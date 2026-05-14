@@ -1,6 +1,5 @@
 'use client'
 import { useEffect, useState } from 'react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import type { Match } from '@/lib/types'
@@ -9,9 +8,8 @@ const FF = "'Barlow Condensed',system-ui,sans-serif"
 const BG1='#0e0f1c', BD='#1e2040'
 const GOLD = '#e8a020'
 const STATUS_COLOR: Record<string, string> = { pending: '#6666aa', coding: '#fbbf24', complete: '#4ade80' }
-
 const PLAN_LABELS: Record<string, string> = { starter: 'Starter', pro: 'Pro', club: 'Club' }
-const PLAN_COLORS: Record<string, string> = { starter: '#6666aa', pro: GOLD, club: '#00d4aa' }
+const PLAN_COLORS: Record<string, string> = { starter: '#6666aa', pro: '#e8a020', club: '#00d4aa' }
 
 export default function DashboardPage() {
   const supabase = createClient()
@@ -35,7 +33,6 @@ export default function DashboardPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
-      // Get org
       const { data: member } = await supabase
         .from('org_members')
         .select('org_id, organisations(plan)')
@@ -46,12 +43,10 @@ export default function DashboardPage() {
         setOrgId(member.org_id)
         setPlan((member.organisations as any)?.plan ?? 'starter')
 
-        // Get usage
         const res = await fetch(`/api/usage?orgId=${member.org_id}`)
         const u = await res.json()
         setUsage(u)
 
-        // Get matches for this org
         const { data } = await supabase
           .from('matches')
           .select('*')
@@ -59,7 +54,6 @@ export default function DashboardPage() {
           .order('created_at', { ascending: false })
         if (data) setMatches(data)
       } else {
-        // Fallback: load all matches if no org yet
         const { data } = await supabase
           .from('matches')
           .select('*')
@@ -79,7 +73,6 @@ export default function DashboardPage() {
   return (
     <div style={{ fontFamily: FF, background: '#08090e', color: '#dde1f0', minHeight: '100vh' }}>
 
-      {/* SUCCESS BANNER */}
       {upgraded && (
         <div style={{ background: '#16a34a', color: '#fff', textAlign: 'center', padding: '10px', fontSize: 13, fontWeight: 700, letterSpacing: 1 }}>
           ✓ Plan upgraded successfully! Welcome to {PLAN_LABELS[plan]}.
@@ -87,9 +80,10 @@ export default function DashboardPage() {
       )}
 
       <nav style={{ background: '#131428', borderBottom: `1px solid ${BD}`, padding: '12px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Link href="/" style={{ fontSize: 20, fontWeight: 900, letterSpacing: 3, textDecoration: 'none', color: '#fff' }}>RUGBY<span style={{ color: '#00d4aa' }}>IQ</span></Link>
+        <div style={{ fontSize: 20, fontWeight: 900, letterSpacing: 3, color: '#fff', cursor: 'pointer' }} onClick={() => router.push('/')}>
+          RUGBY<span style={{ color: '#00d4aa' }}>IQ</span>
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          {/* PLAN BADGE */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#0e0f1c', border: `1px solid ${BD}`, borderRadius: 6, padding: '5px 12px' }}>
             <span style={{ fontSize: 10, fontWeight: 700, color: PLAN_COLORS[plan], letterSpacing: 1 }}>{PLAN_LABELS[plan].toUpperCase()}</span>
             {usage && (
@@ -98,6 +92,12 @@ export default function DashboardPage() {
               </span>
             )}
           </div>
+          <button
+            onClick={() => router.push('/settings')}
+            style={{ padding: '6px 14px', background: 'transparent', border: `1px solid ${BD}`, color: '#6666aa', fontFamily: FF, fontSize: 12, fontWeight: 700, borderRadius: 4, cursor: 'pointer' }}
+          >
+            ⚙️ Settings
+          </button>
           <button
             onClick={() => router.push('/dashboard/upgrade')}
             style={{ padding: '6px 14px', background: GOLD, border: 'none', color: '#fff', fontFamily: FF, fontSize: 12, fontWeight: 700, borderRadius: 4, cursor: 'pointer', letterSpacing: 1 }}
@@ -114,7 +114,6 @@ export default function DashboardPage() {
         </div>
       </nav>
 
-      {/* USAGE LIMIT WARNING */}
       {usage && !usage.canCreate && (
         <div style={{ background: '#7c2d12', borderBottom: '1px solid #991b1b', padding: '10px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span style={{ fontSize: 13, color: '#fca5a5' }}>
@@ -151,30 +150,28 @@ export default function DashboardPage() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {matches.map(m => (
-              <Link key={m.id} href={`/matches/${m.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                <div
-                  style={{ background: BG1, border: `1px solid ${BD}`, borderRadius: 8, padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 16, cursor: 'pointer' }}
-                  onMouseEnter={e => (e.currentTarget.style.borderColor = '#3a3a6a')}
-                  onMouseLeave={e => (e.currentTarget.style.borderColor = BD)}
-                >
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 17, fontWeight: 700 }}>
-                      <span style={{ color: m.home_color }}>{m.home_team}</span>
-                      <span style={{ color: '#4a4a7a', margin: '0 10px', fontWeight: 400 }}>vs</span>
-                      <span style={{ color: m.away_color }}>{m.away_team}</span>
-                    </div>
-                    <div style={{ fontSize: 11, color: '#5a5a8a', marginTop: 3, display: 'flex', gap: 12 }}>
-                      {m.competition && <span>{m.competition}</span>}
-                      {m.match_date && <span>{new Date(m.match_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>}
-                    </div>
+              <div key={m.id} onClick={() => router.push(`/matches/${m.id}`)}
+                style={{ background: BG1, border: `1px solid ${BD}`, borderRadius: 8, padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 16, cursor: 'pointer' }}
+                onMouseEnter={e => (e.currentTarget.style.borderColor = '#3a3a6a')}
+                onMouseLeave={e => (e.currentTarget.style.borderColor = BD)}
+              >
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 17, fontWeight: 700 }}>
+                    <span style={{ color: m.home_color }}>{m.home_team}</span>
+                    <span style={{ color: '#4a4a7a', margin: '0 10px', fontWeight: 400 }}>vs</span>
+                    <span style={{ color: m.away_color }}>{m.away_team}</span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    {m.video_url && <span style={{ fontSize: 10, color: '#4ade80', background: '#4ade8022', padding: '2px 8px', borderRadius: 10 }}>VIDEO</span>}
-                    <span style={{ fontSize: 10, fontWeight: 700, color: STATUS_COLOR[m.status], background: `${STATUS_COLOR[m.status]}22`, padding: '2px 8px', borderRadius: 10, textTransform: 'uppercase' }}>{m.status}</span>
-                    <span style={{ color: '#4a4a7a' }}>›</span>
+                  <div style={{ fontSize: 11, color: '#5a5a8a', marginTop: 3, display: 'flex', gap: 12 }}>
+                    {m.competition && <span>{m.competition}</span>}
+                    {m.match_date && <span>{new Date(m.match_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>}
                   </div>
                 </div>
-              </Link>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  {m.video_url && <span style={{ fontSize: 10, color: '#4ade80', background: '#4ade8022', padding: '2px 8px', borderRadius: 10 }}>VIDEO</span>}
+                  <span style={{ fontSize: 10, fontWeight: 700, color: STATUS_COLOR[m.status], background: `${STATUS_COLOR[m.status]}22`, padding: '2px 8px', borderRadius: 10, textTransform: 'uppercase' }}>{m.status}</span>
+                  <span style={{ color: '#4a4a7a' }}>›</span>
+                </div>
+              </div>
             ))}
           </div>
         )}

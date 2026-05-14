@@ -248,10 +248,10 @@ export default function VideoAnalyst({
   return (
     <div style={{ fontFamily: FF, background: BG, color: TEXT, height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
-      {/* HEADER */}
+{/* HEADER */}
       <div style={{ background: NAV, padding: '10px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-          <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: 3, color: '#fff' }}>RUGBY<span style={{ color: GOLD }}>IQ</span></div>
+          <a href="/dashboard" style={{ fontSize: 22, fontWeight: 900, letterSpacing: 3, color: '#fff', textDecoration: 'none' }}>RUGBY<span style={{ color: GOLD }}>IQ</span></a>
           <div style={{ fontSize: 9, letterSpacing: 3, color: '#4a5a7a' }}>ANALYST</div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
@@ -269,15 +269,19 @@ export default function VideoAnalyst({
             <div style={{ fontSize: 44, fontWeight: 900, color: awayTeam.color, lineHeight: 1 }}>{stats.away.score}</div>
           </div>
         </div>
-        <div style={{ textAlign: 'right', fontSize: 12 }}>
-          <div style={{ color: '#4a5a7a' }}>{homeTeam.name} vs {awayTeam.name}</div>
-          {scanState.running && <div style={{ color: GOLD, fontSize: 11, marginTop: 2 }}>🤖 Scanning… {scanState.pct}%</div>}
-          <button
-            onClick={generateShareLink}
-            style={{ marginTop: 6, padding: '3px 10px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: copying ? '#16a34a' : 'transparent', color: copying ? '#fff' : GOLD, border: `1px solid ${copying ? '#16a34a' : GOLD}`, borderRadius: 4, cursor: 'pointer', letterSpacing: 1 }}
-          >
-            {copying ? '✓ Link copied!' : '🔗 Share'}
-          </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ textAlign: 'right', fontSize: 12 }}>
+            <div style={{ color: '#4a5a7a' }}>{homeTeam.name} vs {awayTeam.name}</div>
+            {scanState.running && <div style={{ color: GOLD, fontSize: 11, marginTop: 2 }}>🤖 Scanning… {scanState.pct}%</div>}
+            <button
+              onClick={generateShareLink}
+              style={{ marginTop: 6, padding: '3px 10px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: copying ? '#16a34a' : 'transparent', color: copying ? '#fff' : GOLD, border: `1px solid ${copying ? '#16a34a' : GOLD}`, borderRadius: 4, cursor: 'pointer', letterSpacing: 1 }}
+            >
+              {copying ? '✓ Link copied!' : '🔗 Share'}
+            </button>
+          </div>
+          
+<a href="/settings" title="Club Settings" style={{ width: 36, height: 36, borderRadius: '50%', background: '#1e2a3a', border: '1px solid #2d3a4a', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', fontSize: 16, flexShrink: 0 }}>⚙️</a>
         </div>
       </div>
 
