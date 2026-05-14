@@ -1,97 +1,163 @@
 import Link from 'next/link'
 
+const FF = "'Barlow Condensed', system-ui, sans-serif"
+
 const FEATURES = [
-  { icon: '📹', title: 'Manual coding with hotkeys', desc: 'Code events in real-time or post-match using keyboard shortcuts. T for tackle, S for scrum, L for lineout — your hands never leave the keyboard.' },
-  { icon: '🤖', title: 'AI-assisted detection', desc: 'Claude Vision analyses your footage frame by frame, automatically detecting scrums, lineouts, tackles, tries, conversions, and penalties.' },
-  { icon: '📊', title: 'Instant match stats', desc: 'Live score, ball-in-play time, penalties conceded, scrums won/lost, lineout success rates — all computed instantly as you code.' },
-  { icon: '⚡', title: 'Frame-accurate seeking', desc: 'Click any event on the timeline to jump to 3 seconds before it. Never scrub through footage looking for a single scrum again.' },
-  { icon: '🎯', title: 'Set piece intelligence', desc: 'Track lineout outcomes (won/lost/stolen) and scrum outcomes (won/lost/penalty/turnover). Export success rates for your forwards coach.' },
-  { icon: '🔗', title: 'Works with any footage', desc: "Not locked into a proprietary camera. Upload from any source — drone, broadcast, GoPro. MP4, MOV, WebM all supported." },
+  { icon: '📹', title: 'Manual coding with hotkeys', desc: 'Code events in real-time using keyboard shortcuts. T for tackle, S for scrum, L for lineout — your hands never leave the keyboard.' },
+  { icon: '🤖', title: 'AI-assisted detection', desc: 'Gemini AI watches your footage and automatically detects scrums, lineouts, tackles, tries, conversions and penalties.' },
+  { icon: '📊', title: 'Instant match stats', desc: 'Live score, ball-in-play time, scrum and lineout success rates — computed instantly as you code.' },
+  { icon: '⚡', title: 'Frame-accurate seeking', desc: 'Click any event on the timeline to jump straight to it. Never scrub through footage again.' },
+  { icon: '🔗', title: 'Shareable match reports', desc: 'Generate a read-only link your players and coaches can view without needing an account.' },
+  { icon: '📱', title: 'Works with any footage', desc: 'Upload from any source — Veo, drone, broadcast, GoPro. MP4, MOV, WebM all supported.' },
 ]
 
 const PLANS = [
-  { name: 'Starter', price: 'Free', period: '', color: '#6666aa', features: ['1 matches per month', 'Manual event coding', 'All 8 event types', 'Stats dashboard', 'Timeline & seek'], cta: 'Get started free', highlight: false },
-  { name: 'Pro', price: '£24', period: '/month', color: '#00d4aa', features: ['Unlimited matches', 'AI-assisted detection', 'Full stats export (CSV)', 'Match history', 'Priority support'], cta: 'Start free trial', highlight: true },
-  { name: 'Club', price: '£69', period: '/month', color: '#c084fc', features: ['Everything in Pro', '5 analyst seats', 'Team management', 'Season aggregated stats', 'Onboarding call'], cta: 'Contact us', highlight: false },
+  {
+    name: 'Starter', price: 'Free', period: '',
+    features: ['1 match per month', 'Manual event coding', 'All event types', 'Stats dashboard'],
+    cta: 'Get started free', highlight: false, color: '#64748b'
+  },
+  {
+    name: 'Pro', price: '£29', period: '/mo',
+    features: ['Unlimited matches', 'AI scan included', '2 analyst seats', 'Shareable links', 'PDF export'],
+    cta: 'Start free trial', highlight: true, color: '#0ea5e9'
+  },
+  {
+    name: 'Club', price: '£69', period: '/mo',
+    features: ['Everything in Pro', '5 analyst seats', 'Multiple teams', 'Season statistics', 'Priority support'],
+    cta: 'Get started', highlight: false, color: '#8b5cf6'
+  },
 ]
 
 export default function LandingPage() {
   return (
-    <div style={{ fontFamily: "'Barlow Condensed', system-ui, sans-serif", background: '#08090e', color: '#dde1f0', minHeight: '100vh' }}>
-      <style>{`* { box-sizing: border-box; margin: 0; padding: 0; } a { text-decoration: none; color: inherit; }`}</style>
+    <div style={{ fontFamily: FF, background: '#ffffff', color: '#0f172a', minHeight: '100vh' }}>
+      <style>{`
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        a { text-decoration: none; color: inherit; }
+        @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;700;900&display=swap');
+      `}</style>
 
-      <nav style={{ position: 'sticky', top: 0, zIndex: 40, background: 'rgba(8,9,14,0.95)', borderBottom: '1px solid #1e2040', padding: '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: 3 }}>RUGBY<span style={{ color: '#00d4aa' }}>IQ</span></div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <Link href="/login" style={{ padding: '7px 16px', fontSize: 13, fontWeight: 700, color: '#9999bb' }}>Sign in</Link>
-          <Link href="/login" style={{ padding: '8px 18px', background: '#00d4aa', color: '#000', fontSize: 13, fontWeight: 900, borderRadius: 4 }}>Start free →</Link>
+      {/* NAV */}
+      <nav style={{ position: 'sticky', top: 0, zIndex: 40, background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(8px)', borderBottom: '1px solid #f1f5f9', padding: '14px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ fontSize: 24, fontWeight: 900, letterSpacing: 3, color: '#0f172a' }}>RUGBY<span style={{ color: '#0ea5e9' }}>IQ</span></div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <Link href="/login" style={{ padding: '7px 16px', fontSize: 13, fontWeight: 700, color: '#64748b' }}>Sign in</Link>
+          <Link href="/login" style={{ padding: '8px 20px', background: '#0f172a', color: '#fff', fontSize: 13, fontWeight: 900, borderRadius: 6 }}>Start free →</Link>
         </div>
       </nav>
 
-      <section style={{ maxWidth: 900, margin: '0 auto', padding: '100px 24px 80px', textAlign: 'center' }}>
-        <div style={{ display: 'inline-block', background: '#00d4aa22', border: '1px solid #00d4aa44', color: '#00d4aa', fontSize: 11, fontWeight: 700, letterSpacing: 3, padding: '4px 14px', borderRadius: 12, marginBottom: 28 }}>POWERED BY CLAUDE AI</div>
-        <h1 style={{ fontSize: 'clamp(40px, 8vw, 88px)', fontWeight: 900, lineHeight: 1.02, marginBottom: 24 }}>
-          Rugby analysis<br/><span style={{ color: '#00d4aa' }}>the way it should be.</span>
+      {/* HERO */}
+      <section style={{ maxWidth: 960, margin: '0 auto', padding: '96px 32px 80px', textAlign: 'center' }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#f0f9ff', border: '1px solid #bae6fd', color: '#0284c7', fontSize: 11, fontWeight: 700, letterSpacing: 2, padding: '5px 14px', borderRadius: 20, marginBottom: 32 }}>
+          🤖 POWERED BY GEMINI AI
+        </div>
+        <h1 style={{ fontSize: 'clamp(44px, 8vw, 88px)', fontWeight: 900, lineHeight: 1.02, marginBottom: 24, letterSpacing: -1 }}>
+          Rugby analysis<br/><span style={{ color: '#0ea5e9' }}>the way it should be.</span>
         </h1>
-        <p style={{ fontSize: 20, color: '#8888bb', maxWidth: 580, margin: '0 auto 40px', lineHeight: 1.6, fontWeight: 400 }}>
-          Upload any footage. Code events with hotkeys in real-time, or let AI detect scrums, lineouts, tackles, and tries automatically.
+        <p style={{ fontSize: 20, color: '#64748b', maxWidth: 560, margin: '0 auto 40px', lineHeight: 1.7, fontWeight: 400 }}>
+          Upload any footage. Code events with hotkeys, or let AI detect scrums, lineouts, tackles, and tries automatically. Built for amateur clubs.
         </p>
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-          <Link href="/login" style={{ padding: '14px 32px', background: '#00d4aa', color: '#000', fontSize: 17, fontWeight: 900, borderRadius: 6 }}>Start for free →</Link>
-          <Link href="#features" style={{ padding: '14px 28px', background: 'transparent', color: '#dde1f0', fontSize: 17, fontWeight: 700, borderRadius: 6, border: '1px solid #3a3a5a' }}>See how it works</Link>
+          <Link href="/login" style={{ padding: '14px 32px', background: '#0f172a', color: '#fff', fontSize: 17, fontWeight: 900, borderRadius: 8, letterSpacing: 1 }}>Start for free →</Link>
+          <Link href="#features" style={{ padding: '14px 28px', background: '#f8fafc', color: '#0f172a', fontSize: 17, fontWeight: 700, borderRadius: 8, border: '1px solid #e2e8f0' }}>See how it works</Link>
         </div>
-        <div style={{ marginTop: 24, fontSize: 12, color: '#4a4a7a' }}>No credit card required · Free tier available</div>
-      </section>
+        <div style={{ marginTop: 20, fontSize: 12, color: '#94a3b8' }}>No credit card required · Free tier available</div>
 
-      <section id="features" style={{ maxWidth: 900, margin: '0 auto', padding: '0 24px 80px' }}>
-        <div style={{ textAlign: 'center', marginBottom: 48 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 3, color: '#4a4a7a', marginBottom: 12 }}>FEATURES</div>
-          <div style={{ fontSize: 40, fontWeight: 900 }}>Everything your analysis team needs</div>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16 }}>
-          {FEATURES.map(f => (
-            <div key={f.title} style={{ background: '#0e0f1c', border: '1px solid #1e2040', borderRadius: 10, padding: 22 }}>
-              <div style={{ fontSize: 28, marginBottom: 12 }}>{f.icon}</div>
-              <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>{f.title}</div>
-              <div style={{ fontSize: 14, color: '#7777aa', lineHeight: 1.6, fontWeight: 400 }}>{f.desc}</div>
+        {/* MOCK UI PREVIEW */}
+        <div style={{ marginTop: 64, background: '#0f172a', borderRadius: 16, padding: '3px', boxShadow: '0 25px 60px rgba(0,0,0,0.15)' }}>
+          <div style={{ background: '#1e293b', borderRadius: 13, padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid #334155' }}>
+            <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#ef4444' }}/>
+            <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#f59e0b' }}/>
+            <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#10b981' }}/>
+            <div style={{ flex: 1, textAlign: 'center', fontSize: 12, color: '#64748b', letterSpacing: 1 }}>RUGBYIQ ANALYST</div>
+          </div>
+          <div style={{ background: '#0f172a', borderRadius: '0 0 13px 13px', padding: '20px', display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+            <div style={{ flex: 1, background: '#1e293b', borderRadius: 8, height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28 }}>📹</div>
+            <div style={{ width: 160, display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {[{l:'Tackle',c:'#60a5fa'},{l:'Ruck',c:'#fb923c'},{l:'Lineout',c:'#c084fc'},{l:'Scrum',c:'#f472b6'},{l:'Try',c:'#4ade80'}].map(e => (
+                <div key={e.l} style={{ background: '#1e293b', borderRadius: 6, padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: e.c }}/>
+                  <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 700 }}>{e.l}</span>
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
         </div>
       </section>
 
-      <section style={{ maxWidth: 900, margin: '0 auto', padding: '0 24px 80px' }}>
-        <div style={{ textAlign: 'center', marginBottom: 48 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 3, color: '#4a4a7a', marginBottom: 12 }}>PRICING</div>
-          <div style={{ fontSize: 40, fontWeight: 900, marginBottom: 12 }}>Simple, transparent pricing</div>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12 }}>
-          {PLANS.map(plan => (
-            <div key={plan.name} style={{ background: '#0e0f1c', border: plan.highlight ? `2px solid ${plan.color}` : '1px solid #1e2040', borderRadius: 12, padding: '28px 24px', position: 'relative' }}>
-              {plan.highlight && <div style={{ position: 'absolute', top: -12, left: '50%', transform: 'translateX(-50%)', background: plan.color, color: '#000', fontSize: 10, fontWeight: 900, letterSpacing: 1, padding: '3px 12px', borderRadius: 10 }}>MOST POPULAR</div>}
-              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, color: plan.color, marginBottom: 12 }}>{plan.name.toUpperCase()}</div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 4 }}>
-                <div style={{ fontSize: 44, fontWeight: 900, color: plan.color }}>{plan.price}</div>
-                <div style={{ fontSize: 14, color: '#6666aa' }}>{plan.period}</div>
+      {/* FEATURES */}
+      <section id="features" style={{ background: '#f8fafc', padding: '80px 32px' }}>
+        <div style={{ maxWidth: 960, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 56 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 3, color: '#94a3b8', marginBottom: 12 }}>FEATURES</div>
+            <div style={{ fontSize: 40, fontWeight: 900, letterSpacing: -0.5 }}>Everything your analysis team needs</div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20 }}>
+            {FEATURES.map(f => (
+              <div key={f.title} style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 12, padding: 28, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+                <div style={{ fontSize: 32, marginBottom: 14 }}>{f.icon}</div>
+                <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: '#0f172a' }}>{f.title}</div>
+                <div style={{ fontSize: 14, color: '#64748b', lineHeight: 1.7, fontWeight: 400 }}>{f.desc}</div>
               </div>
-              <div style={{ borderTop: '1px solid #1e2040', margin: '20px 0', paddingTop: 20 }}>
-                {plan.features.map(f => (
-                  <div key={f} style={{ display: 'flex', gap: 8, marginBottom: 10, fontSize: 14, fontWeight: 400 }}>
-                    <span style={{ color: plan.color }}>✓</span>
-                    <span style={{ color: '#aaaabb' }}>{f}</span>
-                  </div>
-                ))}
-              </div>
-              <Link href="/login" style={{ display: 'block', textAlign: 'center', padding: '11px 20px', background: plan.highlight ? plan.color : 'transparent', color: plan.highlight ? '#000' : plan.color, fontSize: 14, fontWeight: 900, borderRadius: 5, border: `1px solid ${plan.color}` }}>
-                {plan.cta}
-              </Link>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </section>
 
-      <footer style={{ borderTop: '1px solid #1e2040', padding: '28px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-        <div style={{ fontSize: 16, fontWeight: 900, letterSpacing: 3 }}>RUGBY<span style={{ color: '#00d4aa' }}>IQ</span></div>
-        <div style={{ fontSize: 12, color: '#4a4a7a' }}>© {new Date().getFullYear()} RugbyIQ · Built with Claude AI</div>
+      {/* PRICING */}
+      <section style={{ padding: '80px 32px' }}>
+        <div style={{ maxWidth: 960, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 56 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 3, color: '#94a3b8', marginBottom: 12 }}>PRICING</div>
+            <div style={{ fontSize: 40, fontWeight: 900, letterSpacing: -0.5, marginBottom: 12 }}>Simple, transparent pricing</div>
+            <div style={{ fontSize: 16, color: '#64748b' }}>Per club — not per user. One subscription, whole team.</div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16 }}>
+            {PLANS.map(plan => (
+              <div key={plan.name} style={{ background: plan.highlight ? '#0f172a' : '#ffffff', border: plan.highlight ? '2px solid #0ea5e9' : '1px solid #e2e8f0', borderRadius: 16, padding: '32px 28px', position: 'relative', boxShadow: plan.highlight ? '0 20px 40px rgba(14,165,233,0.15)' : '0 1px 3px rgba(0,0,0,0.04)' }}>
+                {plan.highlight && (
+                  <div style={{ position: 'absolute', top: -13, left: '50%', transform: 'translateX(-50%)', background: '#0ea5e9', color: '#fff', fontSize: 10, fontWeight: 900, letterSpacing: 1, padding: '4px 14px', borderRadius: 20 }}>MOST POPULAR</div>
+                )}
+                <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 2, color: plan.highlight ? '#94a3b8' : '#94a3b8', marginBottom: 10 }}>{plan.name.toUpperCase()}</div>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 24 }}>
+                  <div style={{ fontSize: 48, fontWeight: 900, color: plan.highlight ? '#ffffff' : '#0f172a' }}>{plan.price}</div>
+                  <div style={{ fontSize: 14, color: '#94a3b8' }}>{plan.period}</div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 28 }}>
+                  {plan.features.map(f => (
+                    <div key={f} style={{ display: 'flex', gap: 10, fontSize: 14, fontWeight: 400, alignItems: 'center' }}>
+                      <span style={{ color: plan.highlight ? '#0ea5e9' : '#10b981', fontWeight: 900 }}>✓</span>
+                      <span style={{ color: plan.highlight ? '#cbd5e1' : '#475569' }}>{f}</span>
+                    </div>
+                  ))}
+                </div>
+                <Link href="/login" style={{ display: 'block', textAlign: 'center', padding: '12px 20px', background: plan.highlight ? '#0ea5e9' : '#0f172a', color: '#fff', fontSize: 14, fontWeight: 900, borderRadius: 8, letterSpacing: 1 }}>
+                  {plan.cta}
+                </Link>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section style={{ background: '#0f172a', padding: '80px 32px', textAlign: 'center' }}>
+        <div style={{ maxWidth: 600, margin: '0 auto' }}>
+          <div style={{ fontSize: 44, fontWeight: 900, color: '#ffffff', marginBottom: 16, letterSpacing: -0.5 }}>
+            Ready to level up your<br/><span style={{ color: '#0ea5e9' }}>analysis game?</span>
+          </div>
+          <div style={{ fontSize: 16, color: '#64748b', marginBottom: 32 }}>Join clubs already using RugbyIQ to gain a competitive edge.</div>
+          <Link href="/login" style={{ display: 'inline-block', padding: '14px 36px', background: '#0ea5e9', color: '#fff', fontSize: 17, fontWeight: 900, borderRadius: 8, letterSpacing: 1 }}>
+            Get started free →
+          </Link>
+        </div>
+      </section>
+
+      {/* FOOTER */}
+      <footer style={{ borderTop: '1px solid #1e293b', background: '#0f172a', padding: '28px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+        <div style={{ fontSize: 18, fontWeight: 900, letterSpacing: 3, color: '#fff' }}>RUGBY<span style={{ color: '#0ea5e9' }}>IQ</span></div>
+        <div style={{ fontSize: 12, color: '#475569' }}>© {new Date().getFullYear()} RugbyIQ · Built for amateur rugby clubs</div>
       </footer>
     </div>
   )

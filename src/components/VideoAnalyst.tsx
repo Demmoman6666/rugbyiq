@@ -155,7 +155,14 @@ export default function VideoAnalyst({
       setCopying(false)
     }
   }
-
+const toggleFullscreen = () => {
+    if (!videoRef.current) return
+    if (!document.fullscreenElement) {
+      videoRef.current.requestFullscreen()
+    } else {
+      document.exitFullscreen()
+    }
+  }
   const startAIScan = async () => {
     if (!videoUrl) return
     setShowScanConfirm(false)
@@ -319,6 +326,7 @@ export default function VideoAnalyst({
           {/* VIDEO CONTROLS */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 14px', background: NAV, flexShrink: 0 }}>
             <button onClick={() => videoRef.current?.paused ? videoRef.current.play() : videoRef.current?.pause()} style={{ width: 30, height: 30, borderRadius: '50%', background: GOLD, border: 'none', color: '#fff', fontSize: 11, cursor: 'pointer', flexShrink: 0, fontWeight: 900 }}>{playing ? '⏸' : '▶'}</button>
+            <button onClick={toggleFullscreen} style={{ width: 30, height: 30, borderRadius: '50%', background: '#1e2a3a', border: '1px solid #2d3a4a', color: '#fff', fontSize: 12, cursor: 'pointer', flexShrink: 0 }} title="Fullscreen">⛶</button>
             <div
               style={{ flex: 1, height: 4, background: '#ffffff22', borderRadius: 2, cursor: 'pointer', position: 'relative' }}
               onClick={e => {
