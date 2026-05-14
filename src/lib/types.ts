@@ -6,7 +6,8 @@ export type EventType =
   | 'PENALTY'
   | 'TRY'
   | 'CONVERSION'
-  | 'KNOCK_ON';
+  | 'KNOCK_ON'
+  | 'KICK';
 
 export type TeamSide = 'home' | 'away';
 
@@ -26,6 +27,7 @@ export const EVENT_CONFIG: Record<EventType, EventConfig> = {
   TRY:        { label: 'Try',      color: '#4ade80', hotkey: 'Y' },
   CONVERSION: { label: 'Conv',     color: '#a3e635', hotkey: 'C', outcomes: ['scored','missed'] },
   KNOCK_ON:   { label: 'Knock On', color: '#fb7185', hotkey: 'K' },
+  KICK:       { label: 'Kick',     color: '#38bdf8', hotkey: 'X', outcomes: ['retained','lost','touch'] },
 };
 
 export interface Organisation {
