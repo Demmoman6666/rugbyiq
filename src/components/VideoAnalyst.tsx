@@ -34,19 +34,23 @@ export default function VideoAnalyst({
   const supabase = createClient()
   const videoRef = useRef<HTMLVideoElement>(null)
 
-  const [tab, setTab]                   = useState<Tab>('code')
-  const [events, setEvents]             = useState<MatchEvent[]>(initialEvents)
-  const [suggestions, setSuggestions]   = useState<AISuggestion[]>([])
-  const [time, setTime]                 = useState(0)
-  const [duration, setDuration]         = useState(videoDuration)
-  const [playing, setPlaying]           = useState(false)
-  const [activeTeam, setActiveTeam]     = useState<'home' | 'away'>('home')
-  const [filters, setFilters]           = useState<EventType[]>([])
-  const [lastEv, setLastEv]             = useState<MatchEvent | null>(null)
-  const [scanState, setScanState]       = useState({ running: false, pct: 0 })
+  const [tab, setTab]                     = useState<Tab>('code')
+  const [events, setEvents]               = useState<MatchEvent[]>(initialEvents)
+  const [suggestions, setSuggestions]     = useState<AISuggestion[]>([])
+  const [time, setTime]                   = useState(0)
+  const [duration, setDuration]           = useState(videoDuration)
+  const [playing, setPlaying]             = useState(false)
+  const [activeTeam, setActiveTeam]       = useState<'home' | 'away'>('home')
+  const [filters, setFilters]             = useState<EventType[]>([])
+  const [lastEv, setLastEv]               = useState<MatchEvent | null>(null)
+  const [scanState, setScanState]         = useState({ running: false, pct: 0 })
   const [showScanConfirm, setShowScanConfirm] = useState(false)
-  const [editingNote, setEditingNote]   = useState<{ id: string; value: string } | null>(null)
-  const [copying, setCopying]           = useState(false)
+  const [editingNote, setEditingNote]     = useState<{ id: string; value: string } | null>(null)
+  const [copying, setCopying]             = useState(false)
+  const [speed, setSpeed]                 = useState(1)
+  const [volume, setVolume]               = useState(1)
+  const [showSpeedMenu, setShowSpeedMenu] = useState(false)
+  const [showVolume, setShowVolume]       = useState(false)
 
   useEffect(() => {
     const load = async () => {
@@ -155,7 +159,8 @@ export default function VideoAnalyst({
       setCopying(false)
     }
   }
-const toggleFullscreen = () => {
+
+  const toggleFullscreen = () => {
     if (!videoRef.current) return
     if (!document.fullscreenElement) {
       videoRef.current.requestFullscreen()
@@ -163,6 +168,33 @@ const toggleFullscreen = () => {
       document.exitFullscreen()
     }
   }
+
+  const skipSeconds = (s: number) => {
+    if (!videoRef.current) return
+    videoRef.current.currentTime = Math.max(0, videoRef.current.currentTime + s)
+  }
+
+  const skipToNextEvent = () => {
+    const next = events.filter(e => e.timestamp_secs > time + 1).sort((a,b) => a.timestamp_secs - b.timestamp_secs)[0]
+    if (next) seekTo(next.timestamp_secs)
+  }
+
+  const skipToPrevEvent = () => {
+    const prev = events.filter(e => e.timestamp_secs < time - 1).sort((a,b) => b.timestamp_secs - a.timestamp_secs)[0]
+    if (prev) seekTo(prev.timestamp_secs)
+  }
+
+  const changeSpeed = (s: number) => {
+    if (videoRef.current) videoRef.current.playbackRate = s
+    setSpeed(s)
+    setShowSpeedMenu(false)
+  }
+
+  const changeVolume = (v: number) => {
+    if (videoRef.current) videoRef.current.volume = v
+    setVolume(v)
+  }
+
   const startAIScan = async () => {
     if (!videoUrl) return
     setShowScanConfirm(false)
@@ -255,7 +287,7 @@ const toggleFullscreen = () => {
   return (
     <div style={{ fontFamily: FF, background: BG, color: TEXT, height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
-{/* HEADER */}
+      {/* HEADER */}
       <div style={{ background: NAV, padding: '10px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
           <a href="/dashboard" style={{ fontSize: 22, fontWeight: 900, letterSpacing: 3, color: '#fff', textDecoration: 'none' }}>RUGBY<span style={{ color: GOLD }}>IQ</span></a>
@@ -287,8 +319,7 @@ const toggleFullscreen = () => {
               {copying ? '✓ Link copied!' : '🔗 Share'}
             </button>
           </div>
-          
-<a href="/settings" title="Club Settings" style={{ width: 36, height: 36, borderRadius: '50%', background: '#1e2a3a', border: '1px solid #2d3a4a', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', fontSize: 16, flexShrink: 0 }}>⚙️</a>
+          <a href="/settings" title="Club Settings" style={{ width: 36, height: 36, borderRadius: '50%', background: '#1e2a3a', border: '1px solid #2d3a4a', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', fontSize: 16, flexShrink: 0 }}>⚙️</a>
         </div>
       </div>
 
@@ -324,11 +355,21 @@ const toggleFullscreen = () => {
           </div>
 
           {/* VIDEO CONTROLS */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 14px', background: NAV, flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: NAV, flexShrink: 0, position: 'relative' }}>
+            {/* PREV EVENT */}
+            <button onClick={skipToPrevEvent} title="Previous event" style={{ width: 28, height: 28, borderRadius: 4, background: '#1e2a3a', border: '1px solid #2d3a4a', color: '#fff', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>⏮</button>
+            {/* REWIND 5s */}
+            <button onClick={() => skipSeconds(-5)} title="-5 seconds" style={{ width: 32, height: 28, borderRadius: 4, background: '#1e2a3a', border: '1px solid #2d3a4a', color: '#fff', fontSize: 10, cursor: 'pointer', flexShrink: 0, fontWeight: 700 }}>-5s</button>
+            {/* PLAY/PAUSE */}
             <button onClick={() => videoRef.current?.paused ? videoRef.current.play() : videoRef.current?.pause()} style={{ width: 30, height: 30, borderRadius: '50%', background: GOLD, border: 'none', color: '#fff', fontSize: 11, cursor: 'pointer', flexShrink: 0, fontWeight: 900 }}>{playing ? '⏸' : '▶'}</button>
-            <button onClick={toggleFullscreen} style={{ width: 30, height: 30, borderRadius: '50%', background: '#1e2a3a', border: '1px solid #2d3a4a', color: '#fff', fontSize: 12, cursor: 'pointer', flexShrink: 0 }} title="Fullscreen">⛶</button>
+            {/* FORWARD 5s */}
+            <button onClick={() => skipSeconds(5)} title="+5 seconds" style={{ width: 32, height: 28, borderRadius: 4, background: '#1e2a3a', border: '1px solid #2d3a4a', color: '#fff', fontSize: 10, cursor: 'pointer', flexShrink: 0, fontWeight: 700 }}>+5s</button>
+            {/* NEXT EVENT */}
+            <button onClick={skipToNextEvent} title="Next event" style={{ width: 28, height: 28, borderRadius: 4, background: '#1e2a3a', border: '1px solid #2d3a4a', color: '#fff', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>⏭</button>
+
+            {/* SCRUBBER */}
             <div
-              style={{ flex: 1, height: 4, background: '#ffffff22', borderRadius: 2, cursor: 'pointer', position: 'relative' }}
+              style={{ flex: 1, height: 4, background: '#ffffff22', borderRadius: 2, cursor: 'pointer', position: 'relative', margin: '0 4px' }}
               onClick={e => {
                 const r = e.currentTarget.getBoundingClientRect()
                 if (videoRef.current) videoRef.current.currentTime = Math.round(((e.clientX - r.left) / r.width) * actualDuration())
@@ -337,8 +378,44 @@ const toggleFullscreen = () => {
               <div style={{ height: '100%', width: `${(time / actualDuration()) * 100}%`, background: GOLD, borderRadius: 2 }}/>
               <div style={{ position: 'absolute', top: '50%', left: `${(time / actualDuration()) * 100}%`, transform: 'translate(-50%,-50%)', width: 10, height: 10, borderRadius: '50%', background: GOLD }}/>
             </div>
+
             <span style={{ fontFamily: MONO, fontSize: 11, color: '#ffffff88', whiteSpace: 'nowrap' }}>{formatTime(time)} / {formatTime(duration)}</span>
-            <button onClick={() => setShowScanConfirm(true)} disabled={scanState.running || !videoUrl} style={{ padding: '5px 14px', fontFamily: FF, fontSize: 12, fontWeight: 700, background: GOLD, border: 'none', color: '#fff', borderRadius: 4, cursor: 'pointer', whiteSpace: 'nowrap', opacity: videoUrl ? 1 : 0.4 }}>
+
+            {/* VOLUME */}
+            <div style={{ position: 'relative' }}>
+              <button onClick={() => { setShowVolume(v => !v); setShowSpeedMenu(false) }} style={{ width: 28, height: 28, borderRadius: 4, background: '#1e2a3a', border: '1px solid #2d3a4a', color: '#fff', fontSize: 13, cursor: 'pointer' }}>
+                {volume === 0 ? '🔇' : volume < 0.5 ? '🔉' : '🔊'}
+              </button>
+              {showVolume && (
+                <div style={{ position: 'absolute', bottom: 38, left: '50%', transform: 'translateX(-50%)', background: '#1e293b', border: '1px solid #334155', borderRadius: 8, padding: '12px 10px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, zIndex: 50 }}>
+                  <input type="range" min={0} max={1} step={0.05} value={volume} onChange={e => changeVolume(Number(e.target.value))}
+                    style={{ writingMode: 'vertical-lr' as any, direction: 'rtl' as any, width: 4, height: 80, cursor: 'pointer', accentColor: GOLD }} />
+                  <span style={{ fontSize: 10, color: '#94a3b8' }}>{Math.round(volume * 100)}%</span>
+                </div>
+              )}
+            </div>
+
+            {/* SPEED */}
+            <div style={{ position: 'relative' }}>
+              <button onClick={() => { setShowSpeedMenu(v => !v); setShowVolume(false) }} style={{ padding: '0 8px', height: 28, borderRadius: 4, background: '#1e2a3a', border: '1px solid #2d3a4a', color: '#fff', fontSize: 11, cursor: 'pointer', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                {speed}x
+              </button>
+              {showSpeedMenu && (
+                <div style={{ position: 'absolute', bottom: 38, right: 0, background: '#1e293b', border: '1px solid #334155', borderRadius: 8, overflow: 'hidden', zIndex: 50, minWidth: 80 }}>
+                  {[0.25, 0.5, 1, 1.25, 1.5, 1.75, 2, 4].map(s => (
+                    <button key={s} onClick={() => changeSpeed(s)} style={{ display: 'block', width: '100%', padding: '7px 14px', background: speed === s ? GOLD : 'transparent', color: '#fff', border: 'none', fontSize: 12, fontWeight: speed === s ? 700 : 400, cursor: 'pointer', textAlign: 'left', fontFamily: FF }}>
+                      {s}x {speed === s ? '✓' : ''}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* FULLSCREEN */}
+            <button onClick={toggleFullscreen} title="Fullscreen" style={{ width: 28, height: 28, borderRadius: 4, background: '#1e2a3a', border: '1px solid #2d3a4a', color: '#fff', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>⛶</button>
+
+            {/* AI SCAN */}
+            <button onClick={() => setShowScanConfirm(true)} disabled={scanState.running || !videoUrl} style={{ padding: '5px 12px', fontFamily: FF, fontSize: 12, fontWeight: 700, background: GOLD, border: 'none', color: '#fff', borderRadius: 4, cursor: 'pointer', whiteSpace: 'nowrap', opacity: videoUrl ? 1 : 0.4 }}>
               {scanState.running ? `🤖 ${scanState.pct}%` : '🤖 AI Scan'}
             </button>
           </div>
