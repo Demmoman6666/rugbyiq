@@ -19,12 +19,14 @@ export default function LoginPage() {
   const handle = async () => {
     setLoading(true)
     setError('')
-    const { error } = mode === 'login'
+    console.log('attempting auth...')
+    const { error, data } = mode === 'login'
       ? await supabase.auth.signInWithPassword({ email, password })
       : await supabase.auth.signUp({ email, password })
+    console.log('auth result:', { error, data })
     if (error) { setError(error.message); setLoading(false); return }
-    if (mode === 'signup') { setError('Check your email to confirm your account, then sign in.'); setLoading(false); return }
-    router.push('/dashboard')
+    console.log('pushing to dashboard...')
+window.location.href = '/dashboard'
   }
 
   return (
