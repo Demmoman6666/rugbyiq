@@ -17,6 +17,7 @@ export default function DashboardPage() {
   const [loading, setLoading]   = useState(true)
   const [plan, setPlan]         = useState('starter')
   const [orgName, setOrgName]   = useState('')
+  const [orgId, setOrgId]       = useState('')
   const [usage, setUsage]       = useState<{ used: number; limit: number; canCreate: boolean } | null>(null)
   const [upgraded, setUpgraded] = useState(false)
 
@@ -30,7 +31,7 @@ export default function DashboardPage() {
   useEffect(() => {
     const load = async () => {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+      if (!user) { router.push('/login'); return }
 
       const { data: member } = await supabase
         .from('org_members')
@@ -38,27 +39,27 @@ export default function DashboardPage() {
         .eq('user_id', user.id)
         .single()
 
+
       if (member) {
         const org = member.organisations as any
         setPlan(org?.plan ?? 'starter')
         setOrgName(org?.name ?? '')
+        setOrgId(member.org_id)
 
         const res = await fetch(`/api/usage?orgId=${member.org_id}`)
         const u = await res.json()
         setUsage(u)
 
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from('matches')
           .select('*')
           .eq('org_id', member.org_id)
           .order('created_at', { ascending: false })
+
         if (data) setMatches(data)
       } else {
-        const { data } = await supabase
-          .from('matches')
-          .select('*')
-          .order('created_at', { ascending: false })
-        if (data) setMatches(data)
+        router.push('/onboarding')
+        return
       }
       setLoading(false)
     }
