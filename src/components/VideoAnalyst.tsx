@@ -3,8 +3,8 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { computeMatchStats, formatTime } from '@/lib/stats'
-import { EVENT_CONFIG } from '@/lib/types'
-import type { MatchEvent, AISuggestion, TeamInfo, EventType } from '@/lib/types'
+import { getSportConfig } from '@/lib/sports'
+import type { MatchEvent, AISuggestion, TeamInfo } from '@/lib/types'
 import { createClient } from '@/lib/supabase'
 
 interface VideoAnalystProps {
@@ -41,7 +41,7 @@ export default function VideoAnalyst({
   const [duration, setDuration]           = useState(videoDuration)
   const [playing, setPlaying]             = useState(false)
   const [activeTeam, setActiveTeam]       = useState<'home' | 'away'>('home')
-  const [filters, setFilters]             = useState<EventType[]>([])
+  const [filters, setFilters]             = useState<string[]>([])
   const [lastEv, setLastEv]               = useState<MatchEvent | null>(null)
   const [scanState, setScanState]         = useState({ running: false, pct: 0 })
   const [showScanConfirm, setShowScanConfirm] = useState(false)
@@ -51,6 +51,7 @@ export default function VideoAnalyst({
   const [volume, setVolume]               = useState(1)
   const [showSpeedMenu, setShowSpeedMenu] = useState(false)
   const [showVolume, setShowVolume]       = useState(false)
+  const [sportConfig, setSportConfig]     = useState(getSportConfig('rugby'))
 
   useEffect(() => {
     const load = async () => {
@@ -63,6 +64,23 @@ export default function VideoAnalyst({
       .subscribe()
     return () => { supabase.removeChannel(ch) }
   }, [matchId])
+
+  useEffect(() => {
+    const loadSport = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data: member } = await supabase
+        .from('org_members')
+        .select('org_id, organisations(sport)')
+        .eq('user_id', user.id)
+        .single()
+      if (member) {
+        const sport = (member.organisations as any)?.sport ?? 'rugby'
+        setSportConfig(getSportConfig(sport))
+      }
+    }
+    loadSport()
+  }, [])
 
   useEffect(() => {
     const v = videoRef.current
@@ -87,7 +105,7 @@ export default function VideoAnalyst({
     const h = (e: KeyboardEvent) => {
       if (['INPUT','TEXTAREA'].includes((e.target as HTMLElement).tagName)) return
       if (e.key === ' ') { e.preventDefault(); videoRef.current?.paused ? videoRef.current.play() : videoRef.current?.pause() }
-      const type = (Object.keys(EVENT_CONFIG) as EventType[]).find(k => EVENT_CONFIG[k].hotkey === e.key.toUpperCase())
+      const type = Object.keys(sportConfig.events).find(k => sportConfig.events[k].hotkey === e.key.toUpperCase())
       if (type) codeEvent(type)
     }
     window.addEventListener('keydown', h)
@@ -102,12 +120,12 @@ export default function VideoAnalyst({
   , [events, filters])
   const pendingSuggestions = useMemo(() => suggestions.filter(s => s.status === 'pending'), [suggestions])
   const barData = useMemo(() =>
-    (Object.keys(EVENT_CONFIG) as EventType[]).map(type => ({
-      name: EVENT_CONFIG[type].label,
+    Object.keys(sportConfig.events).map(type => ({
+      name: sportConfig.events[type].label,
       [homeTeam.abbr]: events.filter(e => e.event_type === type && e.team === 'home').length,
       [awayTeam.abbr]: events.filter(e => e.event_type === type && e.team === 'away').length,
     }))
-  , [events, homeTeam.abbr, awayTeam.abbr])
+  , [events, homeTeam.abbr, awayTeam.abbr, sportConfig])
 
   const seekTo = useCallback((secs: number) => {
     const t = Math.max(0, secs - 1)
@@ -115,13 +133,13 @@ export default function VideoAnalyst({
     setTime(t)
   }, [])
 
-  const codeEvent = async (type: EventType) => {
+  const codeEvent = async (type: string) => {
     const { data } = await supabase.from('events').insert({
       match_id: matchId, event_type: type, timestamp_secs: time, team: activeTeam, ai_detected: false
     }).select().single()
     if (data) {
       setEvents(prev => [...prev, data as MatchEvent])
-      if (EVENT_CONFIG[type].outcomes) setLastEv(data as MatchEvent)
+      if (sportConfig.events[type]?.outcomes) setLastEv(data as MatchEvent)
       else setLastEv(null)
     }
   }
@@ -211,34 +229,28 @@ export default function VideoAnalyst({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ videoUrl, matchId, videoDuration: actualDuration() })
       })
-
       clearInterval(iv)
-
       if (!res.ok) {
         const err = await res.json()
         throw new Error(err.error ?? 'Analysis failed')
       }
-
       const { events: detected } = await res.json()
-
       const newSuggestions: AISuggestion[] = (detected as any[])
         .filter(e => e.event_type && e.event_type !== 'NONE')
         .map(e => ({
           id: crypto.randomUUID(),
           timestamp_secs: Math.round(e.timestamp_seconds),
-          event_type: e.event_type as EventType,
+          event_type: e.event_type,
           confidence: e.confidence ?? 0.8,
           description: e.description,
           status: 'pending' as const,
         }))
-
       setSuggestions(newSuggestions)
       setScanState({ running: false, pct: 100 })
       setTab('ai')
     } catch (err: any) {
       clearInterval(iv)
       setScanState({ running: false, pct: 0 })
-      console.error('Gemini scan error:', err)
       alert(`Scan failed: ${err.message}`)
     }
   }
@@ -254,17 +266,22 @@ export default function VideoAnalyst({
 
   const dismissSuggestion = (id: string) =>
     setSuggestions(prev => prev.map(s => s.id === id ? { ...s, status: 'dismissed' as const } : s))
-  const toggleFilter = (type: EventType) =>
+
+  const toggleFilter = (type: string) =>
     setFilters(f => f.includes(type) ? f.filter(x => x !== type) : [...f, type])
 
   const geminiCost = (actualDuration() / 60 * 0.30 * 258 / 1000 * 0.79).toFixed(2)
   const geminiMins = Math.ceil(actualDuration() / 60 * 0.5)
 
-  const Pill = ({ type }: { type: EventType }) => (
-    <span style={{ padding: '2px 8px', borderRadius: 12, background: EVENT_CONFIG[type].color + '22', color: EVENT_CONFIG[type].color, fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap', fontFamily: FF, border: `1px solid ${EVENT_CONFIG[type].color}55` }}>
-      {EVENT_CONFIG[type].label}
-    </span>
-  )
+  const Pill = ({ type }: { type: string }) => {
+    const cfg = sportConfig.events[type]
+    if (!cfg) return <span style={{ padding: '2px 8px', borderRadius: 12, background: '#e2e8f022', color: MUTED, fontSize: 11, fontWeight: 700 }}>{type}</span>
+    return (
+      <span style={{ padding: '2px 8px', borderRadius: 12, background: cfg.color + '22', color: cfg.color, fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap', fontFamily: FF, border: `1px solid ${cfg.color}55` }}>
+        {cfg.label}
+      </span>
+    )
+  }
 
   const StatBar = ({ label, hv, av }: { label: string; hv: number; av: number }) => {
     const tot = (hv + av) || 1
@@ -290,7 +307,7 @@ export default function VideoAnalyst({
       {/* HEADER */}
       <div style={{ background: NAV, padding: '10px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-          <a href="/dashboard" style={{ fontSize: 22, fontWeight: 900, letterSpacing: 3, color: '#fff', textDecoration: 'none' }}>RUGBY<span style={{ color: GOLD }}>IQ</span></a>
+          <a href="/dashboard" style={{ fontSize: 22, fontWeight: 900, letterSpacing: 3, color: '#fff', textDecoration: 'none' }}>CLUB<span style={{ color: GOLD }}>CODE</span></a>
           <div style={{ fontSize: 9, letterSpacing: 3, color: '#4a5a7a' }}>ANALYST</div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
@@ -356,18 +373,12 @@ export default function VideoAnalyst({
 
           {/* VIDEO CONTROLS */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: NAV, flexShrink: 0, position: 'relative' }}>
-            {/* PREV EVENT */}
             <button onClick={skipToPrevEvent} title="Previous event" style={{ width: 28, height: 28, borderRadius: 4, background: '#1e2a3a', border: '1px solid #2d3a4a', color: '#fff', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>⏮</button>
-            {/* REWIND 5s */}
             <button onClick={() => skipSeconds(-5)} title="-5 seconds" style={{ width: 32, height: 28, borderRadius: 4, background: '#1e2a3a', border: '1px solid #2d3a4a', color: '#fff', fontSize: 10, cursor: 'pointer', flexShrink: 0, fontWeight: 700 }}>-5s</button>
-            {/* PLAY/PAUSE */}
             <button onClick={() => videoRef.current?.paused ? videoRef.current.play() : videoRef.current?.pause()} style={{ width: 30, height: 30, borderRadius: '50%', background: GOLD, border: 'none', color: '#fff', fontSize: 11, cursor: 'pointer', flexShrink: 0, fontWeight: 900 }}>{playing ? '⏸' : '▶'}</button>
-            {/* FORWARD 5s */}
             <button onClick={() => skipSeconds(5)} title="+5 seconds" style={{ width: 32, height: 28, borderRadius: 4, background: '#1e2a3a', border: '1px solid #2d3a4a', color: '#fff', fontSize: 10, cursor: 'pointer', flexShrink: 0, fontWeight: 700 }}>+5s</button>
-            {/* NEXT EVENT */}
             <button onClick={skipToNextEvent} title="Next event" style={{ width: 28, height: 28, borderRadius: 4, background: '#1e2a3a', border: '1px solid #2d3a4a', color: '#fff', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>⏭</button>
 
-            {/* SCRUBBER */}
             <div
               style={{ flex: 1, height: 4, background: '#ffffff22', borderRadius: 2, cursor: 'pointer', position: 'relative', margin: '0 4px' }}
               onClick={e => {
@@ -381,7 +392,6 @@ export default function VideoAnalyst({
 
             <span style={{ fontFamily: MONO, fontSize: 11, color: '#ffffff88', whiteSpace: 'nowrap' }}>{formatTime(time)} / {formatTime(duration)}</span>
 
-            {/* VOLUME */}
             <div style={{ position: 'relative' }}>
               <button onClick={() => { setShowVolume(v => !v); setShowSpeedMenu(false) }} style={{ width: 28, height: 28, borderRadius: 4, background: '#1e2a3a', border: '1px solid #2d3a4a', color: '#fff', fontSize: 13, cursor: 'pointer' }}>
                 {volume === 0 ? '🔇' : volume < 0.5 ? '🔉' : '🔊'}
@@ -395,7 +405,6 @@ export default function VideoAnalyst({
               )}
             </div>
 
-            {/* SPEED */}
             <div style={{ position: 'relative' }}>
               <button onClick={() => { setShowSpeedMenu(v => !v); setShowVolume(false) }} style={{ padding: '0 8px', height: 28, borderRadius: 4, background: '#1e2a3a', border: '1px solid #2d3a4a', color: '#fff', fontSize: 11, cursor: 'pointer', fontWeight: 700, whiteSpace: 'nowrap' }}>
                 {speed}x
@@ -411,10 +420,8 @@ export default function VideoAnalyst({
               )}
             </div>
 
-            {/* FULLSCREEN */}
             <button onClick={toggleFullscreen} title="Fullscreen" style={{ width: 28, height: 28, borderRadius: 4, background: '#1e2a3a', border: '1px solid #2d3a4a', color: '#fff', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>⛶</button>
 
-            {/* AI SCAN */}
             <button onClick={() => setShowScanConfirm(true)} disabled={scanState.running || !videoUrl} style={{ padding: '5px 12px', fontFamily: FF, fontSize: 12, fontWeight: 700, background: GOLD, border: 'none', color: '#fff', borderRadius: 4, cursor: 'pointer', whiteSpace: 'nowrap', opacity: videoUrl ? 1 : 0.4 }}>
               {scanState.running ? `🤖 ${scanState.pct}%` : '🤖 AI Scan'}
             </button>
@@ -426,7 +433,7 @@ export default function VideoAnalyst({
               <div style={{ background: CARD, borderRadius: 12, padding: 28, maxWidth: 400, width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
                 <div style={{ fontSize: 18, fontWeight: 900, marginBottom: 10, color: TEXT }}>🤖 Run AI Analysis?</div>
                 <div style={{ fontSize: 13, color: MUTED, lineHeight: 1.6, marginBottom: 20 }}>
-                  Gemini will watch the <strong style={{ color: TEXT }}>entire video</strong> and return all scrums, lineouts, tackles, tries, and more with timestamps — in a single pass.
+                  Gemini will watch the <strong style={{ color: TEXT }}>entire video</strong> and return all events with timestamps in a single pass.
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 22 }}>
                   {[[formatTime(duration), 'Duration'], ['~'+geminiMins+'m', 'Est. time'], ['~£'+geminiCost, 'Cost']].map(([v,l]) => (
@@ -453,18 +460,18 @@ export default function VideoAnalyst({
                 ))}
               </div>
               <div style={{ width: 1, height: 28, background: BD, marginRight: 4 }}/>
-              {(Object.keys(EVENT_CONFIG) as EventType[]).map(type => (
-                <button key={type} onClick={() => codeEvent(type)} style={{ padding: '5px 10px', fontFamily: FF, fontSize: 12, fontWeight: 700, border: `1px solid ${EVENT_CONFIG[type].color}`, borderRadius: 4, background: 'transparent', color: EVENT_CONFIG[type].color, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, minWidth: 52 }}>
-                  <span style={{ fontSize: 8, opacity: 0.5, letterSpacing: 1 }}>[{EVENT_CONFIG[type].hotkey}]</span>
-                  {EVENT_CONFIG[type].label}
+              {Object.keys(sportConfig.events).map(type => (
+                <button key={type} onClick={() => codeEvent(type)} style={{ padding: '5px 10px', fontFamily: FF, fontSize: 12, fontWeight: 700, border: `1px solid ${sportConfig.events[type].color}`, borderRadius: 4, background: 'transparent', color: sportConfig.events[type].color, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, minWidth: 52 }}>
+                  <span style={{ fontSize: 8, opacity: 0.5, letterSpacing: 1 }}>[{sportConfig.events[type].hotkey}]</span>
+                  {sportConfig.events[type].label}
                 </button>
               ))}
             </div>
-            {lastEv && EVENT_CONFIG[lastEv.event_type].outcomes && (
+            {lastEv && sportConfig.events[lastEv.event_type]?.outcomes && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, paddingTop: 8, borderTop: `1px solid ${BD}`, flexWrap: 'wrap' }}>
-                <span style={{ fontSize: 11, color: EVENT_CONFIG[lastEv.event_type].color, fontWeight: 700, letterSpacing: 1 }}>SET {EVENT_CONFIG[lastEv.event_type].label.toUpperCase()} OUTCOME:</span>
-                {EVENT_CONFIG[lastEv.event_type].outcomes!.map(o => (
-                  <button key={o} onClick={() => updateOutcome(o)} style={{ padding: '4px 12px', fontFamily: FF, fontSize: 12, fontWeight: 700, cursor: 'pointer', border: `1px solid ${EVENT_CONFIG[lastEv.event_type].color}`, borderRadius: 4, background: `${EVENT_CONFIG[lastEv.event_type].color}11`, color: EVENT_CONFIG[lastEv.event_type].color, textTransform: 'uppercase' }}>{o}</button>
+                <span style={{ fontSize: 11, color: sportConfig.events[lastEv.event_type].color, fontWeight: 700, letterSpacing: 1 }}>SET {sportConfig.events[lastEv.event_type].label.toUpperCase()} OUTCOME:</span>
+                {sportConfig.events[lastEv.event_type].outcomes!.map(o => (
+                  <button key={o} onClick={() => updateOutcome(o)} style={{ padding: '4px 12px', fontFamily: FF, fontSize: 12, fontWeight: 700, cursor: 'pointer', border: `1px solid ${sportConfig.events[lastEv.event_type].color}`, borderRadius: 4, background: `${sportConfig.events[lastEv.event_type].color}11`, color: sportConfig.events[lastEv.event_type].color, textTransform: 'uppercase' }}>{o}</button>
                 ))}
                 <button onClick={() => setLastEv(null)} style={{ padding: '4px 10px', fontFamily: FF, fontSize: 12, border: `1px solid ${BD}`, borderRadius: 4, background: 'transparent', color: MUTED, cursor: 'pointer' }}>skip</button>
               </div>
@@ -481,18 +488,21 @@ export default function VideoAnalyst({
               }}
             >
               <div style={{ position: 'absolute', top: 0, bottom: 0, left: '50%', width: 1, background: '#ffffff22' }}/>
-              {events.map(e => (
-                <div key={e.id} onClick={ev => { ev.stopPropagation(); seekTo(e.timestamp_secs) }}
-                  style={{ position: 'absolute', top: '50%', left: `${(e.timestamp_secs / actualDuration()) * 100}%`, transform: 'translate(-50%,-50%)', width: 8, height: 8, borderRadius: '50%', background: EVENT_CONFIG[e.event_type].color, cursor: 'pointer', zIndex: 2, border: '1px solid rgba(255,255,255,0.3)' }}
-                  title={`${EVENT_CONFIG[e.event_type].label} ${formatTime(e.timestamp_secs)}`}
-                />
-              ))}
+              {events.map(e => {
+                const cfg = sportConfig.events[e.event_type]
+                return (
+                  <div key={e.id} onClick={ev => { ev.stopPropagation(); seekTo(e.timestamp_secs) }}
+                    style={{ position: 'absolute', top: '50%', left: `${(e.timestamp_secs / actualDuration()) * 100}%`, transform: 'translate(-50%,-50%)', width: 8, height: 8, borderRadius: '50%', background: cfg?.color ?? MUTED, cursor: 'pointer', zIndex: 2, border: '1px solid rgba(255,255,255,0.3)' }}
+                    title={`${cfg?.label ?? e.event_type} ${formatTime(e.timestamp_secs)}`}
+                  />
+                )
+              })}
               <div style={{ position: 'absolute', top: 0, bottom: 0, left: `${(time / actualDuration()) * 100}%`, width: 2, background: GOLD, zIndex: 4, borderRadius: 1 }}/>
             </div>
 
             <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', flexShrink: 0 }}>
-              {(Object.keys(EVENT_CONFIG) as EventType[]).map(type => (
-                <button key={type} onClick={() => toggleFilter(type)} style={{ padding: '3px 10px', borderRadius: 12, fontFamily: FF, fontSize: 10, fontWeight: 700, border: `1px solid ${EVENT_CONFIG[type].color}`, cursor: 'pointer', color: filters.includes(type) ? '#fff' : EVENT_CONFIG[type].color, background: filters.includes(type) ? EVENT_CONFIG[type].color : 'transparent' }}>{EVENT_CONFIG[type].label}</button>
+              {Object.keys(sportConfig.events).map(type => (
+                <button key={type} onClick={() => toggleFilter(type)} style={{ padding: '3px 10px', borderRadius: 12, fontFamily: FF, fontSize: 10, fontWeight: 700, border: `1px solid ${sportConfig.events[type].color}`, cursor: 'pointer', color: filters.includes(type) ? '#fff' : sportConfig.events[type].color, background: filters.includes(type) ? sportConfig.events[type].color : 'transparent' }}>{sportConfig.events[type].label}</button>
               ))}
               {filters.length > 0 && <button onClick={() => setFilters([])} style={{ padding: '3px 10px', borderRadius: 12, fontSize: 10, fontWeight: 700, border: `1px solid ${BD}`, background: 'transparent', color: MUTED, cursor: 'pointer' }}>✕ clear</button>}
             </div>
@@ -518,7 +528,6 @@ export default function VideoAnalyst({
                       <button
                         onClick={ev => { ev.stopPropagation(); setEditingNote(editingNote?.id === e.id ? null : { id: e.id, value: e.notes ?? '' }) }}
                         style={{ background: 'none', border: 'none', color: e.notes ? GOLD : '#cbd5e1', cursor: 'pointer', fontSize: 13, padding: '0 2px' }}
-                        title="Add note"
                       >✎</button>
                       <button onClick={ev => { ev.stopPropagation(); deleteEvent(e.id) }} style={{ background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer', fontSize: 12, padding: '0 2px' }}>✕</button>
                     </div>

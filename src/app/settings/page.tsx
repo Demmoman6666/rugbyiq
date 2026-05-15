@@ -3,9 +3,10 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
+import { SPORTS_LIST } from '@/lib/sports'
 
 const NAV  = '#0f172a'
-const GOLD = '#e8a020'
+const GOLD = '#0ea5e9'
 const FF   = "'Barlow Condensed', system-ui, sans-serif"
 const MUTED= '#64748b'
 const BD   = '#e2e8f0'
@@ -32,7 +33,7 @@ export default function SettingsPage() {
 
   const [form, setForm] = useState({
     name: '', home_ground: '', website: '',
-    primary_color: '#00d4aa', secondary_color: '#0f172a'
+    primary_color: '#00d4aa', secondary_color: '#0f172a', sport: 'rugby'
   })
 
   useEffect(() => {
@@ -57,6 +58,7 @@ export default function SettingsPage() {
         website: o.website ?? '',
         primary_color: o.primary_color ?? '#00d4aa',
         secondary_color: o.secondary_color ?? '#0f172a',
+        sport: o.sport ?? 'rugby',
       })
 
       const { data: allMembers } = await supabase
@@ -81,6 +83,7 @@ export default function SettingsPage() {
       website: form.website,
       primary_color: form.primary_color,
       secondary_color: form.secondary_color,
+      sport: form.sport,
     }).eq('id', org.id)
     setSaving(false)
     setSaved(true)
@@ -134,7 +137,7 @@ export default function SettingsPage() {
       <div style={{ background: NAV, padding: '12px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <button onClick={() => router.push('/dashboard')} style={{ background: 'transparent', border: 'none', color: '#4a5a7a', cursor: 'pointer', fontSize: 20, padding: 0 }}>←</button>
-          <div style={{ fontSize: 20, fontWeight: 900, letterSpacing: 3, color: '#fff' }}>RUGBY<span style={{ color: GOLD }}>IQ</span></div>
+          <div style={{ fontSize: 20, fontWeight: 900, letterSpacing: 3, color: '#fff' }}>CLUB<span style={{ color: GOLD }}>CODE</span></div>
         </div>
         <div style={{ fontSize: 12, color: '#4a5a7a', letterSpacing: 1 }}>CLUB SETTINGS</div>
       </div>
@@ -144,9 +147,28 @@ export default function SettingsPage() {
         {/* CLUB DETAILS */}
         <div style={{ background: CARD, border: `1px solid ${BD}`, borderRadius: 12, padding: '24px 28px' }}>
           <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: 2, color: MUTED, marginBottom: 20 }}>CLUB DETAILS</div>
-          <Field label="CLUB NAME" value={form.name} onChange={(v: string) => setForm(f => ({ ...f, name: v }))} placeholder="Penallta RFC" />
+          <Field label="CLUB NAME" value={form.name} onChange={(v: string) => setForm(f => ({ ...f, name: v }))} placeholder="e.g. Penallta RFC" />
           <Field label="HOME GROUND" value={form.home_ground} onChange={(v: string) => setForm(f => ({ ...f, home_ground: v }))} placeholder="e.g. Ystrad Fawr" />
           <Field label="WEBSITE" value={form.website} onChange={(v: string) => setForm(f => ({ ...f, website: v }))} placeholder="https://..." />
+
+          {/* SPORT SELECTOR */}
+          <div style={{ marginBottom: 20 }}>
+            <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, color: MUTED, display: 'block', marginBottom: 8 }}>SPORT</label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+              {SPORTS_LIST.map(s => (
+                <button
+                  key={s.id}
+                  onClick={() => setForm(f => ({ ...f, sport: s.id }))}
+                  style={{ padding: '10px 8px', borderRadius: 8, border: form.sport === s.id ? `2px solid ${GOLD}` : `1px solid ${BD}`, background: form.sport === s.id ? '#f0f9ff' : '#fff', cursor: 'pointer', fontFamily: FF, fontSize: 13, fontWeight: 700, color: form.sport === s.id ? '#0284c7' : MUTED, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}
+                >
+                  <span style={{ fontSize: 20 }}>{s.icon}</span>
+                  {s.name}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* COLOURS */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
             {[
               { label: 'PRIMARY COLOUR', key: 'primary_color' },
@@ -162,6 +184,7 @@ export default function SettingsPage() {
               </div>
             ))}
           </div>
+
           <button onClick={save} disabled={saving}
             style={{ padding: '10px 24px', fontFamily: FF, fontSize: 13, fontWeight: 700, background: saved ? '#16a34a' : NAV, color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', letterSpacing: 1 }}>
             {saved ? '✓ Saved' : saving ? 'Saving…' : 'Save Changes'}
