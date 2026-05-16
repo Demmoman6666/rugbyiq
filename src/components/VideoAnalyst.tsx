@@ -16,7 +16,7 @@ interface VideoAnalystProps {
   initialEvents?: MatchEvent[]
 }
 
-type Tab = 'code' | 'ai' | 'stats'
+type Tab = 'code' | 'ai' | 'stats' | 'review'
 
 const BG    = '#0a0e1a'
 const CARD  = '#111827'
@@ -56,6 +56,15 @@ export default function VideoAnalyst({
   const [sportConfig, setSportConfig]     = useState(getSportConfig('rugby'))
   const [toast, setToast]                 = useState<{ label: string; color: string; team: string } | null>(null)
   const toastTimer                        = useRef<NodeJS.Timeout | null>(null)
+  const [reviewName, setReviewName]       = useState('')
+  const [reviewDesc, setReviewDesc]       = useState('')
+  const [reviewSelected, setReviewSelected] = useState<string[]>([])
+  const [clipBefore, setClipBefore]       = useState(10)
+  const [clipAfter, setClipAfter]         = useState(20)
+  const [reviewSets, setReviewSets]       = useState<any[]>([])
+  const [buildingReview, setBuildingReview] = useState(false)
+  const [reviewLink, setReviewLink]       = useState('')
+  const [orgId, setOrgId]                 = useState('')
 
   const showToast = (label: string, color: string, team: string) => {
     if (toastTimer.current) clearTimeout(toastTimer.current)
@@ -87,7 +96,11 @@ export default function VideoAnalyst({
       if (member) {
         const sport = (member.organisations as any)?.sport ?? 'rugby'
         setSportConfig(getSportConfig(sport))
+        setOrgId(member.org_id)
       }
+      const reviewRes = await fetch(`/api/review?matchId=${matchId}`)
+      const reviewData = await reviewRes.json()
+      if (reviewData.reviewSets) setReviewSets(reviewData.reviewSets)
     }
     loadSport()
   }, [])
@@ -247,6 +260,28 @@ export default function VideoAnalyst({
 
   const dismissSuggestion = (id: string) => setSuggestions(prev => prev.map(s => s.id === id ? { ...s, status: 'dismissed' as const } : s))
   const toggleFilter = (type: string) => setFilters(f => f.includes(type) ? f.filter(x => x !== type) : [...f, type])
+  const toggleReviewEvent = (id: string) => setReviewSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+  const copyReviewLink = (link: string) => navigator.clipboard.writeText(link)
+
+  const createReview = async () => {
+    if (!reviewName.trim() || reviewSelected.length === 0) return
+    setBuildingReview(true)
+    try {
+      const res = await fetch('/api/review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ matchId, orgId, name: reviewName, description: reviewDesc, eventIds: reviewSelected, clipBeforeSecs: clipBefore, clipAfterSecs: clipAfter })
+      })
+      const { reviewSet } = await res.json()
+      const link = `${window.location.origin}/review/${reviewSet.token}`
+      setReviewLink(link)
+      setReviewSets(prev => [reviewSet, ...prev])
+      setReviewName('')
+      setReviewDesc('')
+      setReviewSelected([])
+    } catch { alert('Failed to create review') }
+    finally { setBuildingReview(false) }
+  }
 
   const geminiCost = (actualDuration() / 60 * 0.30 * 258 / 1000 * 0.79).toFixed(2)
   const geminiMins = Math.ceil(actualDuration() / 60 * 0.5)
@@ -325,11 +360,12 @@ export default function VideoAnalyst({
 
       {/* TABS */}
       <div style={{ display: 'flex', background: NAV, borderBottom: `1px solid ${BD}`, flexShrink: 0 }}>
-        {(['code','ai','stats'] as Tab[]).map(t => (
+        {(['code','ai','stats','review'] as Tab[]).map(t => (
           <button key={t} onClick={() => setTab(t)} style={{ padding: '10px 24px', fontFamily: FF, fontSize: 12, fontWeight: 700, letterSpacing: 1.5, border: 'none', background: 'none', cursor: 'pointer', color: tab === t ? '#fff' : MUTED, borderBottom: tab === t ? `2px solid ${GOLD}` : '2px solid transparent', marginBottom: -1, transition: 'color 0.15s' }}>
-            {t === 'code' && '▶  CODE MATCH'}
-            {t === 'ai'   && <>🤖  AI REVIEW {pendingSuggestions.length > 0 && <span style={{ background: GOLD, color: '#000', fontSize: 9, fontWeight: 900, padding: '1px 6px', borderRadius: 10, marginLeft: 6 }}>{pendingSuggestions.length}</span>}</>}
-            {t === 'stats' && '◈  STATISTICS'}
+            {t === 'code'   && '▶  CODE MATCH'}
+            {t === 'ai'     && <>🤖  AI REVIEW {pendingSuggestions.length > 0 && <span style={{ background: GOLD, color: '#000', fontSize: 9, fontWeight: 900, padding: '1px 6px', borderRadius: 10, marginLeft: 6 }}>{pendingSuggestions.length}</span>}</>}
+            {t === 'stats'  && '◈  STATISTICS'}
+            {t === 'review' && '🎬  REVIEW BUILDER'}
           </button>
         ))}
       </div>
@@ -337,8 +373,6 @@ export default function VideoAnalyst({
       {/* CODE TAB */}
       {tab === 'code' && (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-
-          {/* VIDEO */}
           <div style={{ position: 'relative', width: '100%', flexShrink: 0, background: '#000' }}>
             {videoUrl ? (
               <video ref={videoRef} src={videoUrl} crossOrigin="anonymous" style={{ width: '100%', height: 'auto', maxHeight: '52vh', objectFit: 'contain', display: 'block' }} playsInline preload="metadata"/>
@@ -350,22 +384,10 @@ export default function VideoAnalyst({
                 </div>
               </div>
             )}
-
-            {/* TIMER OVERLAY */}
             <div style={{ position: 'absolute', top: 10, left: 12, background: 'rgba(0,0,0,0.8)', color: GOLD, fontFamily: MONO, fontSize: 16, padding: '3px 10px', borderRadius: 3, letterSpacing: 3 }}>{formatTime(time)}</div>
             <div style={{ position: 'absolute', top: 10, right: 12, background: 'rgba(0,0,0,0.8)', color: DIM, fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 3, letterSpacing: 2 }}>{time < duration / 2 ? '1ST HALF' : '2ND HALF'}</div>
-
-            {/* TOAST CONFIRMATION */}
             {toast && (
-              <div style={{
-                position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)',
-                background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)',
-                border: `1px solid ${toast.color}55`,
-                borderRadius: 6, padding: '8px 20px',
-                display: 'flex', alignItems: 'center', gap: 10,
-                zIndex: 10, pointerEvents: 'none',
-                animation: 'fadeIn 0.15s ease'
-              }}>
+              <div style={{ position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)', border: `1px solid ${toast.color}55`, borderRadius: 6, padding: '8px 20px', display: 'flex', alignItems: 'center', gap: 10, zIndex: 10, pointerEvents: 'none' }}>
                 <div style={{ width: 8, height: 8, borderRadius: '50%', background: toast.color, boxShadow: `0 0 8px ${toast.color}` }}/>
                 <span style={{ color: toast.color, fontWeight: 700, fontSize: 14, letterSpacing: 1 }}>{toast.label}</span>
                 <span style={{ color: DIM, fontSize: 11 }}>{toast.team}</span>
@@ -374,7 +396,6 @@ export default function VideoAnalyst({
             )}
           </div>
 
-          {/* VIDEO CONTROLS */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', background: NAV, borderBottom: `1px solid ${BD}`, flexShrink: 0 }}>
             {ctrlBtn(skipToPrevEvent, '⏮', 'Previous event')}
             {ctrlBtn(() => skipSeconds(-5), '-5s', 'Rewind 5s', true)}
@@ -384,15 +405,12 @@ export default function VideoAnalyst({
             </button>
             {ctrlBtn(() => skipSeconds(5), '+5s', 'Forward 5s', true)}
             {ctrlBtn(skipToNextEvent, '⏭', 'Next event')}
-
             <div style={{ flex: 1, height: 3, background: '#ffffff10', borderRadius: 2, cursor: 'pointer', position: 'relative', margin: '0 6px' }}
               onClick={e => { const r = e.currentTarget.getBoundingClientRect(); if (videoRef.current) videoRef.current.currentTime = Math.round(((e.clientX - r.left) / r.width) * actualDuration()) }}>
               <div style={{ height: '100%', width: `${(time / actualDuration()) * 100}%`, background: GOLD, borderRadius: 2 }}/>
               <div style={{ position: 'absolute', top: '50%', left: `${(time / actualDuration()) * 100}%`, transform: 'translate(-50%,-50%)', width: 10, height: 10, borderRadius: '50%', background: GOLD, boxShadow: `0 0 6px ${GOLD}` }}/>
             </div>
-
             <span style={{ fontFamily: MONO, fontSize: 10, color: MUTED, whiteSpace: 'nowrap' }}>{formatTime(time)} / {formatTime(duration)}</span>
-
             <div style={{ position: 'relative' }}>
               {ctrlBtn(() => { setShowVolume(v => !v); setShowSpeedMenu(false) }, volume === 0 ? '🔇' : volume < 0.5 ? '🔉' : '🔊')}
               {showVolume && (
@@ -403,7 +421,6 @@ export default function VideoAnalyst({
                 </div>
               )}
             </div>
-
             <div style={{ position: 'relative' }}>
               <button onClick={() => { setShowSpeedMenu(v => !v); setShowVolume(false) }}
                 style={{ padding: '0 10px', height: 28, borderRadius: 4, background: '#ffffff0d', border: `1px solid #ffffff12`, color: DIM, fontSize: 11, cursor: 'pointer', fontWeight: 700, fontFamily: FF }}>
@@ -420,23 +437,18 @@ export default function VideoAnalyst({
                 </div>
               )}
             </div>
-
             {ctrlBtn(toggleFullscreen, '⛶', 'Fullscreen')}
-
             <button onClick={() => setShowScanConfirm(true)} disabled={scanState.running || !videoUrl}
               style={{ padding: '5px 14px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: scanState.running ? '#ffffff0d' : GOLD + '22', border: `1px solid ${GOLD}44`, color: GOLD, borderRadius: 4, cursor: 'pointer', whiteSpace: 'nowrap', letterSpacing: 1, opacity: videoUrl ? 1 : 0.3 }}>
               {scanState.running ? `🤖 ${scanState.pct}%` : '🤖 AI SCAN'}
             </button>
           </div>
 
-          {/* AI SCAN CONFIRM */}
           {showScanConfirm && (
             <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }}>
               <div style={{ background: '#111827', border: `1px solid ${BD}`, borderRadius: 12, padding: 28, maxWidth: 400, width: '90%', boxShadow: '0 40px 80px rgba(0,0,0,0.5)' }}>
                 <div style={{ fontSize: 18, fontWeight: 900, marginBottom: 8, color: TEXT, letterSpacing: 1 }}>🤖 RUN AI ANALYSIS?</div>
-                <div style={{ fontSize: 13, color: DIM, lineHeight: 1.7, marginBottom: 20 }}>
-                  Gemini will watch the <strong style={{ color: TEXT }}>entire video</strong> and return all events with timestamps in a single pass.
-                </div>
+                <div style={{ fontSize: 13, color: DIM, lineHeight: 1.7, marginBottom: 20 }}>Gemini will watch the <strong style={{ color: TEXT }}>entire video</strong> and return all events with timestamps in a single pass.</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 22 }}>
                   {[[formatTime(duration), 'Duration'], ['~'+geminiMins+'m', 'Est. time'], ['~£'+geminiCost, 'Cost']].map(([v,l]) => (
                     <div key={l} style={{ background: BG, borderRadius: 8, padding: '12px 8px', textAlign: 'center', border: `1px solid ${BD}` }}>
@@ -453,7 +465,6 @@ export default function VideoAnalyst({
             </div>
           )}
 
-          {/* CODING BAR */}
           <div style={{ background: CARD, borderBottom: `1px solid ${BD}`, padding: '8px 12px', flexShrink: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', gap: 4, marginRight: 6 }}>
@@ -487,7 +498,6 @@ export default function VideoAnalyst({
             )}
           </div>
 
-          {/* TIMELINE + LIST */}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '10px 12px', gap: 8, background: PANEL }}>
             <div style={{ position: 'relative', height: 20, background: '#ffffff06', borderRadius: 3, flexShrink: 0, cursor: 'pointer', border: `1px solid ${BD}` }}
               onClick={e => { const r = e.currentTarget.getBoundingClientRect(); seekTo(Math.round(((e.clientX - r.left) / r.width) * actualDuration())) }}>
@@ -502,7 +512,6 @@ export default function VideoAnalyst({
               })}
               <div style={{ position: 'absolute', top: 0, bottom: 0, left: `${(time / actualDuration()) * 100}%`, width: 2, background: GOLD, zIndex: 4, borderRadius: 1, boxShadow: `0 0 4px ${GOLD}` }}/>
             </div>
-
             <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', flexShrink: 0 }}>
               {Object.keys(sportConfig.events).map(type => (
                 <button key={type} onClick={() => toggleFilter(type)}
@@ -512,7 +521,6 @@ export default function VideoAnalyst({
               ))}
               {filters.length > 0 && <button onClick={() => setFilters([])} style={{ padding: '2px 10px', borderRadius: 3, fontSize: 9, fontWeight: 700, letterSpacing: 1, border: `1px solid ${BD}`, background: 'transparent', color: MUTED, cursor: 'pointer' }}>✕ CLEAR</button>}
             </div>
-
             <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 1 }}>
               {visible.map(e => (
                 <div key={e.id} style={{ borderRadius: 4, background: CARD, border: `1px solid ${BD}` }}>
@@ -618,7 +626,6 @@ export default function VideoAnalyst({
               <div style={{ fontSize: 10, color: MUTED, marginTop: 4, letterSpacing: 1 }}>{stats.away.tries} TRIES · {stats.away.penalties} PEN</div>
             </div>
           </div>
-
           <div style={{ background: CARD, border: `1px solid ${BD}`, borderRadius: 8, padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 2, color: MUTED, marginBottom: 6 }}>BALL IN PLAY</div>
@@ -634,7 +641,6 @@ export default function VideoAnalyst({
               ))}
             </div>
           </div>
-
           <div style={{ background: CARD, border: `1px solid ${BD}`, borderRadius: 8, padding: '16px 20px' }}>
             <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 2, color: MUTED, marginBottom: 16 }}>MATCH STATISTICS</div>
             <div style={{ display: 'grid', gridTemplateColumns: '50px 1fr 110px 1fr 50px', gap: 10, marginBottom: 12 }}>
@@ -652,7 +658,6 @@ export default function VideoAnalyst({
             <StatBar label="SCRUM WON"  hv={stats.home.scrumsWon}    av={stats.away.scrumsWon}/>
             <StatBar label="SCRUM LOST" hv={stats.home.scrumsLost}   av={stats.away.scrumsLost}/>
           </div>
-
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             {[
               { label: 'LINEOUT %', hw: stats.home.lineoutsWon, ht: stats.home.lineoutsTotal, hp: stats.home.lineoutPct, aw: stats.away.lineoutsWon, at: stats.away.lineoutsTotal, ap: stats.away.lineoutPct },
@@ -674,7 +679,6 @@ export default function VideoAnalyst({
               </div>
             ))}
           </div>
-
           <div style={{ background: CARD, border: `1px solid ${BD}`, borderRadius: 8, padding: '16px 20px' }}>
             <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 2, color: MUTED, marginBottom: 12 }}>EVENT BREAKDOWN</div>
             <div style={{ display: 'flex', gap: 16, marginBottom: 12 }}>
@@ -695,6 +699,115 @@ export default function VideoAnalyst({
               </BarChart>
             </ResponsiveContainer>
           </div>
+        </div>
+      )}
+
+      {/* REVIEW TAB */}
+      {tab === 'review' && (
+        <div style={{ padding: 14, flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12, background: PANEL }}>
+          <div style={{ background: CARD, border: `1px solid ${BD}`, borderRadius: 8, padding: '16px 18px' }}>
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, color: MUTED, marginBottom: 14 }}>BUILD REVIEW SET</div>
+            <input value={reviewName} onChange={e => setReviewName(e.target.value)} placeholder="Review name e.g. Defensive Errors v Mountain Ash"
+              style={{ width: '100%', padding: '8px 12px', fontFamily: FF, fontSize: 13, background: BG, border: `1px solid ${BD}`, borderRadius: 4, color: TEXT, outline: 'none', marginBottom: 8, boxSizing: 'border-box' }}/>
+            <input value={reviewDesc} onChange={e => setReviewDesc(e.target.value)} placeholder="Description (optional)"
+              style={{ width: '100%', padding: '8px 12px', fontFamily: FF, fontSize: 13, background: BG, border: `1px solid ${BD}`, borderRadius: 4, color: TEXT, outline: 'none', marginBottom: 12, boxSizing: 'border-box' }}/>
+
+            <div style={{ display: 'flex', gap: 16, marginBottom: 14 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 9, color: MUTED, letterSpacing: 1.5, marginBottom: 6 }}>SECONDS BEFORE EVENT</div>
+                <div style={{ display: 'flex', gap: 4 }}>
+                  {[5, 10, 15, 20].map(s => (
+                    <button key={s} onClick={() => setClipBefore(s)}
+                      style={{ flex: 1, padding: '5px 0', fontFamily: FF, fontSize: 11, fontWeight: 700, borderRadius: 4, border: `1px solid ${clipBefore === s ? GOLD : BD}`, background: clipBefore === s ? GOLD + '22' : 'transparent', color: clipBefore === s ? GOLD : MUTED, cursor: 'pointer' }}>
+                      {s}s
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 9, color: MUTED, letterSpacing: 1.5, marginBottom: 6 }}>SECONDS AFTER EVENT</div>
+                <div style={{ display: 'flex', gap: 4 }}>
+                  {[10, 20, 30, 45].map(s => (
+                    <button key={s} onClick={() => setClipAfter(s)}
+                      style={{ flex: 1, padding: '5px 0', fontFamily: FF, fontSize: 11, fontWeight: 700, borderRadius: 4, border: `1px solid ${clipAfter === s ? GOLD : BD}`, background: clipAfter === s ? GOLD + '22' : 'transparent', color: clipAfter === s ? GOLD : MUTED, cursor: 'pointer' }}>
+                      {s}s
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ fontSize: 9, color: MUTED, letterSpacing: 1.5, marginBottom: 8 }}>SELECT EVENTS — {reviewSelected.length} SELECTED</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: 240, overflowY: 'auto', marginBottom: 12 }}>
+              {visible.length === 0 && <div style={{ fontSize: 12, color: MUTED, padding: '12px 0' }}>No events coded yet — go to Code Match first</div>}
+              {visible.map(e => {
+                const cfg = sportConfig.events[e.event_type]
+                const selected = reviewSelected.includes(e.id)
+                return (
+                  <div key={e.id} onClick={() => toggleReviewEvent(e.id)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 10px', borderRadius: 4, border: `1px solid ${selected ? (cfg?.color ?? GOLD) + '55' : BD}`, background: selected ? (cfg?.color ?? GOLD) + '11' : 'transparent', cursor: 'pointer', transition: 'all 0.1s' }}>
+                    <div style={{ width: 16, height: 16, borderRadius: 3, border: `2px solid ${selected ? cfg?.color ?? GOLD : BD}`, background: selected ? cfg?.color ?? GOLD : 'transparent', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {selected && <span style={{ color: '#000', fontSize: 10, fontWeight: 900 }}>✓</span>}
+                    </div>
+                    <span style={{ padding: '1px 8px', borderRadius: 3, background: (cfg?.color ?? MUTED) + '22', color: cfg?.color ?? MUTED, fontSize: 10, fontWeight: 700, border: `1px solid ${(cfg?.color ?? MUTED) + '44'}` }}>{e.event_type}</span>
+                    <span style={{ fontFamily: MONO, fontSize: 10, color: MUTED }}>{formatTime(e.timestamp_secs)}</span>
+                    <span style={{ fontSize: 11, color: e.team === 'home' ? homeTeam.color : awayTeam.color, fontWeight: 700 }}>{e.team === 'home' ? homeTeam.abbr : awayTeam.abbr}</span>
+                    {e.outcome && <span style={{ fontSize: 10, color: MUTED, fontStyle: 'italic' }}>{e.outcome}</span>}
+                    {e.notes && <span style={{ fontSize: 10, color: MUTED, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 120 }}>📝 {e.notes}</span>}
+                  </div>
+                )
+              })}
+            </div>
+
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <button onClick={() => setReviewSelected(visible.map(e => e.id))}
+                style={{ padding: '7px 14px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: 'transparent', border: `1px solid ${BD}`, color: MUTED, borderRadius: 4, cursor: 'pointer', letterSpacing: 1 }}>
+                SELECT ALL
+              </button>
+              <button onClick={() => setReviewSelected([])}
+                style={{ padding: '7px 14px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: 'transparent', border: `1px solid ${BD}`, color: MUTED, borderRadius: 4, cursor: 'pointer', letterSpacing: 1 }}>
+                CLEAR
+              </button>
+              <button onClick={createReview} disabled={buildingReview || !reviewName.trim() || reviewSelected.length === 0}
+                style={{ flex: 1, padding: '9px 0', fontFamily: FF, fontSize: 13, fontWeight: 900, background: reviewName.trim() && reviewSelected.length > 0 ? GOLD : '#ffffff0d', border: 'none', color: reviewName.trim() && reviewSelected.length > 0 ? '#000' : MUTED, borderRadius: 4, cursor: reviewName.trim() && reviewSelected.length > 0 ? 'pointer' : 'default', letterSpacing: 1 }}>
+                {buildingReview ? 'CREATING…' : `🎬 CREATE REVIEW (${reviewSelected.length} clips)`}
+              </button>
+            </div>
+
+            {reviewLink && (
+              <div style={{ marginTop: 12, background: '#16a34a22', border: '1px solid #16a34a44', borderRadius: 6, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 11, color: '#4ade80', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>✓ {reviewLink}</span>
+                <button onClick={() => copyReviewLink(reviewLink)}
+                  style={{ padding: '5px 12px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: '#16a34a', border: 'none', color: '#fff', borderRadius: 4, cursor: 'pointer' }}>
+                  COPY
+                </button>
+              </div>
+            )}
+          </div>
+
+          {reviewSets.length > 0 && (
+            <div style={{ background: CARD, border: `1px solid ${BD}`, borderRadius: 8, padding: '16px 18px' }}>
+              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, color: MUTED, marginBottom: 12 }}>SAVED REVIEWS</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {reviewSets.map(rs => (
+                  <div key={rs.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: BG, borderRadius: 4, border: `1px solid ${BD}` }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>{rs.name}</div>
+                      <div style={{ fontSize: 10, color: MUTED, marginTop: 2 }}>{rs.event_ids?.length ?? 0} clips · {rs.clip_before_secs}s before · {rs.clip_after_secs}s after</div>
+                    </div>
+                    <button onClick={() => copyReviewLink(`${window.location.origin}/review/${rs.token}`)}
+                      style={{ padding: '5px 12px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: GOLD + '22', border: `1px solid ${GOLD}44`, color: GOLD, borderRadius: 4, cursor: 'pointer', letterSpacing: 1 }}>
+                      🔗 COPY
+                    </button>
+                    <a href={`/review/${rs.token}`} target="_blank" rel="noreferrer"
+                      style={{ padding: '5px 12px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: '#ffffff0d', border: `1px solid ${BD}`, color: DIM, borderRadius: 4, cursor: 'pointer', letterSpacing: 1, textDecoration: 'none' }}>
+                      ▶ OPEN
+                    </a>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
