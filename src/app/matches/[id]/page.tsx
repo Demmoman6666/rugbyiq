@@ -7,7 +7,7 @@ import type { Match } from '@/lib/types'
 import Link from 'next/link'
 
 const FF = "'Barlow Condensed',system-ui,sans-serif"
-const BD='#1e2040'
+const BD = '#e2e8f0'
 
 export default function MatchPage() {
   const { id } = useParams<{ id: string }>()
@@ -18,6 +18,7 @@ export default function MatchPage() {
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
   const [uploadPct, setUploadPct] = useState(0)
+  const [uploadError, setUploadError] = useState('')
 
   useEffect(() => {
     const load = async () => {
@@ -32,101 +33,129 @@ export default function MatchPage() {
 
   const uploadVideo = async (file: File) => {
     if (!match) return
-    console.log('Starting upload:', file.name, file.size)
     setUploading(true)
     setUploadPct(0)
+    setUploadError('')
 
-    const path = `${match.id}/${Date.now()}-${file.name}`
-    console.log('Upload path:', path)
+    try {
+      // Get presigned URL from R2
+      const res = await fetch('/api/upload-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          filename: file.name,
+          contentType: file.type,
+          matchId: match.id
+        })
+      })
 
-    const { data: uploadData, error } = await supabase.storage
-      .from('match-videos')
-      .upload(path, file, { cacheControl: '3600', upsert: false })
+      const { uploadUrl, publicUrl, error: urlError } = await res.json()
+      if (urlError) throw new Error(urlError)
 
-    console.log('Upload result:', uploadData, 'Error:', error)
+      // Upload directly to R2 with progress tracking
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest()
+        xhr.upload.addEventListener('progress', e => {
+          if (e.lengthComputable) {
+            setUploadPct(Math.round((e.loaded / e.total) * 100))
+          }
+        })
+        xhr.addEventListener('load', () => {
+          if (xhr.status >= 200 && xhr.status < 300) resolve()
+          else reject(new Error(`Upload failed: ${xhr.status}`))
+        })
+        xhr.addEventListener('error', () => reject(new Error('Upload failed')))
+        xhr.open('PUT', uploadUrl)
+        xhr.setRequestHeader('Content-Type', file.type)
+        xhr.send(file)
+      })
 
-    if (error) {
-      console.error('Upload failed:', error.message)
+      // Save public URL to match
+      const { data: updated } = await supabase
+        .from('matches')
+        .update({ video_url: publicUrl, video_public_url: publicUrl, status: 'coding' })
+        .eq('id', match.id)
+        .select()
+        .single()
+
+      if (updated) setMatch(updated as Match)
+    } catch (err: any) {
+      setUploadError(err.message)
+    } finally {
       setUploading(false)
-      return
     }
-
-    setUploadPct(100)
-
-    const { data: urlData } = supabase.storage.from('match-videos').getPublicUrl(path)
-    const publicUrl = urlData.publicUrl
-    console.log('Public URL:', publicUrl)
-
-    const { data: updated, error: updateErr } = await supabase
-      .from('matches')
-      .update({ video_url: path, video_public_url: publicUrl, status: 'coding' })
-      .eq('id', match.id)
-      .select()
-      .single()
-
-    console.log('Match update result:', updated, 'Error:', updateErr)
-
-    setMatch({ ...match, video_url: path, video_public_url: publicUrl, status: 'coding' })
-    setUploading(false)
   }
 
   if (loading) return (
-    <div style={{ fontFamily: FF, background: '#08090e', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6666aa' }}>
+    <div style={{ fontFamily: FF, background: '#f8fafc', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
       Loading...
     </div>
   )
 
   if (!match) return (
-    <div style={{ fontFamily: FF, background: '#08090e', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#dde1f0' }}>
+    <div style={{ fontFamily: FF, background: '#f8fafc', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0f172a' }}>
       <div style={{ textAlign: 'center' }}>
         <div style={{ marginBottom: 12 }}>Match not found</div>
-        <Link href="/dashboard" style={{ color: '#00d4aa' }}>← Back to dashboard</Link>
+        <Link href="/dashboard" style={{ color: '#0ea5e9' }}>← Back to dashboard</Link>
       </div>
     </div>
   )
 
-  if (!match.video_public_url) return (
-    <div style={{ fontFamily: FF, background: '#08090e', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-      <div style={{ background: '#0e0f1c', border: `1px solid ${BD}`, borderRadius: 12, padding: '40px 36px', maxWidth: 480, width: '100%', textAlign: 'center' }}>
-        <Link href="/dashboard" style={{ fontSize: 13, color: '#6666aa', textDecoration: 'none', display: 'block', marginBottom: 24, textAlign: 'left' }}>← Dashboard</Link>
-        <div style={{ fontSize: 22, fontWeight: 900, marginBottom: 4, color: '#dde1f0' }}>
+  if (!match.video_public_url && match.status !== 'coding') return (
+    <div style={{ fontFamily: FF, background: '#f8fafc', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+      <div style={{ background: '#ffffff', border: `1px solid ${BD}`, borderRadius: 16, padding: '40px 36px', maxWidth: 480, width: '100%', textAlign: 'center', boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
+        <Link href="/dashboard" style={{ fontSize: 13, color: '#64748b', textDecoration: 'none', display: 'block', marginBottom: 24, textAlign: 'left' }}>← Dashboard</Link>
+
+        <div style={{ fontSize: 22, fontWeight: 900, marginBottom: 4, color: '#0f172a' }}>
           <span style={{ color: match.home_color }}>{match.home_team}</span>
-          <span style={{ color: '#4a4a7a', margin: '0 10px' }}>vs</span>
+          <span style={{ color: '#cbd5e1', margin: '0 10px' }}>vs</span>
           <span style={{ color: match.away_color }}>{match.away_team}</span>
         </div>
-        {match.competition && <div style={{ fontSize: 13, color: '#6666aa', marginBottom: 32 }}>{match.competition}</div>}
+        {match.competition && <div style={{ fontSize: 13, color: '#64748b', marginBottom: 32 }}>{match.competition}</div>}
+
         <div
-          style={{ border: '2px dashed #2a2a4a', borderRadius: 10, padding: '40px 20px', cursor: 'pointer', marginBottom: 16 }}
-          onDragOver={e => e.preventDefault()}
-          onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) uploadVideo(f) }}
-          onClick={() => fileRef.current?.click()}
+          style={{ border: `2px dashed ${BD}`, borderRadius: 10, padding: '40px 20px', cursor: uploading ? 'default' : 'pointer', marginBottom: 16, background: '#f8fafc', transition: 'border-color 0.15s' }}
+          onDragOver={e => { e.preventDefault(); e.currentTarget.style.borderColor = '#0ea5e9' }}
+          onDragLeave={e => { e.currentTarget.style.borderColor = BD }}
+          onDrop={e => { e.preventDefault(); e.currentTarget.style.borderColor = BD; const f = e.dataTransfer.files[0]; if (f && !uploading) uploadVideo(f) }}
+          onClick={() => !uploading && fileRef.current?.click()}
         >
           {uploading ? (
             <>
               <div style={{ fontSize: 32, marginBottom: 12 }}>⏳</div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: '#00d4aa', marginBottom: 8 }}>Uploading... {uploadPct}%</div>
-              <div style={{ height: 4, background: '#1a1a2a', borderRadius: 2 }}>
-                <div style={{ height: '100%', width: `${uploadPct}%`, background: '#00d4aa', borderRadius: 2, transition: 'width 0.3s' }}/>
+              <div style={{ fontSize: 16, fontWeight: 700, color: '#0ea5e9', marginBottom: 12 }}>Uploading… {uploadPct}%</div>
+              <div style={{ height: 6, background: '#e2e8f0', borderRadius: 3, overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${uploadPct}%`, background: '#0ea5e9', borderRadius: 3, transition: 'width 0.3s' }}/>
               </div>
+              <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 10 }}>Don't close this tab while uploading</div>
             </>
           ) : (
             <>
               <div style={{ fontSize: 40, marginBottom: 12 }}>📹</div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: '#dde1f0', marginBottom: 8 }}>Drop footage here</div>
-              <div style={{ fontSize: 13, color: '#6666aa' }}>MP4, MOV, or WebM · up to 50MB</div>
-              <div style={{ fontSize: 13, color: '#00d4aa', marginTop: 12, fontWeight: 700 }}>or click to browse</div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: '#0f172a', marginBottom: 8 }}>Drop footage here</div>
+              <div style={{ fontSize: 13, color: '#64748b' }}>MP4, MOV, or WebM</div>
+              <div style={{ fontSize: 12, color: '#10b981', marginTop: 6, fontWeight: 700 }}>✓ Up to 5GB supported</div>
+              <div style={{ fontSize: 13, color: '#0ea5e9', marginTop: 12, fontWeight: 700 }}>or click to browse</div>
             </>
           )}
         </div>
+
+        {uploadError && (
+          <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', fontSize: 12, padding: '10px 14px', borderRadius: 8, marginBottom: 12 }}>
+            ⚠️ {uploadError}
+          </div>
+        )}
+
         <button
           onClick={async () => {
             await supabase.from('matches').update({ status: 'coding' }).eq('id', match.id)
             setMatch({ ...match, status: 'coding' })
           }}
-          style={{ background: 'none', border: 'none', color: '#6666aa', fontFamily: FF, fontSize: 13, cursor: 'pointer', textDecoration: 'underline' }}
+          style={{ background: 'none', border: 'none', color: '#94a3b8', fontFamily: FF, fontSize: 13, cursor: 'pointer', textDecoration: 'underline' }}
         >
           Skip — code without video
         </button>
+
         <input
           ref={fileRef}
           type="file"
@@ -145,6 +174,3 @@ export default function MatchPage() {
       awayTeam={{ id: 'away', name: match.away_team, color: match.away_color, abbr: match.away_team.split(' ').map((w: string) => w[0]).join('').slice(0, 3).toUpperCase() }}
       videoUrl={match.video_public_url}
       videoDuration={match.video_duration ?? 4800}
-    />
-  )
-}
