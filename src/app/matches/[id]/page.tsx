@@ -38,7 +38,6 @@ export default function MatchPage() {
     setUploadError('')
 
     try {
-      // Get presigned URL from R2
       const res = await fetch('/api/upload-url', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -52,7 +51,6 @@ export default function MatchPage() {
       const { uploadUrl, publicUrl, error: urlError } = await res.json()
       if (urlError) throw new Error(urlError)
 
-      // Upload directly to R2 with progress tracking
       await new Promise<void>((resolve, reject) => {
         const xhr = new XMLHttpRequest()
         xhr.upload.addEventListener('progress', e => {
@@ -70,7 +68,6 @@ export default function MatchPage() {
         xhr.send(file)
       })
 
-      // Save public URL to match
       const { data: updated } = await supabase
         .from('matches')
         .update({ video_url: publicUrl, video_public_url: publicUrl, status: 'coding' })
@@ -174,3 +171,6 @@ export default function MatchPage() {
       awayTeam={{ id: 'away', name: match.away_team, color: match.away_color, abbr: match.away_team.split(' ').map((w: string) => w[0]).join('').slice(0, 3).toUpperCase() }}
       videoUrl={match.video_public_url}
       videoDuration={match.video_duration ?? 4800}
+    />
+  )
+}
