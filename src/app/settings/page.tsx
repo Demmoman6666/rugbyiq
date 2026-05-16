@@ -83,7 +83,6 @@ export default function SettingsPage() {
       website: form.website,
       primary_color: form.primary_color,
       secondary_color: form.secondary_color,
-      sport: form.sport,
     }).eq('id', org.id)
     setSaving(false)
     setSaved(true)
@@ -131,6 +130,8 @@ export default function SettingsPage() {
     </div>
   )
 
+  const currentSport = SPORTS_LIST.find(s => s.id === form.sport)
+
   return (
     <div style={{ fontFamily: FF, background: BG, minHeight: '100vh' }}>
 
@@ -151,20 +152,15 @@ export default function SettingsPage() {
           <Field label="HOME GROUND" value={form.home_ground} onChange={(v: string) => setForm(f => ({ ...f, home_ground: v }))} placeholder="e.g. Ystrad Fawr" />
           <Field label="WEBSITE" value={form.website} onChange={(v: string) => setForm(f => ({ ...f, website: v }))} placeholder="https://..." />
 
-          {/* SPORT SELECTOR */}
+          {/* SPORT — LOCKED */}
           <div style={{ marginBottom: 20 }}>
             <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, color: MUTED, display: 'block', marginBottom: 8 }}>SPORT</label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-              {SPORTS_LIST.map(s => (
-                <button
-                  key={s.id}
-                  onClick={() => setForm(f => ({ ...f, sport: s.id }))}
-                  style={{ padding: '10px 8px', borderRadius: 8, border: form.sport === s.id ? `2px solid ${GOLD}` : `1px solid ${BD}`, background: form.sport === s.id ? '#f0f9ff' : '#fff', cursor: 'pointer', fontFamily: FF, fontSize: 13, fontWeight: 700, color: form.sport === s.id ? '#0284c7' : MUTED, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}
-                >
-                  <span style={{ fontSize: 20 }}>{s.icon}</span>
-                  {s.name}
-                </button>
-              ))}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: '#f8fafc', border: `1px solid ${BD}`, borderRadius: 8, padding: '12px 16px' }}>
+              <span style={{ fontSize: 24 }}>{currentSport?.icon}</span>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: TEXT }}>{currentSport?.name}</div>
+                <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>🔒 Sport is locked after club creation. Contact support to change it.</div>
+              </div>
             </div>
           </div>
 
