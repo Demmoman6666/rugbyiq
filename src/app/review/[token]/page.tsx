@@ -4,13 +4,13 @@ import { useEffect, useState, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import { formatTime } from '@/lib/stats'
 
-const FF   = "'Barlow Condensed', system-ui, sans-serif"
-const MONO = "'DM Mono', 'Courier New', monospace"
-const GOLD = '#e8a020'
-const NAV  = '#060912'
-const BD   = '#1e2d3d'
+const FF    = "'Barlow Condensed', system-ui, sans-serif"
+const MONO  = "'DM Mono', 'Courier New', monospace"
+const GOLD  = '#e8a020'
+const NAV   = '#060912'
+const BD    = '#1e2d3d'
 const MUTED = '#4a5568'
-const DIM  = '#94a3b8'
+const DIM   = '#94a3b8'
 
 export default function ReviewPage() {
   const { token } = useParams<{ token: string }>()
@@ -28,29 +28,24 @@ export default function ReviewPage() {
   useEffect(() => {
     const load = async () => {
       const res = await fetch(`/api/review?token=${token}`)
-      const { reviewSet } = await res.json()
-      if (!reviewSet) { setLoading(false); return }
-      setReviewSet(reviewSet)
-
+      const { reviewSet: rs } = await res.json()
+      if (!rs) { setLoading(false); return }
+      setReviewSet(rs)
       const [evRes, matchRes] = await Promise.all([
-fetch(`/api/events?match_id=${reviewSet.match_id}`),
-fetch(`/api/matches/${reviewSet.match_id}`)
+        fetch(`/api/events?match_id=${rs.match_id}`),
+        fetch(`/api/matches/${rs.match_id}`)
       ])
       const evData = await evRes.json()
       const matchData = await matchRes.json()
-
-      const orderedEvents = reviewSet.event_ids
+      const orderedEvents = rs.event_ids
         .map((id: string) => evData.events?.find((e: any) => e.id === id))
         .filter(Boolean)
-
       setEvents(orderedEvents)
       setMatch(matchData.match)
       setLoading(false)
     }
     load()
   }, [token])
-
-  const currentEvent = events[currentIdx]
 
   const playClip = (idx: number) => {
     if (!videoRef.current || !events[idx]) return
@@ -60,7 +55,6 @@ fetch(`/api/matches/${reviewSet.match_id}`)
     videoRef.current.play()
     setCurrentIdx(idx)
     setPlaying(true)
-
     if (clipTimer.current) clearTimeout(clipTimer.current)
     const clipDuration = (reviewSet.clip_before_secs ?? 10) + (reviewSet.clip_after_secs ?? 20)
     clipTimer.current = setTimeout(() => {
@@ -73,17 +67,8 @@ fetch(`/api/matches/${reviewSet.match_id}`)
     }, clipDuration * 1000)
   }
 
-  const handlePrev = () => {
-    if (clipTimer.current) clearTimeout(clipTimer.current)
-    playClip(Math.max(0, currentIdx - 1))
-  }
-
-  const handleNext = () => {
-    if (clipTimer.current) clearTimeout(clipTimer.current)
-    playClip(Math.min(events.length - 1, currentIdx + 1))
-  }
-
-  const handleStart = () => playClip(0)
+  const handlePrev = () => { if (clipTimer.current) clearTimeout(clipTimer.current); playClip(Math.max(0, currentIdx - 1)) }
+  const handleNext = () => { if (clipTimer.current) clearTimeout(clipTimer.current); playClip(Math.min(events.length - 1, currentIdx + 1)) }
 
   if (loading) return (
     <div style={{ fontFamily: FF, background: NAV, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: DIM }}>
@@ -96,6 +81,8 @@ fetch(`/api/matches/${reviewSet.match_id}`)
       Review not found.
     </div>
   )
+
+  const currentEvent = events[currentIdx]
 
   return (
     <div style={{ fontFamily: FF, background: '#0a0e1a', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -120,11 +107,11 @@ fetch(`/api/matches/${reviewSet.match_id}`)
 
         {/* VIDEO PANEL */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-          <div style={{ position: 'relative', background: '#000', flex: 1 }}>
+          <div style={{ position: 'relative', background: '#000' }}>
             <video
               ref={videoRef}
               src={match.video_public_url}
-              style={{ width: '100%', height: '100%', maxHeight: '75vh', objectFit: 'contain', display: 'block' }}
+              style={{ width: '100%', height: 'auto', maxHeight: '72vh', objectFit: 'contain', display: 'block' }}
               playsInline
               onPlay={() => setPlaying(true)}
               onPause={() => setPlaying(false)}
@@ -156,7 +143,7 @@ fetch(`/api/matches/${reviewSet.match_id}`)
             </button>
 
             {!playing ? (
-              <button onClick={handleStart}
+              <button onClick={() => playClip(currentIdx)}
                 style={{ padding: '8px 24px', fontFamily: FF, fontSize: 13, fontWeight: 900, background: GOLD, border: 'none', color: '#000', borderRadius: 4, cursor: 'pointer', letterSpacing: 1 }}>
                 ▶ {currentIdx === 0 ? 'START REVIEW' : 'PLAY'}
               </button>
@@ -185,11 +172,25 @@ fetch(`/api/matches/${reviewSet.match_id}`)
         {/* CLIP LIST */}
         <div style={{ width: 280, background: '#0d1117', borderLeft: `1px solid ${BD}`, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
           <div style={{ padding: '12px 16px', borderBottom: `1px solid ${BD}`, fontSize: 10, fontWeight: 700, letterSpacing: 2, color: MUTED }}>
-            CLIPS
+            CLIPS — {events.length} TOTAL
           </div>
           {events.map((ev, idx) => (
-            <div key={ev.id} onClick={() => { if (clipTimer.current) clearTimeout(clipTimer.current); playClip(idx) }}
+            <div key={ev.id}
+              onClick={() => { if (clipTimer.current) clearTimeout(clipTimer.current); playClip(idx) }}
               style={{ padding: '12px 16px', borderBottom: `1px solid ${BD}`, cursor: 'pointer', background: idx === currentIdx ? '#ffffff08' : 'transparent', borderLeft: idx === currentIdx ? `3px solid ${GOLD}` : '3px solid transparent', transition: 'background 0.15s' }}
               onMouseEnter={e => { if (idx !== currentIdx) e.currentTarget.style.background = '#ffffff04' }}
               onMouseLeave={e => { if (idx !== currentIdx) e.currentTarget.style.background = 'transparent' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, ma
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, color: idx === currentIdx ? GOLD : MUTED }}>{String(idx + 1).padStart(2, '0')}</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: idx === currentIdx ? '#fff' : DIM }}>{ev.event_type}</span>
+                <span style={{ fontFamily: MONO, fontSize: 10, color: MUTED, marginLeft: 'auto' }}>{formatTime(ev.timestamp_secs)}</span>
+              </div>
+              {ev.outcome && <div style={{ fontSize: 10, color: MUTED, fontStyle: 'italic' }}>{ev.outcome}</div>}
+              {ev.notes && <div style={{ fontSize: 10, color: '#64748b', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>📝 {ev.notes}</div>}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
