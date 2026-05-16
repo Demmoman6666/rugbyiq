@@ -332,8 +332,7 @@ export default function VideoAnalyst({
           {/* VIDEO */}
           <div style={{ position: 'relative', width: '100%', flexShrink: 0, background: '#000' }}>
             {videoUrl ? (
-              <video ref={videoRef} src={videoUrl} crossOrigin="anonymous" style={{ width: '100%', maxHeight: '42vh', objectFit: 'contain', display: 'block' }} playsInline preload="metadata"/>
-            ) : (
+<video ref={videoRef} src={videoUrl} crossOrigin="anonymous" style={{ width: '100%', maxHeight: '55vh', objectFit: 'cover', display: 'block' }} playsInline preload="metadata"/>            ) : (
               <div style={{ width: '100%', height: '36vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#050810' }}>
                 <div style={{ textAlign: 'center', color: MUTED }}>
                   <div style={{ fontSize: 36, marginBottom: 10 }}>📹</div>
