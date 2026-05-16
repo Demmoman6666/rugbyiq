@@ -43,19 +43,19 @@ export async function POST(req: NextRequest) {
     const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL}/invite/${token}`
 
     await resend.emails.send({
-      from: 'RugbyIQ <onboarding@resend.dev>',
+      from: 'ClubCode <noreply@clubcode.co.uk>',
       to: email,
-      subject: `You've been invited to join ${org?.name ?? 'a club'} on RugbyIQ`,
+      subject: `You've been invited to join ${org?.name ?? 'a club'} on ClubCode`,
       html: `
         <div style="font-family: system-ui, sans-serif; max-width: 500px; margin: 0 auto; padding: 32px; background: #f8fafc;">
           <div style="background: #ffffff; border-radius: 12px; padding: 32px; border: 1px solid #e2e8f0;">
             <h1 style="font-size: 24px; font-weight: 900; letter-spacing: 2px; color: #0f172a; margin: 0 0 8px;">
-              RUGBY<span style="color: #0ea5e9;">IQ</span>
+              CLUB<span style="color: #0ea5e9;">CODE</span>
             </h1>
             <p style="font-size: 13px; color: #64748b; margin: 0 0 28px; letter-spacing: 1px;">MATCH ANALYSIS PLATFORM</p>
             <h2 style="font-size: 20px; font-weight: 700; color: #0f172a; margin: 0 0 12px;">You've been invited!</h2>
             <p style="font-size: 15px; color: #475569; line-height: 1.6; margin: 0 0 24px;">
-              You've been invited to join <strong>${org?.name ?? 'a club'}</strong> on RugbyIQ as an ${role}.
+              You've been invited to join <strong>${org?.name ?? 'a club'}</strong> on ClubCode as an ${role}.
             </p>
             <a href="${inviteUrl}" style="display: inline-block; padding: 13px 28px; background: #0f172a; color: #ffffff; font-weight: 700; font-size: 15px; border-radius: 8px; text-decoration: none; letter-spacing: 1px;">
               Accept Invite →
