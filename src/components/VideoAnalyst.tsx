@@ -54,6 +54,14 @@ export default function VideoAnalyst({
   const [showSpeedMenu, setShowSpeedMenu] = useState(false)
   const [showVolume, setShowVolume]       = useState(false)
   const [sportConfig, setSportConfig]     = useState(getSportConfig('rugby'))
+  const [toast, setToast]                 = useState<{ label: string; color: string; team: string } | null>(null)
+  const toastTimer                        = useRef<NodeJS.Timeout | null>(null)
+
+  const showToast = (label: string, color: string, team: string) => {
+    if (toastTimer.current) clearTimeout(toastTimer.current)
+    setToast({ label, color, team })
+    toastTimer.current = setTimeout(() => setToast(null), 1500)
+  }
 
   useEffect(() => {
     const load = async () => {
@@ -105,13 +113,13 @@ export default function VideoAnalyst({
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
-      if (['INPUT','TEXTAREA'].includes((e.target as HTMLElement).tagName)) return
+      if (!document.fullscreenElement && ['INPUT','TEXTAREA'].includes((e.target as HTMLElement).tagName)) return
       if (e.key === ' ') { e.preventDefault(); videoRef.current?.paused ? videoRef.current.play() : videoRef.current?.pause() }
       const type = Object.keys(sportConfig.events).find(k => sportConfig.events[k].hotkey === e.key.toUpperCase())
       if (type) codeEvent(type)
     }
-    window.addEventListener('keydown', h)
-    return () => window.removeEventListener('keydown', h)
+    document.addEventListener('keydown', h)
+    return () => document.removeEventListener('keydown', h)
   })
 
   const actualDuration = () => videoRef.current?.duration || duration
@@ -135,13 +143,16 @@ export default function VideoAnalyst({
   }, [])
 
   const codeEvent = async (type: string) => {
+    const cfg = sportConfig.events[type]
+    const team = activeTeam
     const { data } = await supabase.from('events').insert({
-      match_id: matchId, event_type: type, timestamp_secs: time, team: activeTeam, ai_detected: false
+      match_id: matchId, event_type: type, timestamp_secs: time, team, ai_detected: false
     }).select().single()
     if (data) {
       setEvents(prev => [...prev, data as MatchEvent])
-      if (sportConfig.events[type]?.outcomes) setLastEv(data as MatchEvent)
+      if (cfg?.outcomes) setLastEv(data as MatchEvent)
       else setLastEv(null)
+      showToast(cfg?.label ?? type, cfg?.color ?? GOLD, team === 'home' ? homeTeam.abbr : awayTeam.abbr)
     }
   }
 
@@ -285,7 +296,6 @@ export default function VideoAnalyst({
           <div style={{ width: 1, height: 20, background: BD }}/>
           <div style={{ fontSize: 10, letterSpacing: 3, color: MUTED }}>ANALYST</div>
         </div>
-
         <div style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, color: homeTeam.color, opacity: 0.8 }}>{homeTeam.abbr}</div>
@@ -301,7 +311,6 @@ export default function VideoAnalyst({
             <div style={{ fontSize: 40, fontWeight: 900, color: awayTeam.color, lineHeight: 1 }}>{stats.away.score}</div>
           </div>
         </div>
-
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: 11, color: MUTED }}>{homeTeam.name} vs {awayTeam.name}</div>
@@ -332,7 +341,8 @@ export default function VideoAnalyst({
           {/* VIDEO */}
           <div style={{ position: 'relative', width: '100%', flexShrink: 0, background: '#000' }}>
             {videoUrl ? (
-<video ref={videoRef} src={videoUrl} crossOrigin="anonymous" style={{ width: '100%', maxHeight: '55vh', objectFit: 'cover', display: 'block' }} playsInline preload="metadata"/>            ) : (
+              <video ref={videoRef} src={videoUrl} crossOrigin="anonymous" style={{ width: '100%', height: 'auto', maxHeight: '52vh', objectFit: 'contain', display: 'block' }} playsInline preload="metadata"/>
+            ) : (
               <div style={{ width: '100%', height: '36vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#050810' }}>
                 <div style={{ textAlign: 'center', color: MUTED }}>
                   <div style={{ fontSize: 36, marginBottom: 10 }}>📹</div>
@@ -340,8 +350,28 @@ export default function VideoAnalyst({
                 </div>
               </div>
             )}
+
+            {/* TIMER OVERLAY */}
             <div style={{ position: 'absolute', top: 10, left: 12, background: 'rgba(0,0,0,0.8)', color: GOLD, fontFamily: MONO, fontSize: 16, padding: '3px 10px', borderRadius: 3, letterSpacing: 3 }}>{formatTime(time)}</div>
             <div style={{ position: 'absolute', top: 10, right: 12, background: 'rgba(0,0,0,0.8)', color: DIM, fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 3, letterSpacing: 2 }}>{time < duration / 2 ? '1ST HALF' : '2ND HALF'}</div>
+
+            {/* TOAST CONFIRMATION */}
+            {toast && (
+              <div style={{
+                position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)',
+                background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)',
+                border: `1px solid ${toast.color}55`,
+                borderRadius: 6, padding: '8px 20px',
+                display: 'flex', alignItems: 'center', gap: 10,
+                zIndex: 10, pointerEvents: 'none',
+                animation: 'fadeIn 0.15s ease'
+              }}>
+                <div style={{ width: 8, height: 8, borderRadius: '50%', background: toast.color, boxShadow: `0 0 8px ${toast.color}` }}/>
+                <span style={{ color: toast.color, fontWeight: 700, fontSize: 14, letterSpacing: 1 }}>{toast.label}</span>
+                <span style={{ color: DIM, fontSize: 11 }}>{toast.team}</span>
+                <span style={{ color: MUTED, fontFamily: MONO, fontSize: 11 }}>{formatTime(time)}</span>
+              </div>
+            )}
           </div>
 
           {/* VIDEO CONTROLS */}
@@ -459,7 +489,6 @@ export default function VideoAnalyst({
 
           {/* TIMELINE + LIST */}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '10px 12px', gap: 8, background: PANEL }}>
-            {/* TIMELINE */}
             <div style={{ position: 'relative', height: 20, background: '#ffffff06', borderRadius: 3, flexShrink: 0, cursor: 'pointer', border: `1px solid ${BD}` }}
               onClick={e => { const r = e.currentTarget.getBoundingClientRect(); seekTo(Math.round(((e.clientX - r.left) / r.width) * actualDuration())) }}>
               <div style={{ position: 'absolute', top: 0, bottom: 0, left: '50%', width: 1, background: '#ffffff08' }}/>
@@ -474,7 +503,6 @@ export default function VideoAnalyst({
               <div style={{ position: 'absolute', top: 0, bottom: 0, left: `${(time / actualDuration()) * 100}%`, width: 2, background: GOLD, zIndex: 4, borderRadius: 1, boxShadow: `0 0 4px ${GOLD}` }}/>
             </div>
 
-            {/* FILTERS */}
             <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', flexShrink: 0 }}>
               {Object.keys(sportConfig.events).map(type => (
                 <button key={type} onClick={() => toggleFilter(type)}
@@ -485,7 +513,6 @@ export default function VideoAnalyst({
               {filters.length > 0 && <button onClick={() => setFilters([])} style={{ padding: '2px 10px', borderRadius: 3, fontSize: 9, fontWeight: 700, letterSpacing: 1, border: `1px solid ${BD}`, background: 'transparent', color: MUTED, cursor: 'pointer' }}>✕ CLEAR</button>}
             </div>
 
-            {/* EVENT LIST */}
             <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 1 }}>
               {visible.map(e => (
                 <div key={e.id} style={{ borderRadius: 4, background: CARD, border: `1px solid ${BD}` }}>
@@ -574,8 +601,6 @@ export default function VideoAnalyst({
       {/* STATS TAB */}
       {tab === 'stats' && (
         <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 10, overflowY: 'auto', flex: 1, background: PANEL }}>
-
-          {/* SCOREBOARD */}
           <div style={{ background: NAV, borderRadius: 8, padding: '20px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: `1px solid ${BD}` }}>
             <div>
               <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, color: homeTeam.color, opacity: 0.8 }}>{homeTeam.name.toUpperCase()}</div>
@@ -594,7 +619,6 @@ export default function VideoAnalyst({
             </div>
           </div>
 
-          {/* BALL IN PLAY */}
           <div style={{ background: CARD, border: `1px solid ${BD}`, borderRadius: 8, padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 2, color: MUTED, marginBottom: 6 }}>BALL IN PLAY</div>
@@ -611,7 +635,6 @@ export default function VideoAnalyst({
             </div>
           </div>
 
-          {/* STAT BARS */}
           <div style={{ background: CARD, border: `1px solid ${BD}`, borderRadius: 8, padding: '16px 20px' }}>
             <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 2, color: MUTED, marginBottom: 16 }}>MATCH STATISTICS</div>
             <div style={{ display: 'grid', gridTemplateColumns: '50px 1fr 110px 1fr 50px', gap: 10, marginBottom: 12 }}>
@@ -630,7 +653,6 @@ export default function VideoAnalyst({
             <StatBar label="SCRUM LOST" hv={stats.home.scrumsLost}   av={stats.away.scrumsLost}/>
           </div>
 
-          {/* SUCCESS RATES */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             {[
               { label: 'LINEOUT %', hw: stats.home.lineoutsWon, ht: stats.home.lineoutsTotal, hp: stats.home.lineoutPct, aw: stats.away.lineoutsWon, at: stats.away.lineoutsTotal, ap: stats.away.lineoutPct },
@@ -653,7 +675,6 @@ export default function VideoAnalyst({
             ))}
           </div>
 
-          {/* BAR CHART */}
           <div style={{ background: CARD, border: `1px solid ${BD}`, borderRadius: 8, padding: '16px 20px' }}>
             <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 2, color: MUTED, marginBottom: 12 }}>EVENT BREAKDOWN</div>
             <div style={{ display: 'flex', gap: 16, marginBottom: 12 }}>
