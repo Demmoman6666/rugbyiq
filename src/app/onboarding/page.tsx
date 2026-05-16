@@ -9,7 +9,6 @@ const NAV  = '#0f172a'
 const GOLD = '#0ea5e9'
 const FF   = "'Barlow Condensed', system-ui, sans-serif"
 const MUTED= '#64748b'
-const BD   = '#e2e8f0'
 
 export default function OnboardingPage() {
   const supabase = createClient()
@@ -28,13 +27,14 @@ export default function OnboardingPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not logged in')
       const slug = clubName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-')
-      const { data: org, error: orgErr } = await supabase
-        .from('organisations')
-        .insert({ name: clubName, slug, plan: 'starter', sport })
-        .select()
-        .single()
-      if (orgErr) throw orgErr
-      await supabase.from('org_members').insert({ org_id: org.id, user_id: user.id, role: 'admin' })
+
+      const res = await fetch('/api/onboarding', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: clubName, slug, sport, userId: user.id })
+      })
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
       router.push('/dashboard')
     } catch (err: any) {
       setError(err.message)
