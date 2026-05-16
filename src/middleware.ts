@@ -17,10 +17,11 @@ export async function middleware(request: NextRequest) {
       },
     }
   )
+
   const { data: { user } } = await supabase.auth.getUser()
   const path = request.nextUrl.pathname
 
-  const publicPaths = ['/share/', '/login', '/api/share', '/invite/', '/onboarding']
+  const publicPaths = ['/share/', '/login', '/api/share', '/invite/', '/onboarding', '/review/']
   if (publicPaths.some(p => path.startsWith(p))) return supabaseResponse
 
   const protectedPaths = ['/dashboard', '/matches', '/settings']
