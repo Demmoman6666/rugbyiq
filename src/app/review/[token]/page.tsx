@@ -33,8 +33,8 @@ export default function ReviewPage() {
       setReviewSet(reviewSet)
 
       const [evRes, matchRes] = await Promise.all([
-        fetch(`/api/events?matchId=${reviewSet.match_id}`),
-        fetch(`/api/matches/${reviewSet.match_id}`)
+fetch(`/api/events?match_id=${reviewSet.match_id}`),
+fetch(`/api/matches/${reviewSet.match_id}`)
       ])
       const evData = await evRes.json()
       const matchData = await matchRes.json()
