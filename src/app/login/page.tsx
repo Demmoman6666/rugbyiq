@@ -31,7 +31,7 @@ export default function LoginPage() {
       {/* NAV */}
       <nav style={{ background: '#ffffff', borderBottom: '1px solid #e2e8f0', padding: '14px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Link href="/" style={{ fontSize: 22, fontWeight: 900, letterSpacing: 3, color: '#0f172a', textDecoration: 'none' }}>
-          RUGBY<span style={{ color: '#0ea5e9' }}>IQ</span>
+          CLUB<span style={{ color: '#0ea5e9' }}>CODE</span>
         </Link>
         <div style={{ fontSize: 13, color: '#64748b' }}>
           {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
@@ -50,7 +50,7 @@ export default function LoginPage() {
               {mode === 'login' ? 'Welcome back' : 'Create your account'}
             </div>
             <div style={{ fontSize: 14, color: '#64748b' }}>
-              {mode === 'login' ? 'Sign in to your RugbyIQ account' : 'Start analysing matches for free'}
+              {mode === 'login' ? 'Sign in to your ClubCode account' : 'Start analysing matches for free'}
             </div>
           </div>
 
