@@ -19,6 +19,8 @@ export default function MatchPage() {
   const [uploading, setUploading] = useState(false)
   const [uploadPct, setUploadPct] = useState(0)
   const [uploadError, setUploadError] = useState('')
+  const [ytUrl, setYtUrl] = useState('')
+  const [ytError, setYtError] = useState('')
 
   useEffect(() => {
     const load = async () => {
@@ -41,11 +43,7 @@ export default function MatchPage() {
       const res = await fetch('/api/upload-url', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          filename: file.name,
-          contentType: file.type,
-          matchId: match.id
-        })
+        body: JSON.stringify({ filename: file.name, contentType: file.type, matchId: match.id })
       })
 
       const { uploadUrl, publicUrl, error: urlError } = await res.json()
@@ -54,9 +52,7 @@ export default function MatchPage() {
       await new Promise<void>((resolve, reject) => {
         const xhr = new XMLHttpRequest()
         xhr.upload.addEventListener('progress', e => {
-          if (e.lengthComputable) {
-            setUploadPct(Math.round((e.loaded / e.total) * 100))
-          }
+          if (e.lengthComputable) setUploadPct(Math.round((e.loaded / e.total) * 100))
         })
         xhr.addEventListener('load', () => {
           if (xhr.status >= 200 && xhr.status < 300) resolve()
@@ -81,6 +77,20 @@ export default function MatchPage() {
     } finally {
       setUploading(false)
     }
+  }
+
+  const loadYouTube = async () => {
+    if (!match) return
+    setYtError('')
+    const m = ytUrl.trim().match(/(?:v=|youtu\.be\/|embed\/)([a-zA-Z0-9_-]{11})/)
+    if (!m) { setYtError('Invalid YouTube URL — paste the full link from your browser'); return }
+    const { data: updated } = await supabase
+      .from('matches')
+      .update({ video_public_url: ytUrl.trim(), status: 'coding' })
+      .eq('id', match.id)
+      .select()
+      .single()
+    if (updated) setMatch(updated as Match)
   }
 
   if (loading) return (
@@ -110,6 +120,7 @@ export default function MatchPage() {
         </div>
         {match.competition && <div style={{ fontSize: 13, color: '#64748b', marginBottom: 32 }}>{match.competition}</div>}
 
+        {/* Upload box */}
         <div
           style={{ border: `2px dashed ${BD}`, borderRadius: 10, padding: '40px 20px', cursor: uploading ? 'default' : 'pointer', marginBottom: 16, background: '#f8fafc', transition: 'border-color 0.15s' }}
           onDragOver={e => { e.preventDefault(); e.currentTarget.style.borderColor = '#0ea5e9' }}
@@ -142,6 +153,30 @@ export default function MatchPage() {
             ⚠️ {uploadError}
           </div>
         )}
+
+        {/* YouTube option */}
+        <div style={{ borderTop: `1px solid ${BD}`, paddingTop: 20, marginBottom: 16 }}>
+          <div style={{ fontSize: 12, color: '#64748b', marginBottom: 8, textAlign: 'left', fontWeight: 700, letterSpacing: 1 }}>OR PASTE A YOUTUBE LINK</div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input
+              type="text"
+              placeholder="https://youtube.com/watch?v=..."
+              value={ytUrl}
+              onChange={e => { setYtUrl(e.target.value); setYtError('') }}
+              onKeyDown={e => e.key === 'Enter' && loadYouTube()}
+              style={{ flex: 1, padding: '9px 12px', background: '#f8fafc', border: `1px solid ${BD}`, color: '#0f172a', fontSize: 13, borderRadius: 8, outline: 'none', fontFamily: FF }}
+            />
+            <button
+              onClick={loadYouTube}
+              style={{ padding: '9px 16px', background: '#0ea5e9', border: 'none', color: '#fff', fontFamily: FF, fontSize: 13, fontWeight: 700, borderRadius: 8, cursor: 'pointer', letterSpacing: 0.5 }}
+            >
+              LOAD
+            </button>
+          </div>
+          {ytError && (
+            <div style={{ color: '#dc2626', fontSize: 12, marginTop: 6, textAlign: 'left' }}>⚠️ {ytError}</div>
+          )}
+        </div>
 
         <button
           onClick={async () => {
