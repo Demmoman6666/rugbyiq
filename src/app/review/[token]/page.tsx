@@ -12,9 +12,17 @@ const BD    = '#1e2d3d'
 const MUTED = '#4a5568'
 const DIM   = '#94a3b8'
 
+const extractYouTubeId = (url: string) => {
+  const m = url?.match(/(?:v=|youtu\.be\/|embed\/)([a-zA-Z0-9_-]{11})/)
+  return m?.[1] ?? null
+}
+
 export default function ReviewPage() {
   const { token } = useParams<{ token: string }>()
-  const videoRef = useRef<HTMLVideoElement>(null)
+  const videoRef   = useRef<HTMLVideoElement>(null)
+  const ytPlayerRef = useRef<any>(null)
+  const ytReadyRef  = useRef(false)
+  const ivRef       = useRef<NodeJS.Timeout | null>(null)
 
   const [reviewSet, setReviewSet]   = useState<any>(null)
   const [events, setEvents]         = useState<any[]>([])
@@ -24,6 +32,9 @@ export default function ReviewPage() {
   const [playing, setPlaying]       = useState(false)
   const [autoPlay, setAutoPlay]     = useState(true)
   const clipTimer                   = useRef<NodeJS.Timeout | null>(null)
+
+  const youtubeId = match ? extractYouTubeId(match.video_public_url) : null
+  const isYoutube = Boolean(youtubeId)
 
   useEffect(() => {
     const load = async () => {
@@ -47,24 +58,76 @@ export default function ReviewPage() {
     load()
   }, [token])
 
+  // YouTube init
+  useEffect(() => {
+    if (!youtubeId) return
+
+    const init = () => {
+      try { ytPlayerRef.current?.destroy() } catch (_) {}
+      ytReadyRef.current = false
+      ytPlayerRef.current = new (window as any).YT.Player('yt-review-embed', {
+        videoId: youtubeId,
+        playerVars: { controls: 0, modestbranding: 1, rel: 0 },
+        events: {
+          onReady: () => { ytReadyRef.current = true },
+          onStateChange: (e: any) => setPlaying(e.data === 1),
+        },
+      })
+    }
+
+    if ((window as any).YT?.Player) { init() }
+    else {
+      ;(window as any).onYouTubeIframeAPIReady = init
+      if (!document.querySelector('script[src*="youtube.com/iframe_api"]')) {
+        const s = document.createElement('script')
+        s.src = 'https://www.youtube.com/iframe_api'
+        document.head.appendChild(s)
+      }
+    }
+
+    return () => {
+      if (ivRef.current) clearInterval(ivRef.current)
+      try { ytPlayerRef.current?.destroy() } catch (_) {}
+      ytPlayerRef.current = null
+      ytReadyRef.current = false
+    }
+  }, [youtubeId])
+
   const playClip = (idx: number) => {
-    if (!videoRef.current || !events[idx]) return
+    if (!events[idx]) return
     const ev = events[idx]
     const startTime = Math.max(0, ev.timestamp_secs - (reviewSet.clip_before_secs ?? 10))
-    videoRef.current.currentTime = startTime
-    videoRef.current.play()
+    const clipDuration = (reviewSet.clip_before_secs ?? 10) + (reviewSet.clip_after_secs ?? 20)
+
+    if (isYoutube) {
+      if (!ytReadyRef.current) return
+      ytPlayerRef.current.seekTo(startTime, true)
+      ytPlayerRef.current.playVideo()
+    } else {
+      if (!videoRef.current) return
+      videoRef.current.currentTime = startTime
+      videoRef.current.play()
+    }
+
     setCurrentIdx(idx)
     setPlaying(true)
+
     if (clipTimer.current) clearTimeout(clipTimer.current)
-    const clipDuration = (reviewSet.clip_before_secs ?? 10) + (reviewSet.clip_after_secs ?? 20)
     clipTimer.current = setTimeout(() => {
       if (autoPlay && idx < events.length - 1) {
         playClip(idx + 1)
       } else {
-        videoRef.current?.pause()
+        if (isYoutube) ytPlayerRef.current?.pauseVideo()
+        else videoRef.current?.pause()
         setPlaying(false)
       }
     }, clipDuration * 1000)
+  }
+
+  const handlePause = () => {
+    if (clipTimer.current) clearTimeout(clipTimer.current)
+    if (isYoutube) ytPlayerRef.current?.pauseVideo()
+    else videoRef.current?.pause()
   }
 
   const handlePrev = () => { if (clipTimer.current) clearTimeout(clipTimer.current); playClip(Math.max(0, currentIdx - 1)) }
@@ -108,16 +171,19 @@ export default function ReviewPage() {
         {/* VIDEO PANEL */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
           <div style={{ position: 'relative', background: '#000' }}>
-            <video
-              ref={videoRef}
-              src={match.video_public_url}
-              style={{ width: '100%', height: 'auto', maxHeight: '72vh', objectFit: 'contain', display: 'block' }}
-              playsInline
-              onPlay={() => setPlaying(true)}
-              onPause={() => setPlaying(false)}
-            />
+            {isYoutube ? (
+              <div id="yt-review-embed" style={{ width: '100%', height: '72vh' }} />
+            ) : (
+              <video
+                ref={videoRef}
+                src={match.video_public_url}
+                style={{ width: '100%', height: 'auto', maxHeight: '72vh', objectFit: 'contain', display: 'block' }}
+                playsInline
+                onPlay={() => setPlaying(true)}
+                onPause={() => setPlaying(false)}
+              />
+            )}
 
-            {/* CLIP INFO OVERLAY */}
             {currentEvent && (
               <div style={{ position: 'absolute', bottom: 16, left: 16, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', border: `1px solid ${BD}`, borderRadius: 8, padding: '10px 16px', maxWidth: 320 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: currentEvent.notes ? 6 : 0 }}>
@@ -129,7 +195,6 @@ export default function ReviewPage() {
               </div>
             )}
 
-            {/* CLIP COUNTER */}
             <div style={{ position: 'absolute', top: 12, right: 12, background: 'rgba(0,0,0,0.7)', borderRadius: 4, padding: '4px 10px', fontFamily: MONO, fontSize: 12, color: GOLD, letterSpacing: 2 }}>
               {currentIdx + 1} / {events.length}
             </div>
@@ -148,7 +213,7 @@ export default function ReviewPage() {
                 ▶ {currentIdx === 0 ? 'START REVIEW' : 'PLAY'}
               </button>
             ) : (
-              <button onClick={() => { videoRef.current?.pause(); if (clipTimer.current) clearTimeout(clipTimer.current) }}
+              <button onClick={handlePause}
                 style={{ padding: '8px 24px', fontFamily: FF, fontSize: 13, fontWeight: 900, background: '#ffffff15', border: `1px solid ${BD}`, color: '#fff', borderRadius: 4, cursor: 'pointer', letterSpacing: 1 }}>
                 ⏸ PAUSE
               </button>
