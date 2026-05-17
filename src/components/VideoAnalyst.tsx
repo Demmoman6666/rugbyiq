@@ -7,6 +7,12 @@ import { getSportConfig } from '@/lib/sports'
 import type { MatchEvent, AISuggestion, TeamInfo } from '@/lib/types'
 import { createClient } from '@/lib/supabase'
 
+// ── YouTube helper ────────────────────────────────────────────────────────────
+const extractYouTubeId = (url: string) => {
+  const m = url.match(/(?:v=|youtu\.be\/|embed\/)([a-zA-Z0-9_-]{11})/)
+  return m?.[1] ?? null
+}
+
 interface VideoAnalystProps {
   matchId: string
   homeTeam: TeamInfo
@@ -33,8 +39,16 @@ const MONO  = "'DM Mono', 'Courier New', monospace"
 export default function VideoAnalyst({
   matchId, homeTeam, awayTeam, videoUrl, videoDuration = 4800, initialEvents = []
 }: VideoAnalystProps) {
-  const supabase = createClient()
-  const videoRef = useRef<HTMLVideoElement>(null)
+  const supabase   = createClient()
+  const videoRef   = useRef<HTMLVideoElement>(null)
+  // ── YouTube refs ─────────────────────────────────────────────────────────
+  const ytPlayerRef = useRef<any>(null)
+  const ytReadyRef  = useRef(false)
+  const ivRef       = useRef<NodeJS.Timeout | null>(null)
+
+  // Derived — computed on every render, no state needed
+  const youtubeId = videoUrl ? extractYouTubeId(videoUrl) : null
+  const isYoutube = Boolean(youtubeId)
 
   const [tab, setTab]                     = useState<Tab>('code')
   const [events, setEvents]               = useState<MatchEvent[]>(initialEvents)
@@ -105,7 +119,59 @@ export default function VideoAnalyst({
     loadSport()
   }, [])
 
+  // ── YouTube IFrame API init ───────────────────────────────────────────────
   useEffect(() => {
+    if (!youtubeId) return
+
+    const init = () => {
+      ytReadyRef.current = false
+      try { ytPlayerRef.current?.destroy() } catch (_) {}
+
+      ytPlayerRef.current = new (window as any).YT.Player('yt-embed', {
+        videoId: youtubeId,
+        playerVars: { controls: 0, modestbranding: 1, rel: 0 },
+        events: {
+          onReady: () => {
+            ytReadyRef.current = true
+            setDuration(Math.floor(ytPlayerRef.current.getDuration()))
+          },
+          onStateChange: (e: any) => {
+            // 1 = playing, 2 = paused
+            setPlaying(e.data === 1)
+          },
+        },
+      })
+
+      if (ivRef.current) clearInterval(ivRef.current)
+      ivRef.current = setInterval(() => {
+        if (ytReadyRef.current && ytPlayerRef.current) {
+          setTime(Math.floor(ytPlayerRef.current.getCurrentTime()))
+        }
+      }, 500)
+    }
+
+    if ((window as any).YT?.Player) {
+      init()
+    } else {
+      ;(window as any).onYouTubeIframeAPIReady = init
+      if (!document.querySelector('script[src*="youtube.com/iframe_api"]')) {
+        const s = document.createElement('script')
+        s.src = 'https://www.youtube.com/iframe_api'
+        document.head.appendChild(s)
+      }
+    }
+
+    return () => {
+      if (ivRef.current) clearInterval(ivRef.current)
+      try { ytPlayerRef.current?.destroy() } catch (_) {}
+      ytPlayerRef.current = null
+      ytReadyRef.current = false
+    }
+  }, [youtubeId])
+
+  // ── Native video event listeners (skipped when YouTube) ──────────────────
+  useEffect(() => {
+    if (isYoutube) return
     const v = videoRef.current
     if (!v) return
     const onTime  = () => setTime(Math.floor(v.currentTime))
@@ -122,12 +188,19 @@ export default function VideoAnalyst({
       v.removeEventListener('play', onPlay)
       v.removeEventListener('pause', onPause)
     }
-  }, [videoUrl])
+  }, [videoUrl, isYoutube])
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
       if (!document.fullscreenElement && ['INPUT','TEXTAREA'].includes((e.target as HTMLElement).tagName)) return
-      if (e.key === ' ') { e.preventDefault(); videoRef.current?.paused ? videoRef.current.play() : videoRef.current?.pause() }
+      if (e.key === ' ') {
+        e.preventDefault()
+        if (isYoutube) {
+          ytReadyRef.current && (playing ? ytPlayerRef.current.pauseVideo() : ytPlayerRef.current.playVideo())
+        } else {
+          videoRef.current?.paused ? videoRef.current.play() : videoRef.current?.pause()
+        }
+      }
       const type = Object.keys(sportConfig.events).find(k => sportConfig.events[k].hotkey === e.key.toUpperCase())
       if (type) codeEvent(type)
     }
@@ -135,7 +208,8 @@ export default function VideoAnalyst({
     return () => document.removeEventListener('keydown', h)
   })
 
-  const actualDuration = () => videoRef.current?.duration || duration
+  const actualDuration = () => (isYoutube ? duration : videoRef.current?.duration) || duration
+
   const stats   = useMemo(() => computeMatchStats(events, duration), [events, duration])
   const visible = useMemo(() =>
     events.filter(e => !filters.length || filters.includes(e.event_type)).sort((a,b) => a.timestamp_secs - b.timestamp_secs)
@@ -149,11 +223,65 @@ export default function VideoAnalyst({
     }))
   , [events, homeTeam.abbr, awayTeam.abbr, sportConfig])
 
+  // ── Unified playback helpers ──────────────────────────────────────────────
   const seekTo = useCallback((secs: number) => {
     const t = Math.max(0, secs - 1)
-    if (videoRef.current) videoRef.current.currentTime = t
+    if (isYoutube) {
+      if (ytReadyRef.current) ytPlayerRef.current.seekTo(t, true)
+    } else {
+      if (videoRef.current) videoRef.current.currentTime = t
+    }
     setTime(t)
-  }, [])
+  }, [isYoutube])
+
+  const playPause = () => {
+    if (isYoutube) {
+      if (!ytReadyRef.current) return
+      playing ? ytPlayerRef.current.pauseVideo() : ytPlayerRef.current.playVideo()
+    } else {
+      videoRef.current?.paused ? videoRef.current.play() : videoRef.current?.pause()
+    }
+  }
+
+  const skipSeconds = (s: number) => {
+    if (isYoutube) {
+      if (!ytReadyRef.current) return
+      const t = Math.max(0, ytPlayerRef.current.getCurrentTime() + s)
+      ytPlayerRef.current.seekTo(t, true)
+    } else {
+      if (!videoRef.current) return
+      videoRef.current.currentTime = Math.max(0, videoRef.current.currentTime + s)
+    }
+  }
+
+  const changeSpeed = (s: number) => {
+    if (isYoutube) {
+      ytPlayerRef.current?.setPlaybackRate(s)
+    } else {
+      if (videoRef.current) videoRef.current.playbackRate = s
+    }
+    setSpeed(s); setShowSpeedMenu(false)
+  }
+
+  const changeVolume = (v: number) => {
+    if (isYoutube) {
+      ytPlayerRef.current?.setVolume(Math.round(v * 100))
+    } else {
+      if (videoRef.current) videoRef.current.volume = v
+    }
+    setVolume(v)
+  }
+
+  const seekFromProgressBar = (e: React.MouseEvent<HTMLDivElement>) => {
+    const r = e.currentTarget.getBoundingClientRect()
+    const t = Math.round(((e.clientX - r.left) / r.width) * actualDuration())
+    if (isYoutube) {
+      if (ytReadyRef.current) ytPlayerRef.current.seekTo(t, true)
+      setTime(t)
+    } else {
+      if (videoRef.current) videoRef.current.currentTime = t
+    }
+  }
 
   const codeEvent = async (type: string) => {
     const cfg = sportConfig.events[type]
@@ -197,14 +325,10 @@ export default function VideoAnalyst({
   }
 
   const toggleFullscreen = () => {
+    if (isYoutube) return // YouTube fullscreen handled by native YT controls
     if (!videoRef.current) return
     if (!document.fullscreenElement) videoRef.current.requestFullscreen()
     else document.exitFullscreen()
-  }
-
-  const skipSeconds = (s: number) => {
-    if (!videoRef.current) return
-    videoRef.current.currentTime = Math.max(0, videoRef.current.currentTime + s)
   }
 
   const skipToNextEvent = () => {
@@ -215,16 +339,6 @@ export default function VideoAnalyst({
   const skipToPrevEvent = () => {
     const prev = events.filter(e => e.timestamp_secs < time - 1).sort((a,b) => b.timestamp_secs - a.timestamp_secs)[0]
     if (prev) seekTo(prev.timestamp_secs)
-  }
-
-  const changeSpeed = (s: number) => {
-    if (videoRef.current) videoRef.current.playbackRate = s
-    setSpeed(s); setShowSpeedMenu(false)
-  }
-
-  const changeVolume = (v: number) => {
-    if (videoRef.current) videoRef.current.volume = v
-    setVolume(v)
   }
 
   const startAIScan = async () => {
@@ -374,8 +488,13 @@ export default function VideoAnalyst({
       {tab === 'code' && (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <div style={{ position: 'relative', width: '100%', flexShrink: 0, background: '#000' }}>
+            {/* ── Video / YouTube player ── */}
             {videoUrl ? (
-              <video ref={videoRef} src={videoUrl} crossOrigin="anonymous" style={{ width: '100%', height: 'auto', maxHeight: '52vh', objectFit: 'contain', display: 'block' }} playsInline preload="metadata"/>
+              isYoutube ? (
+                <div id="yt-embed" style={{ width: '100%', height: '52vh' }} />
+              ) : (
+                <video ref={videoRef} src={videoUrl} crossOrigin="anonymous" style={{ width: '100%', height: 'auto', maxHeight: '52vh', objectFit: 'contain', display: 'block' }} playsInline preload="metadata"/>
+              )
             ) : (
               <div style={{ width: '100%', height: '36vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#050810' }}>
                 <div style={{ textAlign: 'center', color: MUTED }}>
@@ -399,14 +518,16 @@ export default function VideoAnalyst({
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', background: NAV, borderBottom: `1px solid ${BD}`, flexShrink: 0 }}>
             {ctrlBtn(skipToPrevEvent, '⏮', 'Previous event')}
             {ctrlBtn(() => skipSeconds(-5), '-5s', 'Rewind 5s', true)}
-            <button onClick={() => videoRef.current?.paused ? videoRef.current.play() : videoRef.current?.pause()}
+            {/* ── Unified play/pause button ── */}
+            <button onClick={playPause}
               style={{ width: 32, height: 32, borderRadius: '50%', background: GOLD, border: 'none', color: '#000', fontSize: 12, cursor: 'pointer', flexShrink: 0, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               {playing ? '⏸' : '▶'}
             </button>
             {ctrlBtn(() => skipSeconds(5), '+5s', 'Forward 5s', true)}
             {ctrlBtn(skipToNextEvent, '⏭', 'Next event')}
+            {/* ── Progress bar ── */}
             <div style={{ flex: 1, height: 3, background: '#ffffff10', borderRadius: 2, cursor: 'pointer', position: 'relative', margin: '0 6px' }}
-              onClick={e => { const r = e.currentTarget.getBoundingClientRect(); if (videoRef.current) videoRef.current.currentTime = Math.round(((e.clientX - r.left) / r.width) * actualDuration()) }}>
+              onClick={seekFromProgressBar}>
               <div style={{ height: '100%', width: `${(time / actualDuration()) * 100}%`, background: GOLD, borderRadius: 2 }}/>
               <div style={{ position: 'absolute', top: '50%', left: `${(time / actualDuration()) * 100}%`, transform: 'translate(-50%,-50%)', width: 10, height: 10, borderRadius: '50%', background: GOLD, boxShadow: `0 0 6px ${GOLD}` }}/>
             </div>
@@ -711,7 +832,6 @@ export default function VideoAnalyst({
               style={{ width: '100%', padding: '8px 12px', fontFamily: FF, fontSize: 13, background: BG, border: `1px solid ${BD}`, borderRadius: 4, color: TEXT, outline: 'none', marginBottom: 8, boxSizing: 'border-box' }}/>
             <input value={reviewDesc} onChange={e => setReviewDesc(e.target.value)} placeholder="Description (optional)"
               style={{ width: '100%', padding: '8px 12px', fontFamily: FF, fontSize: 13, background: BG, border: `1px solid ${BD}`, borderRadius: 4, color: TEXT, outline: 'none', marginBottom: 12, boxSizing: 'border-box' }}/>
-
             <div style={{ display: 'flex', gap: 16, marginBottom: 14 }}>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 9, color: MUTED, letterSpacing: 1.5, marginBottom: 6 }}>SECONDS BEFORE EVENT</div>
@@ -736,7 +856,6 @@ export default function VideoAnalyst({
                 </div>
               </div>
             </div>
-
             <div style={{ fontSize: 9, color: MUTED, letterSpacing: 1.5, marginBottom: 8 }}>SELECT EVENTS — {reviewSelected.length} SELECTED</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: 240, overflowY: 'auto', marginBottom: 12 }}>
               {visible.length === 0 && <div style={{ fontSize: 12, color: MUTED, padding: '12px 0' }}>No events coded yet — go to Code Match first</div>}
@@ -758,7 +877,6 @@ export default function VideoAnalyst({
                 )
               })}
             </div>
-
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <button onClick={() => setReviewSelected(visible.map(e => e.id))}
                 style={{ padding: '7px 14px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: 'transparent', border: `1px solid ${BD}`, color: MUTED, borderRadius: 4, cursor: 'pointer', letterSpacing: 1 }}>
@@ -773,7 +891,6 @@ export default function VideoAnalyst({
                 {buildingReview ? 'CREATING…' : `🎬 CREATE REVIEW (${reviewSelected.length} clips)`}
               </button>
             </div>
-
             {reviewLink && (
               <div style={{ marginTop: 12, background: '#16a34a22', border: '1px solid #16a34a44', borderRadius: 6, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{ fontSize: 11, color: '#4ade80', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>✓ {reviewLink}</span>
@@ -784,7 +901,6 @@ export default function VideoAnalyst({
               </div>
             )}
           </div>
-
           {reviewSets.length > 0 && (
             <div style={{ background: CARD, border: `1px solid ${BD}`, borderRadius: 8, padding: '16px 18px' }}>
               <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, color: MUTED, marginBottom: 12 }}>SAVED REVIEWS</div>
