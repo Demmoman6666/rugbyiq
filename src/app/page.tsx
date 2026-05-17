@@ -40,7 +40,7 @@ export default function LandingPage() {
 
       {/* NAV */}
       <nav style={{ position: 'sticky', top: 0, zIndex: 40, background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(8px)', borderBottom: '1px solid #f1f5f9', padding: '14px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ fontSize: 24, fontWeight: 900, letterSpacing: 3, color: '#0f172a' }}>RUGBY<span style={{ color: '#0ea5e9' }}>IQ</span></div>
+        <div style={{ fontSize: 24, fontWeight: 900, letterSpacing: 3, color: '#0f172a' }}>CLUB<span style={{ color: '#0ea5e9' }}>CODE</span></div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <Link href="/login" style={{ padding: '7px 16px', fontSize: 13, fontWeight: 700, color: '#64748b' }}>Sign in</Link>
           <Link href="/login" style={{ padding: '8px 20px', background: '#0f172a', color: '#fff', fontSize: 13, fontWeight: 900, borderRadius: 6 }}>Start free →</Link>
@@ -70,7 +70,7 @@ export default function LandingPage() {
             <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#ef4444' }}/>
             <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#f59e0b' }}/>
             <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#10b981' }}/>
-            <div style={{ flex: 1, textAlign: 'center', fontSize: 12, color: '#64748b', letterSpacing: 1 }}>RUGBYIQ ANALYST</div>
+            <div style={{ flex: 1, textAlign: 'center', fontSize: 12, color: '#64748b', letterSpacing: 1 }}>CLUBCODE ANALYST</div>
           </div>
           <div style={{ background: '#0f172a', borderRadius: '0 0 13px 13px', padding: '20px', display: 'flex', gap: 16, alignItems: 'flex-start' }}>
             <div style={{ flex: 1, background: '#1e293b', borderRadius: 8, height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28 }}>📹</div>
@@ -119,7 +119,7 @@ export default function LandingPage() {
                 {plan.highlight && (
                   <div style={{ position: 'absolute', top: -13, left: '50%', transform: 'translateX(-50%)', background: '#0ea5e9', color: '#fff', fontSize: 10, fontWeight: 900, letterSpacing: 1, padding: '4px 14px', borderRadius: 20 }}>MOST POPULAR</div>
                 )}
-                <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 2, color: plan.highlight ? '#94a3b8' : '#94a3b8', marginBottom: 10 }}>{plan.name.toUpperCase()}</div>
+                <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 2, color: '#94a3b8', marginBottom: 10 }}>{plan.name.toUpperCase()}</div>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 24 }}>
                   <div style={{ fontSize: 48, fontWeight: 900, color: plan.highlight ? '#ffffff' : '#0f172a' }}>{plan.price}</div>
                   <div style={{ fontSize: 14, color: '#94a3b8' }}>{plan.period}</div>
@@ -147,7 +147,7 @@ export default function LandingPage() {
           <div style={{ fontSize: 44, fontWeight: 900, color: '#ffffff', marginBottom: 16, letterSpacing: -0.5 }}>
             Ready to level up your<br/><span style={{ color: '#0ea5e9' }}>analysis game?</span>
           </div>
-          <div style={{ fontSize: 16, color: '#64748b', marginBottom: 32 }}>Join clubs already using RugbyIQ to gain a competitive edge.</div>
+          <div style={{ fontSize: 16, color: '#64748b', marginBottom: 32 }}>Join clubs already using ClubCode to gain a competitive edge.</div>
           <Link href="/login" style={{ display: 'inline-block', padding: '14px 36px', background: '#0ea5e9', color: '#fff', fontSize: 17, fontWeight: 900, borderRadius: 8, letterSpacing: 1 }}>
             Get started free →
           </Link>
@@ -156,8 +156,8 @@ export default function LandingPage() {
 
       {/* FOOTER */}
       <footer style={{ borderTop: '1px solid #1e293b', background: '#0f172a', padding: '28px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-        <div style={{ fontSize: 18, fontWeight: 900, letterSpacing: 3, color: '#fff' }}>RUGBY<span style={{ color: '#0ea5e9' }}>IQ</span></div>
-        <div style={{ fontSize: 12, color: '#475569' }}>© {new Date().getFullYear()} RugbyIQ · Built for amateur rugby clubs</div>
+        <div style={{ fontSize: 18, fontWeight: 900, letterSpacing: 3, color: '#fff' }}>CLUB<span style={{ color: '#0ea5e9' }}>CODE</span></div>
+        <div style={{ fontSize: 12, color: '#475569' }}>© {new Date().getFullYear()} ClubCode · Built for amateur rugby clubs</div>
       </footer>
     </div>
   )
