@@ -39,7 +39,6 @@ export default function DashboardPage() {
         .eq('user_id', user.id)
         .single()
 
-
       if (member) {
         const org = member.organisations as any
         setPlan(org?.plan ?? 'starter')
@@ -50,7 +49,7 @@ export default function DashboardPage() {
         const u = await res.json()
         setUsage(u)
 
-        const { data, error } = await supabase
+        const { data } = await supabase
           .from('matches')
           .select('*')
           .eq('org_id', member.org_id)
@@ -83,7 +82,7 @@ export default function DashboardPage() {
       <nav style={{ background: '#ffffff', borderBottom: '1px solid #e2e8f0', padding: '0 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 60, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
           <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: 3, color: '#0f172a', cursor: 'pointer' }} onClick={() => router.push('/')}>
-            RUGBY<span style={{ color: '#0ea5e9' }}>IQ</span>
+            CLUB<span style={{ color: '#0ea5e9' }}>CODE</span>
           </div>
           {orgName && <div style={{ fontSize: 14, fontWeight: 700, color: '#64748b' }}>{orgName}</div>}
         </div>
