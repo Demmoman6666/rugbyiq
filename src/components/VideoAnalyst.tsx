@@ -38,12 +38,12 @@ const MONO  = "'DM Mono', 'Courier New', monospace"
 export default function VideoAnalyst({
   matchId, homeTeam, awayTeam, videoUrl, videoDuration = 4800, initialEvents = []
 }: VideoAnalystProps) {
-  const supabase     = createClient()
-  const videoRef     = useRef<HTMLVideoElement>(null)
-  const containerRef = useRef<HTMLDivElement>(null)
-  const ytPlayerRef  = useRef<any>(null)
-  const ytReadyRef   = useRef(false)
-  const ivRef        = useRef<NodeJS.Timeout | null>(null)
+  const supabase          = createClient()
+  const videoRef          = useRef<HTMLVideoElement>(null)
+  const videoContainerRef = useRef<HTMLDivElement>(null)
+  const ytPlayerRef       = useRef<any>(null)
+  const ytReadyRef        = useRef(false)
+  const ivRef             = useRef<NodeJS.Timeout | null>(null)
 
   const youtubeId = videoUrl ? extractYouTubeId(videoUrl) : null
   const isYoutube = Boolean(youtubeId)
@@ -77,6 +77,7 @@ export default function VideoAnalyst({
   const [buildingReview, setBuildingReview] = useState(false)
   const [reviewLink, setReviewLink]         = useState('')
   const [orgId, setOrgId]                   = useState('')
+  const [isFullscreen, setIsFullscreen]     = useState(false)
 
   const showToast = (label: string, color: string, team: string) => {
     if (toastTimer.current) clearTimeout(toastTimer.current)
@@ -115,6 +116,12 @@ export default function VideoAnalyst({
       if (reviewData.reviewSets) setReviewSets(reviewData.reviewSets)
     }
     loadSport()
+  }, [])
+
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(Boolean(document.fullscreenElement))
+    document.addEventListener('fullscreenchange', onChange)
+    return () => document.removeEventListener('fullscreenchange', onChange)
   }, [])
 
   useEffect(() => {
@@ -274,7 +281,7 @@ export default function VideoAnalyst({
 
   const toggleFullscreen = () => {
     if (isYoutube) return
-    if (!document.fullscreenElement) containerRef.current?.requestFullscreen()
+    if (!document.fullscreenElement) videoContainerRef.current?.requestFullscreen()
     else document.exitFullscreen()
   }
 
@@ -366,7 +373,7 @@ export default function VideoAnalyst({
   )
 
   return (
-    <div ref={containerRef} style={{ fontFamily: FF, background: BG, color: TEXT, height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div style={{ fontFamily: FF, background: BG, color: TEXT, height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
       {/* HEADER */}
       <div style={{ background: NAV, padding: '10px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, borderBottom: `1px solid ${BD}` }}>
@@ -417,12 +424,30 @@ export default function VideoAnalyst({
       {/* CODE TAB */}
       {tab === 'code' && (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          <div style={{ position: 'relative', width: '100%', flexShrink: 0, background: '#000' }}>
+
+          {/* ── Video container — this is what goes fullscreen ── */}
+          <div
+            ref={videoContainerRef}
+            style={{
+              position: 'relative',
+              width: '100%',
+              flexShrink: 0,
+              background: '#000',
+              ...(isFullscreen ? { height: '100vh' } : {}),
+            }}
+          >
             {videoUrl ? (
               isYoutube ? (
-                <div id="yt-embed" style={{ width: '100%', height: '52vh' }} />
+                <div id="yt-embed" style={{ width: '100%', height: isFullscreen ? '100vh' : '52vh' }} />
               ) : (
-                <video ref={videoRef} src={videoUrl} crossOrigin="anonymous" style={{ width: '100%', height: 'auto', maxHeight: '52vh', objectFit: 'contain', display: 'block' }} playsInline preload="metadata"/>
+                <video
+                  ref={videoRef}
+                  src={videoUrl}
+                  crossOrigin="anonymous"
+                  style={{ width: '100%', height: isFullscreen ? '100vh' : 'auto', maxHeight: isFullscreen ? '100vh' : '52vh', objectFit: 'contain', display: 'block' }}
+                  playsInline
+                  preload="metadata"
+                />
               )
             ) : (
               <div style={{ width: '100%', height: '36vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#050810' }}>
@@ -432,11 +457,13 @@ export default function VideoAnalyst({
                 </div>
               </div>
             )}
+
             <div style={{ position: 'absolute', top: 10, left: 12, background: 'rgba(0,0,0,0.8)', color: GOLD, fontFamily: MONO, fontSize: 16, padding: '3px 10px', borderRadius: 3, letterSpacing: 3 }}>{formatTime(time)}</div>
             <div style={{ position: 'absolute', top: 10, right: 12, background: 'rgba(0,0,0,0.8)', color: DIM, fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 3, letterSpacing: 2 }}>{time < duration / 2 ? '1ST HALF' : '2ND HALF'}</div>
-            {/* TOAST — position:fixed so it renders over video in both normal and fullscreen mode */}
+
+            {/* Toast — inside video container so it shows in fullscreen */}
             {toast && (
-              <div style={{ position: 'fixed', bottom: 40, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', border: `2px solid ${toast.color}`, borderRadius: 8, padding: '12px 28px', display: 'flex', alignItems: 'center', gap: 12, zIndex: 99999, pointerEvents: 'none' }}>
+              <div style={{ position: 'absolute', bottom: 32, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', border: `2px solid ${toast.color}`, borderRadius: 8, padding: '12px 28px', display: 'flex', alignItems: 'center', gap: 12, zIndex: 9999, pointerEvents: 'none' }}>
                 <div style={{ width: 12, height: 12, borderRadius: '50%', background: toast.color, boxShadow: `0 0 12px ${toast.color}` }}/>
                 <span style={{ color: toast.color, fontWeight: 900, fontSize: 18, letterSpacing: 2, fontFamily: FF }}>{toast.label}</span>
                 <span style={{ color: DIM, fontSize: 13, fontFamily: FF }}>{toast.team}</span>
@@ -731,17 +758,13 @@ export default function VideoAnalyst({
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 9, color: MUTED, letterSpacing: 1.5, marginBottom: 6 }}>SECONDS BEFORE EVENT</div>
                 <div style={{ display: 'flex', gap: 4 }}>
-                  {[5, 10, 15, 20].map(s => (
-                    <button key={s} onClick={() => setClipBefore(s)} style={{ flex: 1, padding: '5px 0', fontFamily: FF, fontSize: 11, fontWeight: 700, borderRadius: 4, border: `1px solid ${clipBefore === s ? GOLD : BD}`, background: clipBefore === s ? GOLD + '22' : 'transparent', color: clipBefore === s ? GOLD : MUTED, cursor: 'pointer' }}>{s}s</button>
-                  ))}
+                  {[5, 10, 15, 20].map(s => <button key={s} onClick={() => setClipBefore(s)} style={{ flex: 1, padding: '5px 0', fontFamily: FF, fontSize: 11, fontWeight: 700, borderRadius: 4, border: `1px solid ${clipBefore === s ? GOLD : BD}`, background: clipBefore === s ? GOLD + '22' : 'transparent', color: clipBefore === s ? GOLD : MUTED, cursor: 'pointer' }}>{s}s</button>)}
                 </div>
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 9, color: MUTED, letterSpacing: 1.5, marginBottom: 6 }}>SECONDS AFTER EVENT</div>
                 <div style={{ display: 'flex', gap: 4 }}>
-                  {[10, 20, 30, 45].map(s => (
-                    <button key={s} onClick={() => setClipAfter(s)} style={{ flex: 1, padding: '5px 0', fontFamily: FF, fontSize: 11, fontWeight: 700, borderRadius: 4, border: `1px solid ${clipAfter === s ? GOLD : BD}`, background: clipAfter === s ? GOLD + '22' : 'transparent', color: clipAfter === s ? GOLD : MUTED, cursor: 'pointer' }}>{s}s</button>
-                  ))}
+                  {[10, 20, 30, 45].map(s => <button key={s} onClick={() => setClipAfter(s)} style={{ flex: 1, padding: '5px 0', fontFamily: FF, fontSize: 11, fontWeight: 700, borderRadius: 4, border: `1px solid ${clipAfter === s ? GOLD : BD}`, background: clipAfter === s ? GOLD + '22' : 'transparent', color: clipAfter === s ? GOLD : MUTED, cursor: 'pointer' }}>{s}s</button>)}
                 </div>
               </div>
             </div>
