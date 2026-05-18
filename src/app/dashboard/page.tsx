@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
+import SettingsDropdown from '@/components/SettingsDropdown'
 import type { Match } from '@/lib/types'
 
 const FF = "'Barlow Condensed', system-ui, sans-serif"
@@ -79,39 +80,49 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <nav style={{ background: '#ffffff', borderBottom: '1px solid #e2e8f0', padding: '0 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 60, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
-          <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: 3, color: '#0f172a', cursor: 'pointer' }} onClick={() => router.push('/')}>
-            CLUB<span style={{ color: '#0ea5e9' }}>CODE</span>
+      <nav style={{ background: '#0f172a', borderBottom: '1px solid #1e2d3d', padding: '0 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 60 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+          <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: 3, color: '#fff', cursor: 'pointer' }} onClick={() => router.push('/')}>
+            CLUB<span style={{ color: '#e8a020' }}>CODE</span>
           </div>
-          {orgName && <div style={{ fontSize: 14, fontWeight: 700, color: '#64748b' }}>{orgName}</div>}
+          {orgName && (
+            <>
+              <div style={{ width: 1, height: 18, background: '#1e2d3d' }}/>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#4a5568' }}>{orgName}</div>
+            </>
+          )}
         </div>
+
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '5px 12px' }}>
+          {/* Plan badge */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#ffffff08', border: '1px solid #1e2d3d', borderRadius: 8, padding: '5px 12px' }}>
             <div style={{ width: 8, height: 8, borderRadius: '50%', background: PLAN_COLORS[plan] }}/>
             <span style={{ fontSize: 12, fontWeight: 700, color: PLAN_COLORS[plan] }}>{PLAN_LABELS[plan]}</span>
-            {usage && <span style={{ fontSize: 11, color: '#94a3b8' }}>{usage.used}/{usage.limit === 999 ? '∞' : usage.limit}</span>}
+            {usage && <span style={{ fontSize: 11, color: '#4a5568' }}>{usage.used}/{usage.limit === 999 ? '∞' : usage.limit}</span>}
           </div>
-          <button onClick={() => router.push('/settings')} style={{ padding: '7px 14px', background: 'transparent', border: '1px solid #e2e8f0', color: '#64748b', fontFamily: FF, fontSize: 12, fontWeight: 700, borderRadius: 6, cursor: 'pointer' }}>
-            ⚙️ Settings
-          </button>
-          <button onClick={() => router.push('/dashboard/upgrade')} style={{ padding: '7px 14px', background: '#f0f9ff', border: '1px solid #bae6fd', color: '#0284c7', fontFamily: FF, fontSize: 12, fontWeight: 700, borderRadius: 6, cursor: 'pointer' }}>
-            ⚡ {plan === 'starter' ? 'Upgrade' : 'Manage Plan'}
-          </button>
+
+          {/* Upgrade button — only show if not on club plan */}
+          {plan !== 'club' && (
+            <button onClick={() => router.push('/settings?tab=billing')} style={{ padding: '7px 14px', background: '#e8a02022', border: '1px solid #e8a02044', color: '#e8a020', fontFamily: FF, fontSize: 12, fontWeight: 700, borderRadius: 6, cursor: 'pointer', letterSpacing: 1 }}>
+              ⚡ {plan === 'starter' ? 'UPGRADE' : 'MANAGE PLAN'}
+            </button>
+          )}
+
           <button
             onClick={handleNewMatch}
             disabled={usage ? !usage.canCreate : false}
-            style={{ padding: '8px 18px', background: usage && !usage.canCreate ? '#e2e8f0' : '#0f172a', color: usage && !usage.canCreate ? '#94a3b8' : '#fff', fontFamily: FF, fontSize: 13, fontWeight: 700, borderRadius: 6, cursor: usage && !usage.canCreate ? 'default' : 'pointer', border: 'none' }}
-          >
-            + New Match
+            style={{ padding: '8px 18px', background: usage && !usage.canCreate ? '#1e2d3d' : '#e8a020', color: usage && !usage.canCreate ? '#4a5568' : '#000', fontFamily: FF, fontSize: 13, fontWeight: 900, borderRadius: 6, cursor: usage && !usage.canCreate ? 'default' : 'pointer', border: 'none', letterSpacing: 0.5 }}>
+            + NEW MATCH
           </button>
+
+          <SettingsDropdown />
         </div>
       </nav>
 
       {usage && !usage.canCreate && (
         <div style={{ background: '#fff7ed', borderBottom: '1px solid #fed7aa', padding: '10px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 13, color: '#c2410c' }}>⚠️ You have used your {usage.limit} match this month on the Starter plan.</span>
-          <button onClick={() => router.push('/dashboard/upgrade')} style={{ padding: '5px 14px', background: '#ea580c', border: 'none', color: '#fff', fontFamily: FF, fontSize: 12, fontWeight: 700, borderRadius: 4, cursor: 'pointer' }}>
+          <span style={{ fontSize: 13, color: '#c2410c' }}>⚠️ You've used your {usage.limit} match this month on the Starter plan.</span>
+          <button onClick={() => router.push('/settings?tab=billing')} style={{ padding: '5px 14px', background: '#ea580c', border: 'none', color: '#fff', fontFamily: FF, fontSize: 12, fontWeight: 700, borderRadius: 4, cursor: 'pointer' }}>
             Upgrade for unlimited matches
           </button>
         </div>
@@ -128,7 +139,7 @@ export default function DashboardPage() {
         {loading ? (
           <div style={{ textAlign: 'center', padding: 80, color: '#94a3b8', fontSize: 14 }}>Loading...</div>
         ) : matches.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '80px 20px', background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+          <div style={{ textAlign: 'center', padding: '80px 20px', background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 16 }}>
             <div style={{ fontSize: 48, marginBottom: 16 }}>🏉</div>
             <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>No matches yet</div>
             <div style={{ fontSize: 14, color: '#64748b', marginBottom: 24 }}>Create your first match to start analysing footage</div>

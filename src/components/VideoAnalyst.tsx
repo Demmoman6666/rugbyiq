@@ -6,6 +6,7 @@ import { computeMatchStats, formatTime } from '@/lib/stats'
 import { getSportConfig } from '@/lib/sports'
 import type { MatchEvent, AISuggestion, TeamInfo, Player, ParsedPlayer } from '@/lib/types'
 import { createClient } from '@/lib/supabase'
+import SettingsDropdown from '@/components/SettingsDropdown'
 
 const extractYouTubeId = (url: string) => {
   const m = url.match(/(?:v=|youtu\.be\/|embed\/)([a-zA-Z0-9_-]{11})/)
@@ -100,9 +101,6 @@ export default function VideoAnalyst({
   const awaySheetRef = useRef<HTMLInputElement>(null)
 
   // Settings dropdown + delete match
-  const [showSettingsMenu, setShowSettingsMenu]   = useState(false)
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const [deleting, setDeleting]                   = useState(false)
 
   // Two-key player hotkey
   const pendingEventType = useRef<string | null>(null)
@@ -462,11 +460,6 @@ export default function VideoAnalyst({
     finally { setBuildingReview(false) }
   }
 
-  const deleteMatch = async () => {
-    setDeleting(true)
-    await fetch(`/api/matches/${matchId}`, { method: 'DELETE' })
-    window.location.href = '/dashboard'
-  }
 
   const geminiCost = (actualDuration() / 60 * 0.30 * 258 / 1000 * 0.79).toFixed(2)
   const geminiMins = Math.ceil(actualDuration() / 60 * 0.5)
@@ -563,65 +556,14 @@ export default function VideoAnalyst({
     )
   }
 
-  // ── Settings dropdown ─────────────────────────────────────────────────────
-  const SettingsDropdown = () => (
-    <div style={{ position: 'relative' }} onMouseEnter={() => setShowSettingsMenu(true)} onMouseLeave={() => setShowSettingsMenu(false)}>
-      <div style={{ width: 32, height: 32, borderRadius: 6, background: '#ffffff0d', border: `1px solid ${BD}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 14 }}>⚙️</div>
-      {showSettingsMenu && (
-        <div style={{ position: 'absolute', top: 34, right: 0, background: '#111827', border: `1px solid ${BD}`, borderRadius: 8, overflow: 'hidden', zIndex: 200, minWidth: 190, boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }}>
-          {[
-            { label: 'Club Profile',    href: '/settings?tab=club',     icon: '🏉' },
-            { label: 'Account',         href: '/settings?tab=account',  icon: '👤' },
-            { label: 'Plans & Billing', href: '/settings?tab=billing',  icon: '💳' },
-            { label: 'Analysts',        href: '/settings?tab=analysts', icon: '👥' },
-          ].map(item => (
-            <a key={item.href} href={item.href} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', color: DIM, textDecoration: 'none', fontSize: 13, fontFamily: FF, fontWeight: 600, transition: 'background 0.1s' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#1e2d3d'; (e.currentTarget as HTMLElement).style.color = '#fff' }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = DIM }}>
-              <span>{item.icon}</span>{item.label}
-            </a>
-          ))}
-          <div style={{ borderTop: `1px solid ${BD}` }}/>
-          <button onClick={() => { setShowSettingsMenu(false); setShowDeleteConfirm(true) }}
-            style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 16px', background: 'transparent', border: 'none', color: '#ef4444', fontFamily: FF, fontSize: 13, fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#fef2f210' }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}>
-            <span>🗑️</span>Delete Match
-          </button>
-          <div style={{ borderTop: `1px solid ${BD}` }}/>
-          <button onClick={async () => { await createClient().auth.signOut(); window.location.href = '/login' }}
-            style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 16px', background: 'transparent', border: 'none', color: MUTED, fontFamily: FF, fontSize: 13, fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#1e2d3d' }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}>
-            <span>🚪</span>Log out
-          </button>
-        </div>
-      )}
-    </div>
-  )
 
   return (
     <div style={{ fontFamily: FF, background: BG, color: TEXT, height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
       {showSquadsModal && <SquadsModal />}
 
-      {/* Delete match confirmation */}
-      {showDeleteConfirm && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ background: '#111827', border: `1px solid ${BD}`, borderRadius: 12, padding: 28, maxWidth: 380, width: '90%' }}>
-            <div style={{ fontSize: 18, fontWeight: 900, color: TEXT, marginBottom: 8, fontFamily: FF }}>🗑️ Delete Match?</div>
-            <div style={{ fontSize: 13, color: DIM, lineHeight: 1.7, marginBottom: 24 }}>This will permanently delete the match, all coded events, and all player data. This cannot be undone.</div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={deleteMatch} disabled={deleting} style={{ flex: 1, padding: 12, background: '#ef4444', color: '#fff', border: 'none', borderRadius: 6, fontFamily: FF, fontSize: 13, fontWeight: 900, cursor: 'pointer', letterSpacing: 1 }}>
-                {deleting ? 'DELETING...' : 'DELETE MATCH'}
-              </button>
-              <button onClick={() => setShowDeleteConfirm(false)} style={{ padding: '12px 18px', background: 'transparent', color: DIM, border: `1px solid ${BD}`, borderRadius: 6, fontFamily: FF, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* HEADER */}
+            {/* HEADER */}
       <div style={{ background: NAV, padding: '10px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, borderBottom: `1px solid ${BD}` }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <a href="/dashboard" style={{ fontSize: 20, fontWeight: 900, letterSpacing: 3, color: '#fff', textDecoration: 'none' }}>CLUB<span style={{ color: GOLD }}>CODE</span></a>
@@ -652,7 +594,7 @@ export default function VideoAnalyst({
           <button onClick={generateShareLink} style={{ padding: '5px 12px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: copying ? '#16a34a' : '#ffffff0d', color: copying ? '#fff' : GOLD, border: `1px solid ${copying ? '#16a34a' : GOLD + '44'}`, borderRadius: 4, cursor: 'pointer', letterSpacing: 1 }}>
             {copying ? '✓ COPIED' : '🔗 SHARE'}
           </button>
-          <SettingsDropdown />
+          <SettingsDropdown matchId={matchId} />
         </div>
       </div>
 
