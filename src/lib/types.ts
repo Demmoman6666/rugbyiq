@@ -100,4 +100,5 @@ export interface MatchStats {
   away: TeamStats
   ballInPlaySeconds: number
   ballInPlayPct: number
+  totalEvents: number
 }
