@@ -264,34 +264,58 @@ function SettingsPageInner() {
 
             {/* BILLING */}
             {tab === 'billing' && (
-              <div style={{ background: '#fff', border: `1px solid ${BD}`, borderRadius: 10, padding: '24px 28px' }}>
-                <div style={{ fontSize: 18, fontWeight: 900, color: NAV, marginBottom: 4 }}>Plans & Billing</div>
-                <div style={{ fontSize: 13, color: '#64748b', marginBottom: 24 }}>Manage your subscription and billing details.</div>
-                <div style={{ background: '#f8fafc', border: `1px solid ${BD}`, borderRadius: 8, padding: '16px 20px', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div style={{ background: '#fff', border: `1px solid ${BD}`, borderRadius: 10, padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: NAV }}>Current plan</div>
-                    <div style={{ fontSize: 13, color: '#64748b', marginTop: 2 }}>{org?.plan ?? 'Starter'}</div>
+                    <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: '#94a3b8', marginBottom: 4 }}>CURRENT PLAN</div>
+                    <div style={{ fontSize: 22, fontWeight: 900, color: NAV }}>{(org?.plan ?? 'starter').charAt(0).toUpperCase() + (org?.plan ?? 'starter').slice(1)}</div>
                   </div>
-                  <div style={{ background: GOLD + '22', color: GOLD, border: `1px solid ${GOLD}44`, padding: '4px 14px', borderRadius: 20, fontSize: 11, fontWeight: 700, letterSpacing: 1 }}>{(org?.plan ?? 'STARTER').toUpperCase()}</div>
+                  <div style={{ background: GOLD + '22', color: GOLD, border: `1px solid ${GOLD}44`, padding: '6px 18px', borderRadius: 20, fontSize: 12, fontWeight: 700, letterSpacing: 1 }}>{(org?.plan ?? 'STARTER').toUpperCase()}</div>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 24 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
                   {[
-                    { name: 'Starter', price: 'Free', features: ['1 match/month', '1 analyst', 'Basic stats'], color: '#64748b' },
-                    { name: 'Pro', price: '£29/mo', features: ['Unlimited matches', '3 analysts', 'AI scanning', 'Review builder'], color: GOLD },
-                    { name: 'Club', price: '£79/mo', features: ['Unlimited everything', '10 analysts', 'Season stats', 'Priority support'], color: '#8b5cf6' },
-                  ].map(plan => (
-                    <div key={plan.name} style={{ border: `2px solid ${org?.plan === plan.name.toLowerCase() ? plan.color : BD}`, borderRadius: 8, padding: '16px 14px', background: org?.plan === plan.name.toLowerCase() ? plan.color + '08' : '#fff' }}>
-                      <div style={{ fontSize: 14, fontWeight: 900, color: plan.color, marginBottom: 2 }}>{plan.name}</div>
-                      <div style={{ fontSize: 20, fontWeight: 900, color: NAV, marginBottom: 10 }}>{plan.price}</div>
-                      {plan.features.map(f => <div key={f} style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>✓ {f}</div>)}
-                    </div>
-                  ))}
+                    { key: 'starter', name: 'Starter', price: 'Free',   features: ['1 match/month', '1 analyst', 'Basic stats', 'Share links'], color: '#64748b' },
+                    { key: 'pro',     name: 'Pro',     price: '£29/mo', features: ['Unlimited matches', '3 analysts', 'AI scanning', 'Review builder', 'Player stats'], color: GOLD },
+                    { key: 'club',    name: 'Club',    price: '£79/mo', features: ['Unlimited everything', '10 analysts', 'Season stats', 'GPS integration', 'Priority support'], color: '#8b5cf6' },
+                  ].map(plan => {
+                    const isCurrent = (org?.plan ?? 'starter') === plan.key
+                    const isDowngrade = plan.key === 'starter' && !isCurrent
+                    return (
+                      <div key={plan.key} style={{ border: `2px solid ${isCurrent ? plan.color : BD}`, borderRadius: 10, padding: '20px 16px', background: isCurrent ? plan.color + '08' : '#fff', display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ fontSize: 15, fontWeight: 900, color: plan.color, marginBottom: 2 }}>{plan.name}</div>
+                        <div style={{ fontSize: 24, fontWeight: 900, color: NAV, marginBottom: 12 }}>{plan.price}</div>
+                        <div style={{ flex: 1, marginBottom: 16 }}>
+                          {plan.features.map(f => <div key={f} style={{ fontSize: 11, color: '#64748b', marginBottom: 5, display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ color: plan.color }}>✓</span>{f}</div>)}
+                        </div>
+                        {isCurrent ? (
+                          <div style={{ padding: '8px 0', textAlign: 'center', fontSize: 12, fontWeight: 700, color: plan.color, background: plan.color + '18', borderRadius: 6, letterSpacing: 1 }}>CURRENT PLAN</div>
+                        ) : isDowngrade ? (
+                          <div style={{ padding: '8px 0', textAlign: 'center', fontSize: 11, color: '#94a3b8' }}>Contact us to downgrade</div>
+                        ) : (
+                          <button
+                            onClick={async () => {
+                              const res = await fetch('/api/stripe/checkout', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ plan: plan.key, orgId: org?.id, userId: user?.id, email: user?.email }),
+                              })
+                              const { url, error } = await res.json()
+                              if (error) alert(error)
+                              else window.location.href = url
+                            }}
+                            style={{ padding: '10px 0', background: plan.color, color: plan.key === 'pro' ? '#000' : '#fff', border: 'none', borderRadius: 6, fontFamily: FF, fontSize: 13, fontWeight: 900, cursor: 'pointer', letterSpacing: 1, width: '100%' }}>
+                            UPGRADE TO {plan.name.toUpperCase()} →
+                          </button>
+                        )}
+                      </div>
+                    )
+                  })}
                 </div>
-                <div style={{ fontSize: 12, color: '#94a3b8' }}>To upgrade or manage billing, contact <a href="mailto:hello@clubcode.co.uk" style={{ color: GOLD }}>hello@clubcode.co.uk</a></div>
+                <div style={{ fontSize: 11, color: '#94a3b8', textAlign: 'center' }}>Secure payment via Stripe · Cancel anytime · VAT may apply</div>
               </div>
             )}
 
-            {/* ANALYSTS */}
+                        {/* ANALYSTS */}
             {tab === 'analysts' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 {/* Current analysts */}
