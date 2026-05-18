@@ -61,3 +61,14 @@ export interface ParsedPlayer {
   shirt_number: number
   name: string
 }
+
+export interface AIAnalysisResult {
+  events: {
+    event_type: string
+    timestamp_seconds: number
+    confidence: number
+    description?: string
+  }[]
+}
+
+export type EventType = string
