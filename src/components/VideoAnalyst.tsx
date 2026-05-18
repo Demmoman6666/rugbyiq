@@ -78,14 +78,10 @@ export default function VideoAnalyst({
   const [reviewLink, setReviewLink]         = useState('')
   const [orgId, setOrgId]                   = useState('')
   const [isFullscreen, setIsFullscreen]     = useState(false)
+  const [homePlayers, setHomePlayers]       = useState<Player[]>([])
+  const [awayPlayers, setAwayPlayers]       = useState<Player[]>([])
 
-  // ── Players ───────────────────────────────────────────────────────────────
-  const [homePlayers, setHomePlayers] = useState<Player[]>([])
-  const [awayPlayers, setAwayPlayers] = useState<Player[]>([])
-
-  // ── Two-key player hotkey state ───────────────────────────────────────────
-  // pendingEventType: event type waiting for player number
-  // playerBuffer: digits typed so far e.g. "1" waiting for second digit
+  // Two-key player hotkey state
   const pendingEventType = useRef<string | null>(null)
   const playerBuffer     = useRef<string>('')
   const playerTimer      = useRef<NodeJS.Timeout | null>(null)
@@ -126,7 +122,6 @@ export default function VideoAnalyst({
     loadSport()
   }, [])
 
-  // Load players
   useEffect(() => {
     const loadPlayers = async () => {
       const res = await fetch(`/api/players?match_id=${matchId}`)
@@ -192,140 +187,12 @@ export default function VideoAnalyst({
     }
   }, [videoUrl, isYoutube])
 
-  // ── Two-key hotkey system ─────────────────────────────────────────────────
-  // Flow: press event key (e.g. T) → pendingEventType = 'tackle', show HUD
-  //       press digit (e.g. 1) → playerBuffer = '1', start 1s timer
-  //       within 1s press another digit (e.g. 5) → fire event with player 15
-  //       after 1s timeout → fire event with player 1
-  //       if no digit within 2s of event key → fire event with no player
-  const fireEventWithPlayer = useCallback(async (type: string, shirtNumber: number | null) => {
-    const cfg = sportConfig.events[type]
-    const team = activeTeam
-    const players = team === 'home' ? homePlayers : awayPlayers
-    const player = shirtNumber ? players.find(p => p.shirt_number === shirtNumber) : null
+  const actualDuration = useCallback(() => (isYoutube ? duration : videoRef.current?.duration) || duration, [isYoutube, duration])
 
-    const { data } = await supabase.from('events').insert({
-      match_id: matchId, event_type: type, timestamp_secs: time, team, ai_detected: false,
-      player_id: player?.id ?? null,
-      player_name: player?.name ?? null,
-      shirt_number: shirtNumber ?? null,
-    }).select().single()
-
-    if (data) {
-      setEvents(prev => [...prev, data as MatchEvent])
-      if (cfg?.outcomes) setLastEv(data as MatchEvent); else setLastEv(null)
-      const playerLabel = player ? `#${shirtNumber} ${player.name}` : shirtNumber ? `#${shirtNumber}` : undefined
-      showToast(cfg?.label ?? type, cfg?.color ?? GOLD, team === 'home' ? homeTeam.abbr : awayTeam.abbr, playerLabel)
-    }
-
-    // Reset
-    pendingEventType.current = null
-    playerBuffer.current = ''
-    setHudDisplay(null)
-  }, [sportConfig, activeTeam, homePlayers, awayPlayers, time, matchId, homeTeam, awayTeam])
-
-  useEffect(() => {
-    const h = (e: KeyboardEvent) => {
-      if (!document.fullscreenElement && ['INPUT','TEXTAREA'].includes((e.target as HTMLElement).tagName)) return
-
-      // Space = play/pause
-      if (e.key === ' ') {
-        e.preventDefault()
-        if (isYoutube) { ytReadyRef.current && (playing ? ytPlayerRef.current.pauseVideo() : ytPlayerRef.current.playVideo()) }
-        else { videoRef.current?.paused ? videoRef.current.play() : videoRef.current?.pause() }
-        return
-      }
-
-      // If we have a pending event type, check for digit input
-      if (pendingEventType.current) {
-        if (/^\d$/.test(e.key)) {
-          e.preventDefault()
-          playerBuffer.current += e.key
-
-          // Update HUD
-          const cfg = sportConfig.events[pendingEventType.current]
-          setHudDisplay({ eventLabel: cfg?.label ?? pendingEventType.current, digits: playerBuffer.current, color: cfg?.color ?? GOLD })
-
-          // Clear existing timer
-          if (playerTimer.current) clearTimeout(playerTimer.current)
-
-          // If two digits entered, fire immediately
-          if (playerBuffer.current.length >= 2) {
-            const num = parseInt(playerBuffer.current)
-            const type = pendingEventType.current
-            playerBuffer.current = ''
-            playerTimer.current = null
-            fireEventWithPlayer(type, num)
-            return
-          }
-
-          // Otherwise wait 1 second for a second digit
-          playerTimer.current = setTimeout(() => {
-            const num = parseInt(playerBuffer.current)
-            const type = pendingEventType.current!
-            playerBuffer.current = ''
-            playerTimer.current = null
-            fireEventWithPlayer(type, num)
-          }, 1000)
-          return
-        }
-
-        // Non-digit pressed while waiting — fire without player
-        if (playerTimer.current) { clearTimeout(playerTimer.current); playerTimer.current = null }
-        const type = pendingEventType.current
-        pendingEventType.current = null
-        playerBuffer.current = ''
-        setHudDisplay(null)
-        fireEventWithPlayer(type, null)
-      }
-
-      // Check for event hotkey
-      const type = Object.keys(sportConfig.events).find(k => sportConfig.events[k].hotkey === e.key.toUpperCase())
-      if (type) {
-        e.preventDefault()
-        const cfg = sportConfig.events[type]
-
-        // Clear any existing pending
-        if (playerTimer.current) { clearTimeout(playerTimer.current); playerTimer.current = null }
-
-        const hasSquad = (activeTeam === 'home' ? homePlayers : awayPlayers).length > 0
-
-        if (hasSquad) {
-          // Enter player-number-waiting mode
-          pendingEventType.current = type
-          playerBuffer.current = ''
-          setHudDisplay({ eventLabel: cfg?.label ?? type, digits: '', color: cfg?.color ?? GOLD })
-
-          // Auto-fire with no player after 2 seconds if no digit pressed
-          playerTimer.current = setTimeout(() => {
-            const t = pendingEventType.current
-            if (t) {
-              pendingEventType.current = null
-              playerBuffer.current = ''
-              setHudDisplay(null)
-              playerTimer.current = null
-              fireEventWithPlayer(t, null)
-            }
-          }, 2000)
-        } else {
-          // No squad loaded — fire immediately with no player
-          fireEventWithPlayer(type, null)
-        }
-      }
-    }
-    document.addEventListener('keydown', h)
-    return () => document.removeEventListener('keydown', h)
-  }, [isYoutube, playing, sportConfig, activeTeam, homePlayers, awayPlayers, fireEventWithPlayer])
-
-  const actualDuration = () => (isYoutube ? duration : videoRef.current?.duration) || duration
-  const stats   = useMemo(() => computeMatchStats(events, duration), [events, duration])
-  const visible = useMemo(() => events.filter(e => !filters.length || filters.includes(e.event_type)).sort((a,b) => a.timestamp_secs - b.timestamp_secs), [events, filters])
-  const pendingSuggestions = useMemo(() => suggestions.filter(s => s.status === 'pending'), [suggestions])
-  const barData = useMemo(() => Object.keys(sportConfig.events).map(type => ({
-    name: sportConfig.events[type].label,
-    [homeTeam.abbr]: events.filter(e => e.event_type === type && e.team === 'home').length,
-    [awayTeam.abbr]: events.filter(e => e.event_type === type && e.team === 'away').length,
-  })), [events, homeTeam.abbr, awayTeam.abbr, sportConfig])
+  // Visible events (respects filters) — used for up/down arrow navigation
+  const visible = useMemo(() =>
+    events.filter(e => !filters.length || filters.includes(e.event_type)).sort((a,b) => a.timestamp_secs - b.timestamp_secs)
+  , [events, filters])
 
   const seekTo = useCallback((secs: number) => {
     const t = Math.max(0, secs - 1)
@@ -333,6 +200,123 @@ export default function VideoAnalyst({
     else { if (videoRef.current) videoRef.current.currentTime = t }
     setTime(t)
   }, [isYoutube])
+
+  const fireEventWithPlayer = useCallback(async (type: string, shirtNumber: number | null) => {
+    const cfg = sportConfig.events[type]
+    const team = activeTeam
+    const players = team === 'home' ? homePlayers : awayPlayers
+    const player = shirtNumber ? players.find(p => p.shirt_number === shirtNumber) : null
+    const { data } = await supabase.from('events').insert({
+      match_id: matchId, event_type: type, timestamp_secs: time, team, ai_detected: false,
+      player_id: player?.id ?? null, player_name: player?.name ?? null, shirt_number: shirtNumber ?? null,
+    }).select().single()
+    if (data) {
+      setEvents(prev => [...prev, data as MatchEvent])
+      if (cfg?.outcomes) setLastEv(data as MatchEvent); else setLastEv(null)
+      const playerLabel = player ? `#${shirtNumber} ${player.name}` : shirtNumber ? `#${shirtNumber}` : undefined
+      showToast(cfg?.label ?? type, cfg?.color ?? GOLD, team === 'home' ? homeTeam.abbr : awayTeam.abbr, playerLabel)
+    }
+    pendingEventType.current = null; playerBuffer.current = ''; setHudDisplay(null)
+  }, [sportConfig, activeTeam, homePlayers, awayPlayers, time, matchId, homeTeam, awayTeam])
+
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => {
+      if (['INPUT','TEXTAREA'].includes((e.target as HTMLElement).tagName)) return
+
+      // ── Arrow keys ────────────────────────────────────────────────────────
+      if (e.key === 'ArrowRight') {
+        e.preventDefault()
+        // Skip forward 5s
+        if (isYoutube) { if (ytReadyRef.current) ytPlayerRef.current.seekTo(Math.min(ytPlayerRef.current.getCurrentTime() + 5, ytPlayerRef.current.getDuration()), true) }
+        else { if (videoRef.current) videoRef.current.currentTime = Math.min(videoRef.current.currentTime + 5, videoRef.current.duration || 0) }
+        return
+      }
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault()
+        // Skip back 5s
+        if (isYoutube) { if (ytReadyRef.current) ytPlayerRef.current.seekTo(Math.max(ytPlayerRef.current.getCurrentTime() - 5, 0), true) }
+        else { if (videoRef.current) videoRef.current.currentTime = Math.max(videoRef.current.currentTime - 5, 0) }
+        return
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        // Previous visible event
+        const prev = [...visible].reverse().find(ev => ev.timestamp_secs < time - 1)
+        if (prev) seekTo(prev.timestamp_secs)
+        return
+      }
+      if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        // Next visible event
+        const next = visible.find(ev => ev.timestamp_secs > time + 1)
+        if (next) seekTo(next.timestamp_secs)
+        return
+      }
+
+      // ── Space = play/pause ────────────────────────────────────────────────
+      if (e.key === ' ') {
+        e.preventDefault()
+        if (isYoutube) { ytReadyRef.current && (playing ? ytPlayerRef.current.pauseVideo() : ytPlayerRef.current.playVideo()) }
+        else { videoRef.current?.paused ? videoRef.current.play() : videoRef.current?.pause() }
+        return
+      }
+
+      // ── Pending event: digit input ────────────────────────────────────────
+      if (pendingEventType.current) {
+        if (/^\d$/.test(e.key)) {
+          e.preventDefault()
+          playerBuffer.current += e.key
+          const cfg = sportConfig.events[pendingEventType.current]
+          setHudDisplay({ eventLabel: cfg?.label ?? pendingEventType.current, digits: playerBuffer.current, color: cfg?.color ?? GOLD })
+          if (playerTimer.current) clearTimeout(playerTimer.current)
+          if (playerBuffer.current.length >= 2) {
+            const num = parseInt(playerBuffer.current); const type = pendingEventType.current
+            playerBuffer.current = ''; playerTimer.current = null
+            fireEventWithPlayer(type, num); return
+          }
+          playerTimer.current = setTimeout(() => {
+            const num = parseInt(playerBuffer.current); const type = pendingEventType.current!
+            playerBuffer.current = ''; playerTimer.current = null
+            fireEventWithPlayer(type, num)
+          }, 1000)
+          return
+        }
+        if (playerTimer.current) { clearTimeout(playerTimer.current); playerTimer.current = null }
+        const type = pendingEventType.current
+        pendingEventType.current = null; playerBuffer.current = ''; setHudDisplay(null)
+        fireEventWithPlayer(type, null)
+      }
+
+      // ── Event hotkey ──────────────────────────────────────────────────────
+      const type = Object.keys(sportConfig.events).find(k => sportConfig.events[k].hotkey === e.key.toUpperCase())
+      if (type) {
+        e.preventDefault()
+        const cfg = sportConfig.events[type]
+        if (playerTimer.current) { clearTimeout(playerTimer.current); playerTimer.current = null }
+        const hasSquad = (activeTeam === 'home' ? homePlayers : awayPlayers).length > 0
+        if (hasSquad) {
+          pendingEventType.current = type; playerBuffer.current = ''
+          setHudDisplay({ eventLabel: cfg?.label ?? type, digits: '', color: cfg?.color ?? GOLD })
+          playerTimer.current = setTimeout(() => {
+            const t = pendingEventType.current
+            if (t) { pendingEventType.current = null; playerBuffer.current = ''; setHudDisplay(null); playerTimer.current = null; fireEventWithPlayer(t, null) }
+          }, 2000)
+        } else {
+          fireEventWithPlayer(type, null)
+        }
+      }
+    }
+    document.addEventListener('keydown', h)
+    return () => document.removeEventListener('keydown', h)
+  }, [isYoutube, playing, sportConfig, activeTeam, homePlayers, awayPlayers, fireEventWithPlayer, visible, time, seekTo])
+
+  const stats   = useMemo(() => computeMatchStats(events, duration), [events, duration])
+  const pendingSuggestions = useMemo(() => suggestions.filter(s => s.status === 'pending'), [suggestions])
+  const barData = useMemo(() => Object.keys(sportConfig.events).map(type => ({
+    name: sportConfig.events[type].label,
+    [homeTeam.abbr]: events.filter(e => e.event_type === type && e.team === 'home').length,
+    [awayTeam.abbr]: events.filter(e => e.event_type === type && e.team === 'away').length,
+  })), [events, homeTeam.abbr, awayTeam.abbr, sportConfig])
 
   const playPause = () => {
     if (isYoutube) { if (!ytReadyRef.current) return; playing ? ytPlayerRef.current.pauseVideo() : ytPlayerRef.current.playVideo() }
@@ -362,11 +346,8 @@ export default function VideoAnalyst({
   }
 
   const codeEvent = async (type: string) => {
-    const cfg = sportConfig.events[type]
-    const team = activeTeam
-    const { data } = await supabase.from('events').insert({
-      match_id: matchId, event_type: type, timestamp_secs: time, team, ai_detected: false
-    }).select().single()
+    const cfg = sportConfig.events[type]; const team = activeTeam
+    const { data } = await supabase.from('events').insert({ match_id: matchId, event_type: type, timestamp_secs: time, team, ai_detected: false }).select().single()
     if (data) {
       setEvents(prev => [...prev, data as MatchEvent])
       if (cfg?.outcomes) setLastEv(data as MatchEvent); else setLastEv(null)
@@ -408,12 +389,12 @@ export default function VideoAnalyst({
   }
 
   const skipToNextEvent = () => {
-    const next = events.filter(e => e.timestamp_secs > time + 1).sort((a,b) => a.timestamp_secs - b.timestamp_secs)[0]
+    const next = visible.find(e => e.timestamp_secs > time + 1)
     if (next) seekTo(next.timestamp_secs)
   }
 
   const skipToPrevEvent = () => {
-    const prev = events.filter(e => e.timestamp_secs < time - 1).sort((a,b) => b.timestamp_secs - a.timestamp_secs)[0]
+    const prev = [...visible].reverse().find(e => e.timestamp_secs < time - 1)
     if (prev) seekTo(prev.timestamp_secs)
   }
 
@@ -435,10 +416,7 @@ export default function VideoAnalyst({
   }
 
   const acceptSuggestion = async (s: AISuggestion, team: 'home' | 'away') => {
-    const { data } = await supabase.from('events').insert({
-      match_id: matchId, event_type: s.event_type, timestamp_secs: s.timestamp_secs,
-      team, ai_detected: true, ai_confidence: s.confidence, ai_description: s.description, accepted: true
-    }).select().single()
+    const { data } = await supabase.from('events').insert({ match_id: matchId, event_type: s.event_type, timestamp_secs: s.timestamp_secs, team, ai_detected: true, ai_confidence: s.confidence, ai_description: s.description, accepted: true }).select().single()
     if (data) setEvents(prev => [...prev, data as MatchEvent])
     setSuggestions(prev => prev.map(x => x.id === s.id ? { ...x, status: 'accepted' as const, team } : x))
   }
@@ -542,7 +520,25 @@ export default function VideoAnalyst({
           <div ref={videoContainerRef} style={{ position: 'relative', width: '100%', flexShrink: 0, background: '#000', ...(isFullscreen ? { height: '100vh' } : {}) }}>
             {videoUrl ? (
               isYoutube ? (
-                <div id="yt-embed" style={{ width: '100%', height: isFullscreen ? '100vh' : '52vh' }} />
+                <div style={{ position: 'relative', width: '100%', height: isFullscreen ? '100vh' : '52vh' }}>
+                  <div id="yt-embed" style={{ width: '100%', height: '100%' }} />
+                  {/* Transparent overlay: click to seek, double-click to play/pause */}
+                  <div
+                    style={{ position: 'absolute', inset: 0, cursor: 'crosshair', zIndex: 5 }}
+                    onClick={e => {
+                      if (!ytReadyRef.current) return
+                      const dur = ytPlayerRef.current.getDuration()
+                      const r = e.currentTarget.getBoundingClientRect()
+                      const t = Math.round(((e.clientX - r.left) / r.width) * dur)
+                      ytPlayerRef.current.seekTo(t, true)
+                      setTime(t)
+                    }}
+                    onDoubleClick={() => {
+                      if (!ytReadyRef.current) return
+                      playing ? ytPlayerRef.current.pauseVideo() : ytPlayerRef.current.playVideo()
+                    }}
+                  />
+                </div>
               ) : (
                 <video ref={videoRef} src={videoUrl} crossOrigin="anonymous" style={{ width: '100%', height: isFullscreen ? '100vh' : 'auto', maxHeight: isFullscreen ? '100vh' : '52vh', objectFit: 'contain', display: 'block' }} playsInline preload="metadata"/>
               )
@@ -551,17 +547,14 @@ export default function VideoAnalyst({
                 <div style={{ textAlign: 'center', color: MUTED }}><div style={{ fontSize: 36, marginBottom: 10 }}>📹</div><div style={{ fontSize: 13, letterSpacing: 1 }}>NO VIDEO LOADED</div></div>
               </div>
             )}
+            <div style={{ position: 'absolute', top: 10, left: 12, background: 'rgba(0,0,0,0.8)', color: GOLD, fontFamily: MONO, fontSize: 16, padding: '3px 10px', borderRadius: 3, letterSpacing: 3, zIndex: 10 }}>{formatTime(time)}</div>
+            <div style={{ position: 'absolute', top: 10, right: 12, background: 'rgba(0,0,0,0.8)', color: DIM, fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 3, letterSpacing: 2, zIndex: 10 }}>{time < duration / 2 ? '1ST HALF' : '2ND HALF'}</div>
 
-            <div style={{ position: 'absolute', top: 10, left: 12, background: 'rgba(0,0,0,0.8)', color: GOLD, fontFamily: MONO, fontSize: 16, padding: '3px 10px', borderRadius: 3, letterSpacing: 3 }}>{formatTime(time)}</div>
-            <div style={{ position: 'absolute', top: 10, right: 12, background: 'rgba(0,0,0,0.8)', color: DIM, fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 3, letterSpacing: 2 }}>{time < duration / 2 ? '1ST HALF' : '2ND HALF'}</div>
-
-            {/* ── Player number HUD ── */}
+            {/* Player HUD */}
             {hudDisplay && (
               <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', background: 'rgba(0,0,0,0.9)', border: `2px solid ${hudDisplay.color}`, borderRadius: 12, padding: '16px 32px', textAlign: 'center', zIndex: 9999, pointerEvents: 'none', minWidth: 180 }}>
                 <div style={{ color: hudDisplay.color, fontFamily: FF, fontSize: 13, fontWeight: 700, letterSpacing: 2, marginBottom: 6 }}>{hudDisplay.eventLabel.toUpperCase()}</div>
-                <div style={{ fontFamily: MONO, fontSize: 40, fontWeight: 900, color: '#fff', letterSpacing: 8, minHeight: 48 }}>
-                  {hudDisplay.digits || <span style={{ color: '#ffffff30' }}>_</span>}
-                </div>
+                <div style={{ fontFamily: MONO, fontSize: 40, fontWeight: 900, color: '#fff', letterSpacing: 8, minHeight: 48 }}>{hudDisplay.digits || <span style={{ color: '#ffffff30' }}>_</span>}</div>
                 <div style={{ color: '#ffffff50', fontSize: 10, marginTop: 6, letterSpacing: 1 }}>TYPE SHIRT NUMBER</div>
               </div>
             )}
@@ -580,38 +573,52 @@ export default function VideoAnalyst({
 
           {/* Controls bar */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', background: NAV, borderBottom: `1px solid ${BD}`, flexShrink: 0 }}>
-            {ctrlBtn(skipToPrevEvent, '⏮', 'Previous event')}
-            {ctrlBtn(() => skipSeconds(-5), '-5s', 'Rewind 5s', true)}
+            {ctrlBtn(skipToPrevEvent, '⏮', 'Previous event (↑)')}
+            {ctrlBtn(() => skipSeconds(-5), '-5s', 'Rewind 5s (←)', true)}
             <button onClick={playPause} style={{ width: 32, height: 32, borderRadius: '50%', background: GOLD, border: 'none', color: '#000', fontSize: 12, cursor: 'pointer', flexShrink: 0, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               {playing ? '⏸' : '▶'}
             </button>
-            {ctrlBtn(() => skipSeconds(5), '+5s', 'Forward 5s', true)}
-            {ctrlBtn(skipToNextEvent, '⏭', 'Next event')}
-            <div style={{ flex: 1, height: 3, background: '#ffffff10', borderRadius: 2, cursor: 'pointer', position: 'relative', margin: '0 6px' }} onClick={seekFromProgressBar}>
-              <div style={{ height: '100%', width: `${(time / actualDuration()) * 100}%`, background: GOLD, borderRadius: 2 }}/>
-              <div style={{ position: 'absolute', top: '50%', left: `${(time / actualDuration()) * 100}%`, transform: 'translate(-50%,-50%)', width: 10, height: 10, borderRadius: '50%', background: GOLD, boxShadow: `0 0 6px ${GOLD}` }}/>
-            </div>
+            {ctrlBtn(() => skipSeconds(5), '+5s', 'Forward 5s (→)', true)}
+            {ctrlBtn(skipToNextEvent, '⏭', 'Next event (↓)')}
+
+            {/* Progress bar — native video only */}
+            {!isYoutube ? (
+              <div style={{ flex: 1, height: 3, background: '#ffffff10', borderRadius: 2, cursor: 'pointer', position: 'relative', margin: '0 6px' }} onClick={seekFromProgressBar}>
+                <div style={{ height: '100%', width: `${(time / actualDuration()) * 100}%`, background: GOLD, borderRadius: 2 }}/>
+                <div style={{ position: 'absolute', top: '50%', left: `${(time / actualDuration()) * 100}%`, transform: 'translate(-50%,-50%)', width: 10, height: 10, borderRadius: '50%', background: GOLD, boxShadow: `0 0 6px ${GOLD}` }}/>
+              </div>
+            ) : (
+              <div style={{ flex: 1 }}/>
+            )}
+
             <span style={{ fontFamily: MONO, fontSize: 10, color: MUTED, whiteSpace: 'nowrap' }}>{formatTime(time)} / {formatTime(duration)}</span>
-            <div style={{ position: 'relative' }}>
-              {ctrlBtn(() => { setShowVolume(v => !v); setShowSpeedMenu(false) }, volume === 0 ? '🔇' : volume < 0.5 ? '🔉' : '🔊')}
-              {showVolume && (
-                <div style={{ position: 'absolute', bottom: 38, left: '50%', transform: 'translateX(-50%)', background: '#1a2332', border: `1px solid ${BD}`, borderRadius: 8, padding: '12px 10px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, zIndex: 50 }}>
-                  <input type="range" min={0} max={1} step={0.05} value={volume} onChange={e => changeVolume(Number(e.target.value))} style={{ writingMode: 'vertical-lr' as any, direction: 'rtl' as any, width: 4, height: 80, cursor: 'pointer', accentColor: GOLD }} />
-                  <span style={{ fontSize: 10, color: MUTED }}>{Math.round(volume * 100)}%</span>
+
+            {/* Volume / speed / fullscreen — native video only */}
+            {!isYoutube && (
+              <>
+                <div style={{ position: 'relative' }}>
+                  {ctrlBtn(() => { setShowVolume(v => !v); setShowSpeedMenu(false) }, volume === 0 ? '🔇' : volume < 0.5 ? '🔉' : '🔊')}
+                  {showVolume && (
+                    <div style={{ position: 'absolute', bottom: 38, left: '50%', transform: 'translateX(-50%)', background: '#1a2332', border: `1px solid ${BD}`, borderRadius: 8, padding: '12px 10px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, zIndex: 50 }}>
+                      <input type="range" min={0} max={1} step={0.05} value={volume} onChange={e => changeVolume(Number(e.target.value))} style={{ writingMode: 'vertical-lr' as any, direction: 'rtl' as any, width: 4, height: 80, cursor: 'pointer', accentColor: GOLD }} />
+                      <span style={{ fontSize: 10, color: MUTED }}>{Math.round(volume * 100)}%</span>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-            <div style={{ position: 'relative' }}>
-              <button onClick={() => { setShowSpeedMenu(v => !v); setShowVolume(false) }} style={{ padding: '0 10px', height: 28, borderRadius: 4, background: '#ffffff0d', border: `1px solid #ffffff12`, color: DIM, fontSize: 11, cursor: 'pointer', fontWeight: 700, fontFamily: FF }}>{speed}×</button>
-              {showSpeedMenu && (
-                <div style={{ position: 'absolute', bottom: 38, right: 0, background: '#1a2332', border: `1px solid ${BD}`, borderRadius: 6, overflow: 'hidden', zIndex: 50, minWidth: 80 }}>
-                  {[0.25, 0.5, 1, 1.25, 1.5, 1.75, 2, 4].map(s => (
-                    <button key={s} onClick={() => changeSpeed(s)} style={{ display: 'block', width: '100%', padding: '7px 14px', background: speed === s ? GOLD + '22' : 'transparent', color: speed === s ? GOLD : DIM, border: 'none', borderLeft: speed === s ? `2px solid ${GOLD}` : '2px solid transparent', fontSize: 12, fontWeight: speed === s ? 700 : 400, cursor: 'pointer', textAlign: 'left', fontFamily: FF }}>{s}×</button>
-                  ))}
+                <div style={{ position: 'relative' }}>
+                  <button onClick={() => { setShowSpeedMenu(v => !v); setShowVolume(false) }} style={{ padding: '0 10px', height: 28, borderRadius: 4, background: '#ffffff0d', border: `1px solid #ffffff12`, color: DIM, fontSize: 11, cursor: 'pointer', fontWeight: 700, fontFamily: FF }}>{speed}×</button>
+                  {showSpeedMenu && (
+                    <div style={{ position: 'absolute', bottom: 38, right: 0, background: '#1a2332', border: `1px solid ${BD}`, borderRadius: 6, overflow: 'hidden', zIndex: 50, minWidth: 80 }}>
+                      {[0.25, 0.5, 1, 1.25, 1.5, 1.75, 2, 4].map(s => (
+                        <button key={s} onClick={() => changeSpeed(s)} style={{ display: 'block', width: '100%', padding: '7px 14px', background: speed === s ? GOLD + '22' : 'transparent', color: speed === s ? GOLD : DIM, border: 'none', borderLeft: speed === s ? `2px solid ${GOLD}` : '2px solid transparent', fontSize: 12, fontWeight: speed === s ? 700 : 400, cursor: 'pointer', textAlign: 'left', fontFamily: FF }}>{s}×</button>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-            {ctrlBtn(toggleFullscreen, '⛶', 'Fullscreen')}
+                {ctrlBtn(toggleFullscreen, '⛶', 'Fullscreen')}
+              </>
+            )}
+
             <button onClick={() => setShowScanConfirm(true)} disabled={scanState.running || !videoUrl} style={{ padding: '5px 14px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: scanState.running ? '#ffffff0d' : GOLD + '22', border: `1px solid ${GOLD}44`, color: GOLD, borderRadius: 4, cursor: 'pointer', whiteSpace: 'nowrap', letterSpacing: 1, opacity: videoUrl ? 1 : 0.3 }}>
               {scanState.running ? `🤖 ${scanState.pct}%` : '🤖 AI SCAN'}
             </button>
@@ -653,8 +660,6 @@ export default function VideoAnalyst({
                   {sportConfig.events[type].label}
                 </button>
               ))}
-
-              {/* Squad indicator */}
               {(homePlayers.length > 0 || awayPlayers.length > 0) && (
                 <div style={{ marginLeft: 'auto', fontSize: 10, color: MUTED, display: 'flex', gap: 6 }}>
                   {homePlayers.length > 0 && <span style={{ color: homeTeam.color }}>👥 {homeTeam.abbr} {homePlayers.length}</span>}
@@ -663,10 +668,14 @@ export default function VideoAnalyst({
               )}
             </div>
 
-            {/* Hotkey hint when squad loaded */}
             {(activeTeam === 'home' ? homePlayers : awayPlayers).length > 0 && (
               <div style={{ marginTop: 6, fontSize: 10, color: MUTED, letterSpacing: 0.5 }}>
-                💡 Hotkey + shirt number (e.g. <span style={{ fontFamily: MONO, color: DIM }}>T</span> then <span style={{ fontFamily: MONO, color: DIM }}>15</span> = Tackle #15)
+                💡 Hotkey + shirt number (e.g. <span style={{ fontFamily: MONO, color: DIM }}>T</span> then <span style={{ fontFamily: MONO, color: DIM }}>15</span> = Tackle #15) · <span style={{ color: DIM }}>← → skip 5s · ↑ ↓ jump events</span>
+              </div>
+            )}
+            {(activeTeam === 'home' ? homePlayers : awayPlayers).length === 0 && (
+              <div style={{ marginTop: 4, fontSize: 10, color: MUTED }}>
+                <span style={{ color: DIM }}>← → skip 5s · ↑ ↓ jump between events{filters.length > 0 ? ` (filtered: ${filters.join(', ')})` : ''}</span>
               </div>
             )}
 
@@ -692,14 +701,12 @@ export default function VideoAnalyst({
               })}
               <div style={{ position: 'absolute', top: 0, bottom: 0, left: `${(time / actualDuration()) * 100}%`, width: 2, background: GOLD, zIndex: 4, borderRadius: 1, boxShadow: `0 0 4px ${GOLD}` }}/>
             </div>
-
             <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', flexShrink: 0 }}>
               {Object.keys(sportConfig.events).map(type => (
                 <button key={type} onClick={() => toggleFilter(type)} style={{ padding: '2px 10px', borderRadius: 3, fontFamily: FF, fontSize: 9, fontWeight: 700, letterSpacing: 1, border: `1px solid ${filters.includes(type) ? sportConfig.events[type].color : sportConfig.events[type].color + '33'}`, cursor: 'pointer', color: filters.includes(type) ? '#000' : sportConfig.events[type].color, background: filters.includes(type) ? sportConfig.events[type].color : 'transparent' }}>{sportConfig.events[type].label}</button>
               ))}
               {filters.length > 0 && <button onClick={() => setFilters([])} style={{ padding: '2px 10px', borderRadius: 3, fontSize: 9, fontWeight: 700, letterSpacing: 1, border: `1px solid ${BD}`, background: 'transparent', color: MUTED, cursor: 'pointer' }}>✕ CLEAR</button>}
             </div>
-
             <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 1 }}>
               {visible.map(e => (
                 <div key={e.id} style={{ borderRadius: 4, background: CARD, border: `1px solid ${BD}` }}>
@@ -710,12 +717,7 @@ export default function VideoAnalyst({
                     {e.ai_detected && <span style={{ fontSize: 9, background: GOLD+'18', color: GOLD, padding: '1px 6px', borderRadius: 3, fontWeight: 700, border: `1px solid ${GOLD}33`, letterSpacing: 0.5 }}>AI {Math.round((e.ai_confidence ?? 0) * 100)}%</span>}
                     <span style={{ fontFamily: MONO, color: MUTED, fontSize: 11, whiteSpace: 'nowrap' }}>{formatTime(e.timestamp_secs)}</span>
                     <span style={{ fontWeight: 700, color: e.team === 'home' ? homeTeam.color : awayTeam.color, fontSize: 11 }}>{e.team === 'home' ? homeTeam.name : awayTeam.name}</span>
-                    {/* Player badge */}
-                    {e.shirt_number && (
-                      <span style={{ fontFamily: MONO, fontSize: 10, color: GOLD, background: GOLD + '18', padding: '1px 6px', borderRadius: 3, border: `1px solid ${GOLD}33` }}>
-                        #{e.shirt_number}{e.player_name ? ` ${e.player_name.split(' ').pop()}` : ''}
-                      </span>
-                    )}
+                    {e.shirt_number && <span style={{ fontFamily: MONO, fontSize: 10, color: GOLD, background: GOLD + '18', padding: '1px 6px', borderRadius: 3, border: `1px solid ${GOLD}33` }}>#{e.shirt_number}{e.player_name ? ` ${e.player_name.split(' ').pop()}` : ''}</span>}
                     {e.outcome && <span style={{ color: MUTED, fontStyle: 'italic', fontSize: 10 }}>{e.outcome}</span>}
                     {e.notes && editingNote?.id !== e.id && <span style={{ color: MUTED, fontSize: 10, fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 100 }}>📝 {e.notes}</span>}
                     <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
