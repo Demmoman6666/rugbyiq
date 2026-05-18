@@ -152,7 +152,7 @@ export default function VideoAnalyst({
       try { ytPlayerRef.current?.destroy() } catch (_) {}
       ytPlayerRef.current = new (window as any).YT.Player('yt-embed', {
         videoId: youtubeId,
-        playerVars: { controls: 0, modestbranding: 1, rel: 0 },
+        playerVars: { controls: 1, modestbranding: 1, rel: 0 },
         events: {
           onReady: () => { ytReadyRef.current = true; setDuration(Math.floor(ytPlayerRef.current.getDuration())) },
           onStateChange: (e: any) => setPlaying(e.data === 1),
