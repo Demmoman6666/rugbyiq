@@ -4,8 +4,8 @@ import { useEffect, useState, useRef, useMemo } from 'react'
 import { useParams } from 'next/navigation'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { computeMatchStats, formatTime } from '@/lib/stats'
-import { EVENT_CONFIG } from '@/lib/types'
-import type { MatchEvent, EventType } from '@/lib/types'
+import { getSportConfig } from '@/lib/sports'
+import type { MatchEvent } from '@/lib/types'
 
 const BG   = '#f4f6fb'
 const CARD = '#ffffff'
@@ -19,6 +19,7 @@ const MONO = "'DM Mono', 'Courier New', monospace"
 export default function SharePage() {
   const { token } = useParams<{ token: string }>()
   const videoRef = useRef<HTMLVideoElement>(null)
+  const sportConfig = getSportConfig('rugby')
 
   const [match, setMatch]       = useState<any>(null)
   const [events, setEvents]     = useState<MatchEvent[]>([])
@@ -27,7 +28,7 @@ export default function SharePage() {
   const [time, setTime]         = useState(0)
   const [duration, setDuration] = useState(1)
   const [playing, setPlaying]   = useState(false)
-  const [filters, setFilters]   = useState<EventType[]>([])
+  const [filters, setFilters]   = useState<string[]>([])
   const [tab, setTab]           = useState<'events' | 'stats'>('events')
 
   useEffect(() => {
@@ -78,18 +79,22 @@ export default function SharePage() {
   const awayAbbr  = match?.away_team?.split(' ').map((w: string) => w[0]).join('').slice(0,3).toUpperCase() ?? 'AWY'
 
   const barData = useMemo(() =>
-    (Object.keys(EVENT_CONFIG) as EventType[]).map(type => ({
-      name: EVENT_CONFIG[type].label,
+    Object.keys(sportConfig.events).map(type => ({
+      name: sportConfig.events[type].label,
       [homeAbbr]: events.filter(e => e.event_type === type && e.team === 'home').length,
       [awayAbbr]: events.filter(e => e.event_type === type && e.team === 'away').length,
     }))
   , [events, homeAbbr, awayAbbr])
 
-  const Pill = ({ type }: { type: EventType }) => (
-    <span style={{ padding: '2px 8px', borderRadius: 12, background: EVENT_CONFIG[type].color + '22', color: EVENT_CONFIG[type].color, fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap', fontFamily: FF, border: `1px solid ${EVENT_CONFIG[type].color}55` }}>
-      {EVENT_CONFIG[type].label}
-    </span>
-  )
+  const Pill = ({ type }: { type: string }) => {
+    const cfg = sportConfig.events[type]
+    if (!cfg) return <span style={{ padding: '2px 8px', borderRadius: 12, background: '#e2e8f0', color: MUTED, fontSize: 11, fontWeight: 700 }}>{type}</span>
+    return (
+      <span style={{ padding: '2px 8px', borderRadius: 12, background: cfg.color + '22', color: cfg.color, fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap', fontFamily: FF, border: `1px solid ${cfg.color}55` }}>
+        {cfg.label}
+      </span>
+    )
+  }
 
   const StatBar = ({ label, hv, av }: { label: string; hv: number; av: number }) => {
     const tot = (hv + av) || 1
@@ -127,7 +132,7 @@ export default function SharePage() {
       {/* HEADER */}
       <div style={{ background: NAV, padding: '12px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-          <div style={{ fontSize: 20, fontWeight: 900, letterSpacing: 3, color: '#fff' }}>RUGBY<span style={{ color: GOLD }}>IQ</span></div>
+          <div style={{ fontSize: 20, fontWeight: 900, letterSpacing: 3, color: '#fff' }}>CLUB<span style={{ color: GOLD }}>CODE</span></div>
           <div style={{ fontSize: 9, letterSpacing: 3, color: '#4a5a7a' }}>MATCH REPORT</div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
@@ -179,12 +184,15 @@ export default function SharePage() {
         <div style={{ position: 'relative', height: 22, background: NAV, borderRadius: 4, cursor: 'pointer' }}
           onClick={e => { const r = e.currentTarget.getBoundingClientRect(); seekTo(Math.round(((e.clientX - r.left) / r.width) * actualDuration())) }}>
           <div style={{ position: 'absolute', top: 0, bottom: 0, left: '50%', width: 1, background: '#ffffff22' }}/>
-          {events.map(e => (
-            <div key={e.id} onClick={ev => { ev.stopPropagation(); seekTo(e.timestamp_secs) }}
-              style={{ position: 'absolute', top: '50%', left: `${(e.timestamp_secs / actualDuration()) * 100}%`, transform: 'translate(-50%,-50%)', width: 8, height: 8, borderRadius: '50%', background: EVENT_CONFIG[e.event_type]?.color ?? '#888', cursor: 'pointer', zIndex: 2, border: '1px solid rgba(255,255,255,0.3)' }}
-              title={`${EVENT_CONFIG[e.event_type]?.label} ${formatTime(e.timestamp_secs)}`}
-            />
-          ))}
+          {events.map(e => {
+            const cfg = sportConfig.events[e.event_type]
+            return (
+              <div key={e.id} onClick={ev => { ev.stopPropagation(); seekTo(e.timestamp_secs) }}
+                style={{ position: 'absolute', top: '50%', left: `${(e.timestamp_secs / actualDuration()) * 100}%`, transform: 'translate(-50%,-50%)', width: 8, height: 8, borderRadius: '50%', background: cfg?.color ?? '#888', cursor: 'pointer', zIndex: 2, border: '1px solid rgba(255,255,255,0.3)' }}
+                title={`${cfg?.label ?? e.event_type} ${formatTime(e.timestamp_secs)}`}
+              />
+            )
+          })}
           <div style={{ position: 'absolute', top: 0, bottom: 0, left: `${(time / actualDuration()) * 100}%`, width: 2, background: GOLD, zIndex: 4, borderRadius: 1 }}/>
         </div>
       </div>
@@ -202,12 +210,15 @@ export default function SharePage() {
       {tab === 'events' && (
         <div style={{ padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 8, background: BG, flex: 1 }}>
           <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-            {(Object.keys(EVENT_CONFIG) as EventType[]).map(type => (
-              <button key={type} onClick={() => setFilters(f => f.includes(type) ? f.filter(x => x !== type) : [...f, type])}
-                style={{ padding: '3px 10px', borderRadius: 12, fontFamily: FF, fontSize: 10, fontWeight: 700, border: `1px solid ${EVENT_CONFIG[type].color}`, cursor: 'pointer', color: filters.includes(type) ? '#fff' : EVENT_CONFIG[type].color, background: filters.includes(type) ? EVENT_CONFIG[type].color : 'transparent' }}>
-                {EVENT_CONFIG[type].label}
-              </button>
-            ))}
+            {Object.keys(sportConfig.events).map(type => {
+              const cfg = sportConfig.events[type]
+              return (
+                <button key={type} onClick={() => setFilters(f => f.includes(type) ? f.filter(x => x !== type) : [...f, type])}
+                  style={{ padding: '3px 10px', borderRadius: 12, fontFamily: FF, fontSize: 10, fontWeight: 700, border: `1px solid ${cfg.color}`, cursor: 'pointer', color: filters.includes(type) ? '#fff' : cfg.color, background: filters.includes(type) ? cfg.color : 'transparent' }}>
+                  {cfg.label}
+                </button>
+              )
+            })}
             {filters.length > 0 && <button onClick={() => setFilters([])} style={{ padding: '3px 10px', borderRadius: 12, fontSize: 10, fontWeight: 700, border: `1px solid ${BD}`, background: 'transparent', color: MUTED, cursor: 'pointer' }}>✕ clear</button>}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -250,7 +261,6 @@ export default function SharePage() {
               <div style={{ fontSize: 11, color: '#4a5a7a', marginTop: 4 }}>{stats.away.tries} tries · {stats.away.penalties} pen</div>
             </div>
           </div>
-
           <div style={{ background: CARD, border: `1px solid ${BD}`, borderRadius: 10, padding: '16px 22px' }}>
             <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, color: MUTED, marginBottom: 16 }}>MATCH STATISTICS</div>
             <div style={{ display: 'grid', gridTemplateColumns: '50px 1fr 100px 1fr 50px', gap: 10, marginBottom: 14 }}>
@@ -265,7 +275,6 @@ export default function SharePage() {
             <StatBar label="LO WON"    hv={stats.home.lineoutsWon} av={stats.away.lineoutsWon}/>
             <StatBar label="SCRUM WON" hv={stats.home.scrumsWon}   av={stats.away.scrumsWon}/>
           </div>
-
           <div style={{ background: CARD, border: `1px solid ${BD}`, borderRadius: 10, padding: '16px 22px' }}>
             <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, color: MUTED, marginBottom: 16 }}>EVENT BREAKDOWN</div>
             <div style={{ display: 'flex', gap: 16, marginBottom: 12 }}>
@@ -286,9 +295,8 @@ export default function SharePage() {
               </BarChart>
             </ResponsiveContainer>
           </div>
-
           <div style={{ textAlign: 'center', padding: '16px 0', fontSize: 11, color: '#94a3b8' }}>
-            Powered by <span style={{ fontWeight: 700, letterSpacing: 1 }}>RUGBY<span style={{ color: GOLD }}>IQ</span></span>
+            Powered by <span style={{ fontWeight: 700, letterSpacing: 1 }}>CLUB<span style={{ color: GOLD }}>CODE</span></span>
           </div>
         </div>
       )}
