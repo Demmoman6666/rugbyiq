@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import Link from 'next/link'
@@ -11,7 +11,7 @@ const NAV  = '#0f172a'
 
 type SettingsTab = 'club' | 'account' | 'billing' | 'analysts'
 
-export default function SettingsPage() {
+function SettingsPageInner() {
   const router       = useRouter()
   const searchParams = useSearchParams()
   const supabase     = createClient()
@@ -349,5 +349,13 @@ export default function SettingsPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense fallback={<div style={{ fontFamily: "'Barlow Condensed', system-ui, sans-serif", background: '#f8fafc', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>Loading...</div>}>
+      <SettingsPageInner />
+    </Suspense>
   )
 }
