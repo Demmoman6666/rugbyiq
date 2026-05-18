@@ -77,3 +77,27 @@ export interface AIAnalysisResult {
 }
 
 export type EventType = string
+
+export interface TeamStats {
+  score: number
+  tries: number
+  penalties: number
+  knockOns: number
+  tackles: number
+  rucks: number
+  lineoutsWon: number
+  lineoutsLost: number
+  lineoutsTotal: number
+  lineoutPct: number
+  scrumsWon: number
+  scrumsLost: number
+  scrumsTotal: number
+  scrumPct: number
+}
+
+export interface MatchStats {
+  home: TeamStats
+  away: TeamStats
+  ballInPlaySeconds: number
+  ballInPlayPct: number
+}
