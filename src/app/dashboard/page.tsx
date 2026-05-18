@@ -157,20 +157,17 @@ export default function DashboardPage() {
                 onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)'; e.currentTarget.style.borderColor = '#cbd5e1' }}
                 onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)'; e.currentTarget.style.borderColor = '#e2e8f0' }}
               >
-                <div style={{ display: 'flex', gap: 3, flexShrink: 0 }}>
-                  <div style={{ width: 4, height: 40, borderRadius: 2, background: m.home_color }}/>
-                  <div style={{ width: 4, height: 40, borderRadius: 2, background: m.away_color }}/>
-                </div>
+
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 18, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                    <span style={{ color: m.home_color }}>{m.home_team}</span>
-                    <span style={{ color: '#cbd5e1', fontWeight: 400, fontSize: 14 }}>vs</span>
-                    <span style={{ color: m.away_color }}>{m.away_team}</span>
+                  <div style={{ fontSize: 17, fontWeight: 900, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', fontFamily: FF, letterSpacing: 0.3, color: '#0f172a' }}>
+                    <span>{m.home_team}</span>
+                    <span style={{ color: '#cbd5e1', fontWeight: 400, fontSize: 13 }}>vs</span>
+                    <span>{m.away_team}</span>
                   </div>
-                  <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4, display: 'flex', gap: 14 }}>
-                    {m.competition && <span>🏆 {m.competition}</span>}
-                    {m.match_date && <span>📅 {new Date(m.match_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>}
-                    {m.venue && <span>📍 {m.venue}</span>}
+                  <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 5, display: 'flex', gap: 14, alignItems: 'center' }}>
+                    {m.competition && <span style={{ color: '#64748b', fontWeight: 600 }}>{m.competition}</span>}
+                    {m.match_date && <span>{new Date(m.match_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>}
+                    {m.venue && <span>{m.venue}</span>}
                   </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
