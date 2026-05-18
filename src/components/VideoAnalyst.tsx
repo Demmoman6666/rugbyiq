@@ -416,9 +416,13 @@ export default function VideoAnalyst({
 
   const toggleFullscreen = () => {
     if (isYoutube) {
-      const iframe = document.querySelector('#yt-embed iframe') as HTMLElement
+      if (!ytReadyRef.current) return
+      const iframe = ytPlayerRef.current?.getIframe() as HTMLElement
       if (iframe) {
-        if (!document.fullscreenElement) iframe.requestFullscreen()
+        if (!document.fullscreenElement) iframe.requestFullscreen().catch(() => {
+          // fallback: fullscreen the container
+          videoContainerRef.current?.requestFullscreen()
+        })
         else document.exitFullscreen()
       }
       return
