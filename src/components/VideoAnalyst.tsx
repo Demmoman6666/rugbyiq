@@ -625,9 +625,8 @@ export default function VideoAnalyst({
               isYoutube ? (
                 <div style={{ position: 'relative', width: '100%', height: isFullscreen ? '100vh' : '52vh' }}>
                   <div id="yt-embed" style={{ width: '100%', height: '100%' }} />
-                  <div style={{ position: 'absolute', inset: 0, cursor: 'crosshair', zIndex: 5 }}
-                    onClick={e => { if (!ytReadyRef.current) return; const dur = ytPlayerRef.current.getDuration(); const r = e.currentTarget.getBoundingClientRect(); const t = Math.round(((e.clientX - r.left) / r.width) * dur); ytPlayerRef.current.seekTo(t, true); setTime(t) }}
-                    onDoubleClick={() => { if (!ytReadyRef.current) return; playing ? ytPlayerRef.current.pauseVideo() : ytPlayerRef.current.playVideo() }}
+                  <div style={{ position: 'absolute', inset: 0, cursor: 'pointer', zIndex: 5 }}
+                    onClick={() => { if (!ytReadyRef.current) return; playing ? ytPlayerRef.current.pauseVideo() : ytPlayerRef.current.playVideo() }}
                   />
                 </div>
               ) : (
