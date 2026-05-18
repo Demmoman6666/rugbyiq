@@ -63,6 +63,11 @@ export interface ParsedPlayer {
 }
 
 export interface AIAnalysisResult {
+  event_detected: boolean
+  event_type: string
+  confidence: number
+  description?: string
+  timestamp_seconds?: number
   events: {
     event_type: string
     timestamp_seconds: number
