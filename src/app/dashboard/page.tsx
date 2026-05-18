@@ -159,20 +159,18 @@ export default function DashboardPage() {
               >
 
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 17, fontWeight: 900, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', fontFamily: FF, letterSpacing: 0.3, color: '#0f172a' }}>
-                    <span>{m.home_team}</span>
-                    <span style={{ color: '#cbd5e1', fontWeight: 400, fontSize: 13 }}>vs</span>
-                    <span>{m.away_team}</span>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', fontFamily: FF, letterSpacing: 0.2, marginBottom: 5 }}>
+                    {m.home_team} <span style={{ color: '#94a3b8', fontWeight: 400, fontSize: 13, margin: '0 6px' }}>vs</span> {m.away_team}
                   </div>
-                  <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 5, display: 'flex', gap: 14, alignItems: 'center' }}>
-                    {m.competition && <span style={{ color: '#64748b', fontWeight: 600 }}>{m.competition}</span>}
+                  <div style={{ fontSize: 11, color: '#94a3b8', display: 'flex', gap: 16, alignItems: 'center' }}>
+                    {m.competition && <span>{m.competition}</span>}
                     {m.match_date && <span>{new Date(m.match_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>}
                     {m.venue && <span>{m.venue}</span>}
                   </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                  {m.video_url && <span style={{ fontSize: 11, fontWeight: 700, color: '#10b981', background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '3px 8px', borderRadius: 6 }}>VIDEO</span>}
-                  <span style={{ fontSize: 11, fontWeight: 700, color: STATUS_COLOR[m.status], background: STATUS_BG[m.status], padding: '3px 10px', borderRadius: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>{m.status}</span>
+                  {m.video_url && <span style={{ fontSize: 10, fontWeight: 700, color: '#475569', background: '#f1f5f9', border: '1px solid #e2e8f0', padding: '3px 8px', borderRadius: 4, letterSpacing: 0.5 }}>VIDEO</span>}
+                  <span style={{ fontSize: 10, fontWeight: 700, color: '#475569', background: '#f1f5f9', border: '1px solid #e2e8f0', padding: '3px 10px', borderRadius: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>{m.status}</span>
                   <span style={{ color: '#cbd5e1', fontSize: 18 }}>›</span>
                 </div>
               </div>
