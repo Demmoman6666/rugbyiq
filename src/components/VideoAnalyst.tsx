@@ -415,7 +415,14 @@ export default function VideoAnalyst({
   }
 
   const toggleFullscreen = () => {
-    if (isYoutube) return
+    if (isYoutube) {
+      const iframe = document.querySelector('#yt-embed iframe') as HTMLElement
+      if (iframe) {
+        if (!document.fullscreenElement) iframe.requestFullscreen()
+        else document.exitFullscreen()
+      }
+      return
+    }
     if (!document.fullscreenElement) videoContainerRef.current?.requestFullscreen()
     else document.exitFullscreen()
   }
@@ -686,9 +693,9 @@ export default function VideoAnalyst({
                     </div>
                   )}
                 </div>
-                {ctrlBtn(toggleFullscreen, '⛶', 'Fullscreen')}
               </>
             )}
+            {ctrlBtn(toggleFullscreen, '⛶', 'Fullscreen')}
             <button onClick={() => setShowScanConfirm(true)} disabled={scanState.running || !videoUrl} style={{ padding: '5px 14px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: scanState.running ? '#ffffff0d' : GOLD + '22', border: `1px solid ${GOLD}44`, color: GOLD, borderRadius: 4, cursor: 'pointer', whiteSpace: 'nowrap', letterSpacing: 1, opacity: videoUrl ? 1 : 0.3 }}>
               {scanState.running ? `🤖 ${scanState.pct}%` : '🤖 AI SCAN'}
             </button>
