@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { computeMatchStats, formatTime } from '@/lib/stats'
 import { getSportConfig } from '@/lib/sports'
-import type { MatchEvent, AISuggestion, TeamInfo, Player } from '@/lib/types'
+import type { MatchEvent, AISuggestion, TeamInfo, Player, ParsedPlayer } from '@/lib/types'
 import { createClient } from '@/lib/supabase'
 
 const extractYouTubeId = (url: string) => {
@@ -22,6 +22,9 @@ interface VideoAnalystProps {
 }
 
 type Tab = 'code' | 'ai' | 'stats' | 'review'
+type StatsSubTab = 'match' | 'players'
+type SortCol = 'name' | 'shirt' | string
+type SortDir = 'desc' | 'asc'
 
 const BG    = '#0a0e1a'
 const CARD  = '#111827'
@@ -49,6 +52,7 @@ export default function VideoAnalyst({
   const isYoutube = Boolean(youtubeId)
 
   const [tab, setTab]                       = useState<Tab>('code')
+  const [statsSubTab, setStatsSubTab]       = useState<StatsSubTab>('match')
   const [events, setEvents]                 = useState<MatchEvent[]>(initialEvents)
   const [suggestions, setSuggestions]       = useState<AISuggestion[]>([])
   const [time, setTime]                     = useState(0)
@@ -81,7 +85,22 @@ export default function VideoAnalyst({
   const [homePlayers, setHomePlayers]       = useState<Player[]>([])
   const [awayPlayers, setAwayPlayers]       = useState<Player[]>([])
 
-  // Two-key player hotkey state
+  // Player sort state
+  const [playerSortCol, setPlayerSortCol]   = useState<SortCol>('total')
+  const [playerSortDir, setPlayerSortDir]   = useState<SortDir>('desc')
+  const [playerSortTeam, setPlayerSortTeam] = useState<'home' | 'away'>('home')
+
+  // Squads modal
+  const [showSquadsModal, setShowSquadsModal]       = useState(false)
+  const [modalHomePlayers, setModalHomePlayers]     = useState<ParsedPlayer[]>([])
+  const [modalAwayPlayers, setModalAwayPlayers]     = useState<ParsedPlayer[]>([])
+  const [homeParseState, setHomeParseState]         = useState<'idle' | 'parsing' | 'done' | 'error'>('idle')
+  const [awayParseState, setAwayParseState]         = useState<'idle' | 'parsing' | 'done' | 'error'>('idle')
+  const [savingSquads, setSavingSquads]             = useState(false)
+  const homeSheetRef = useRef<HTMLInputElement>(null)
+  const awaySheetRef = useRef<HTMLInputElement>(null)
+
+  // Two-key player hotkey
   const pendingEventType = useRef<string | null>(null)
   const playerBuffer     = useRef<string>('')
   const playerTimer      = useRef<NodeJS.Timeout | null>(null)
@@ -92,6 +111,17 @@ export default function VideoAnalyst({
     setToast({ label, color, team, player })
     toastTimer.current = setTimeout(() => setToast(null), 1500)
   }
+
+  const loadPlayers = useCallback(async () => {
+    const res = await fetch(`/api/players?match_id=${matchId}`)
+    const { players } = await res.json()
+    if (players) {
+      setHomePlayers(players.filter((p: Player) => p.team === 'home'))
+      setAwayPlayers(players.filter((p: Player) => p.team === 'away'))
+      setModalHomePlayers(players.filter((p: Player) => p.team === 'home').map((p: Player) => ({ shirt_number: p.shirt_number, name: p.name })))
+      setModalAwayPlayers(players.filter((p: Player) => p.team === 'away').map((p: Player) => ({ shirt_number: p.shirt_number, name: p.name })))
+    }
+  }, [matchId])
 
   useEffect(() => {
     const load = async () => {
@@ -122,17 +152,7 @@ export default function VideoAnalyst({
     loadSport()
   }, [])
 
-  useEffect(() => {
-    const loadPlayers = async () => {
-      const res = await fetch(`/api/players?match_id=${matchId}`)
-      const { players } = await res.json()
-      if (players) {
-        setHomePlayers(players.filter((p: Player) => p.team === 'home'))
-        setAwayPlayers(players.filter((p: Player) => p.team === 'away'))
-      }
-    }
-    loadPlayers()
-  }, [matchId])
+  useEffect(() => { loadPlayers() }, [loadPlayers])
 
   useEffect(() => {
     const onChange = () => setIsFullscreen(Boolean(document.fullscreenElement))
@@ -189,7 +209,6 @@ export default function VideoAnalyst({
 
   const actualDuration = useCallback(() => (isYoutube ? duration : videoRef.current?.duration) || duration, [isYoutube, duration])
 
-  // Visible events (respects filters) — used for up/down arrow navigation
   const visible = useMemo(() =>
     events.filter(e => !filters.length || filters.includes(e.event_type)).sort((a,b) => a.timestamp_secs - b.timestamp_secs)
   , [events, filters])
@@ -202,8 +221,7 @@ export default function VideoAnalyst({
   }, [isYoutube])
 
   const fireEventWithPlayer = useCallback(async (type: string, shirtNumber: number | null) => {
-    const cfg = sportConfig.events[type]
-    const team = activeTeam
+    const cfg = sportConfig.events[type]; const team = activeTeam
     const players = team === 'home' ? homePlayers : awayPlayers
     const player = shirtNumber ? players.find(p => p.shirt_number === shirtNumber) : null
     const { data } = await supabase.from('events').insert({
@@ -222,72 +240,24 @@ export default function VideoAnalyst({
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
       if (['INPUT','TEXTAREA'].includes((e.target as HTMLElement).tagName)) return
-
-      // ── Arrow keys ────────────────────────────────────────────────────────
-      if (e.key === 'ArrowRight') {
-        e.preventDefault()
-        // Skip forward 5s
-        if (isYoutube) { if (ytReadyRef.current) ytPlayerRef.current.seekTo(Math.min(ytPlayerRef.current.getCurrentTime() + 5, ytPlayerRef.current.getDuration()), true) }
-        else { if (videoRef.current) videoRef.current.currentTime = Math.min(videoRef.current.currentTime + 5, videoRef.current.duration || 0) }
-        return
-      }
-      if (e.key === 'ArrowLeft') {
-        e.preventDefault()
-        // Skip back 5s
-        if (isYoutube) { if (ytReadyRef.current) ytPlayerRef.current.seekTo(Math.max(ytPlayerRef.current.getCurrentTime() - 5, 0), true) }
-        else { if (videoRef.current) videoRef.current.currentTime = Math.max(videoRef.current.currentTime - 5, 0) }
-        return
-      }
-      if (e.key === 'ArrowUp') {
-        e.preventDefault()
-        // Previous visible event
-        const prev = [...visible].reverse().find(ev => ev.timestamp_secs < time - 1)
-        if (prev) seekTo(prev.timestamp_secs)
-        return
-      }
-      if (e.key === 'ArrowDown') {
-        e.preventDefault()
-        // Next visible event
-        const next = visible.find(ev => ev.timestamp_secs > time + 1)
-        if (next) seekTo(next.timestamp_secs)
-        return
-      }
-
-      // ── Space = play/pause ────────────────────────────────────────────────
-      if (e.key === ' ') {
-        e.preventDefault()
-        if (isYoutube) { ytReadyRef.current && (playing ? ytPlayerRef.current.pauseVideo() : ytPlayerRef.current.playVideo()) }
-        else { videoRef.current?.paused ? videoRef.current.play() : videoRef.current?.pause() }
-        return
-      }
-
-      // ── Pending event: digit input ────────────────────────────────────────
+      if (e.key === 'ArrowRight') { e.preventDefault(); if (isYoutube) { if (ytReadyRef.current) ytPlayerRef.current.seekTo(Math.min(ytPlayerRef.current.getCurrentTime() + 5, ytPlayerRef.current.getDuration()), true) } else { if (videoRef.current) videoRef.current.currentTime = Math.min(videoRef.current.currentTime + 5, videoRef.current.duration || 0) }; return }
+      if (e.key === 'ArrowLeft')  { e.preventDefault(); if (isYoutube) { if (ytReadyRef.current) ytPlayerRef.current.seekTo(Math.max(ytPlayerRef.current.getCurrentTime() - 5, 0), true) } else { if (videoRef.current) videoRef.current.currentTime = Math.max(videoRef.current.currentTime - 5, 0) }; return }
+      if (e.key === 'ArrowUp')    { e.preventDefault(); const prev = [...visible].reverse().find(ev => ev.timestamp_secs < time - 1); if (prev) seekTo(prev.timestamp_secs); return }
+      if (e.key === 'ArrowDown')  { e.preventDefault(); const next = visible.find(ev => ev.timestamp_secs > time + 1); if (next) seekTo(next.timestamp_secs); return }
+      if (e.key === ' ') { e.preventDefault(); if (isYoutube) { ytReadyRef.current && (playing ? ytPlayerRef.current.pauseVideo() : ytPlayerRef.current.playVideo()) } else { videoRef.current?.paused ? videoRef.current.play() : videoRef.current?.pause() }; return }
       if (pendingEventType.current) {
         if (/^\d$/.test(e.key)) {
-          e.preventDefault()
-          playerBuffer.current += e.key
+          e.preventDefault(); playerBuffer.current += e.key
           const cfg = sportConfig.events[pendingEventType.current]
           setHudDisplay({ eventLabel: cfg?.label ?? pendingEventType.current, digits: playerBuffer.current, color: cfg?.color ?? GOLD })
           if (playerTimer.current) clearTimeout(playerTimer.current)
-          if (playerBuffer.current.length >= 2) {
-            const num = parseInt(playerBuffer.current); const type = pendingEventType.current
-            playerBuffer.current = ''; playerTimer.current = null
-            fireEventWithPlayer(type, num); return
-          }
-          playerTimer.current = setTimeout(() => {
-            const num = parseInt(playerBuffer.current); const type = pendingEventType.current!
-            playerBuffer.current = ''; playerTimer.current = null
-            fireEventWithPlayer(type, num)
-          }, 1000)
+          if (playerBuffer.current.length >= 2) { const num = parseInt(playerBuffer.current); const type = pendingEventType.current; playerBuffer.current = ''; playerTimer.current = null; fireEventWithPlayer(type, num); return }
+          playerTimer.current = setTimeout(() => { const num = parseInt(playerBuffer.current); const type = pendingEventType.current!; playerBuffer.current = ''; playerTimer.current = null; fireEventWithPlayer(type, num) }, 1000)
           return
         }
         if (playerTimer.current) { clearTimeout(playerTimer.current); playerTimer.current = null }
-        const type = pendingEventType.current
-        pendingEventType.current = null; playerBuffer.current = ''; setHudDisplay(null)
-        fireEventWithPlayer(type, null)
+        const type = pendingEventType.current; pendingEventType.current = null; playerBuffer.current = ''; setHudDisplay(null); fireEventWithPlayer(type, null)
       }
-
-      // ── Event hotkey ──────────────────────────────────────────────────────
       const type = Object.keys(sportConfig.events).find(k => sportConfig.events[k].hotkey === e.key.toUpperCase())
       if (type) {
         e.preventDefault()
@@ -297,13 +267,8 @@ export default function VideoAnalyst({
         if (hasSquad) {
           pendingEventType.current = type; playerBuffer.current = ''
           setHudDisplay({ eventLabel: cfg?.label ?? type, digits: '', color: cfg?.color ?? GOLD })
-          playerTimer.current = setTimeout(() => {
-            const t = pendingEventType.current
-            if (t) { pendingEventType.current = null; playerBuffer.current = ''; setHudDisplay(null); playerTimer.current = null; fireEventWithPlayer(t, null) }
-          }, 2000)
-        } else {
-          fireEventWithPlayer(type, null)
-        }
+          playerTimer.current = setTimeout(() => { const t = pendingEventType.current; if (t) { pendingEventType.current = null; playerBuffer.current = ''; setHudDisplay(null); playerTimer.current = null; fireEventWithPlayer(t, null) } }, 2000)
+        } else { fireEventWithPlayer(type, null) }
       }
     }
     document.addEventListener('keydown', h)
@@ -317,6 +282,84 @@ export default function VideoAnalyst({
     [homeTeam.abbr]: events.filter(e => e.event_type === type && e.team === 'home').length,
     [awayTeam.abbr]: events.filter(e => e.event_type === type && e.team === 'away').length,
   })), [events, homeTeam.abbr, awayTeam.abbr, sportConfig])
+
+  // ── Player stats computation ──────────────────────────────────────────────
+  const playerStats = useMemo(() => {
+    const teamEvents = events.filter(e => e.team === playerSortTeam && e.shirt_number)
+    const shirtNumbers = [...new Set(teamEvents.map(e => e.shirt_number!))]
+    const players = playerSortTeam === 'home' ? homePlayers : awayPlayers
+    const eventTypes = Object.keys(sportConfig.events)
+
+    return shirtNumbers.map(shirt => {
+      const player = players.find(p => p.shirt_number === shirt)
+      const row: Record<string, any> = { shirt, name: player?.name ?? '' }
+      let total = 0
+      eventTypes.forEach(type => {
+        const count = teamEvents.filter(e => e.shirt_number === shirt && e.event_type === type).length
+        row[type] = count; total += count
+      })
+      row.total = total
+      return row
+    })
+  }, [events, playerSortTeam, homePlayers, awayPlayers, sportConfig])
+
+  const sortedPlayerStats = useMemo(() => {
+    return [...playerStats].sort((a, b) => {
+      const av = a[playerSortCol] ?? 0; const bv = b[playerSortCol] ?? 0
+      if (typeof av === 'string') return playerSortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av)
+      return playerSortDir === 'asc' ? av - bv : bv - av
+    })
+  }, [playerStats, playerSortCol, playerSortDir])
+
+  const handleSort = (col: string) => {
+    if (playerSortCol === col) setPlayerSortDir(d => d === 'desc' ? 'asc' : 'desc')
+    else { setPlayerSortCol(col); setPlayerSortDir('desc') }
+  }
+
+  // ── Squads modal helpers ──────────────────────────────────────────────────
+  const parseTeamSheet = async (file: File, team: 'home' | 'away') => {
+    const setter = team === 'home' ? setHomeParseState : setAwayParseState
+    const playerSetter = team === 'home' ? setModalHomePlayers : setModalAwayPlayers
+    setter('parsing')
+    try {
+      const fd = new FormData(); fd.append('image', file); fd.append('team', team)
+      const res = await fetch('/api/parse-teamsheet', { method: 'POST', body: fd })
+      const { players, error } = await res.json()
+      if (error) throw new Error(error)
+      playerSetter(players); setter('done')
+    } catch { setter('error') }
+  }
+
+  const updateModalPlayer = (team: 'home' | 'away', idx: number, field: 'shirt_number' | 'name', value: string) => {
+    const setter = team === 'home' ? setModalHomePlayers : setModalAwayPlayers
+    const list = team === 'home' ? [...modalHomePlayers] : [...modalAwayPlayers]
+    list[idx] = { ...list[idx], [field]: field === 'shirt_number' ? parseInt(value) || 0 : value }
+    setter(list)
+  }
+
+  const removeModalPlayer = (team: 'home' | 'away', idx: number) => {
+    const setter = team === 'home' ? setModalHomePlayers : setModalAwayPlayers
+    const list = team === 'home' ? [...modalHomePlayers] : [...modalAwayPlayers]
+    list.splice(idx, 1); setter(list)
+  }
+
+  const addModalPlayer = (team: 'home' | 'away') => {
+    const setter = team === 'home' ? setModalHomePlayers : setModalAwayPlayers
+    const list = team === 'home' ? [...modalHomePlayers] : [...modalAwayPlayers]
+    const nextNum = list.length > 0 ? Math.max(...list.map(p => p.shirt_number)) + 1 : 1
+    setter([...list, { shirt_number: nextNum, name: '' }])
+  }
+
+  const saveSquads = async () => {
+    setSavingSquads(true)
+    try {
+      if (modalHomePlayers.length > 0) await fetch('/api/players', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ match_id: matchId, team: 'home', players: modalHomePlayers }) })
+      if (modalAwayPlayers.length > 0) await fetch('/api/players', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ match_id: matchId, team: 'away', players: modalAwayPlayers }) })
+      await loadPlayers()
+      setShowSquadsModal(false)
+    } catch { alert('Failed to save squads') }
+    finally { setSavingSquads(false) }
+  }
 
   const playPause = () => {
     if (isYoutube) { if (!ytReadyRef.current) return; playing ? ytPlayerRef.current.pauseVideo() : ytPlayerRef.current.playVideo() }
@@ -348,11 +391,7 @@ export default function VideoAnalyst({
   const codeEvent = async (type: string) => {
     const cfg = sportConfig.events[type]; const team = activeTeam
     const { data } = await supabase.from('events').insert({ match_id: matchId, event_type: type, timestamp_secs: time, team, ai_detected: false }).select().single()
-    if (data) {
-      setEvents(prev => [...prev, data as MatchEvent])
-      if (cfg?.outcomes) setLastEv(data as MatchEvent); else setLastEv(null)
-      showToast(cfg?.label ?? type, cfg?.color ?? GOLD, team === 'home' ? homeTeam.abbr : awayTeam.abbr)
-    }
+    if (data) { setEvents(prev => [...prev, data as MatchEvent]); if (cfg?.outcomes) setLastEv(data as MatchEvent); else setLastEv(null); showToast(cfg?.label ?? type, cfg?.color ?? GOLD, team === 'home' ? homeTeam.abbr : awayTeam.abbr) }
   }
 
   const updateOutcome = async (outcome: string) => {
@@ -361,15 +400,11 @@ export default function VideoAnalyst({
     if (data) { setEvents(prev => prev.map(e => e.id === lastEv.id ? { ...e, outcome } : e)); setLastEv(null) }
   }
 
-  const deleteEvent = async (id: string) => {
-    await supabase.from('events').delete().eq('id', id)
-    setEvents(prev => prev.filter(e => e.id !== id))
-  }
+  const deleteEvent = async (id: string) => { await supabase.from('events').delete().eq('id', id); setEvents(prev => prev.filter(e => e.id !== id)) }
 
   const saveNote = async (id: string, notes: string) => {
     await supabase.from('events').update({ notes }).eq('id', id)
-    setEvents(prev => prev.map(e => e.id === id ? { ...e, notes } : e))
-    setEditingNote(null)
+    setEvents(prev => prev.map(e => e.id === id ? { ...e, notes } : e)); setEditingNote(null)
   }
 
   const generateShareLink = async () => {
@@ -388,15 +423,8 @@ export default function VideoAnalyst({
     else document.exitFullscreen()
   }
 
-  const skipToNextEvent = () => {
-    const next = visible.find(e => e.timestamp_secs > time + 1)
-    if (next) seekTo(next.timestamp_secs)
-  }
-
-  const skipToPrevEvent = () => {
-    const prev = [...visible].reverse().find(e => e.timestamp_secs < time - 1)
-    if (prev) seekTo(prev.timestamp_secs)
-  }
+  const skipToNextEvent = () => { const next = visible.find(e => e.timestamp_secs > time + 1); if (next) seekTo(next.timestamp_secs) }
+  const skipToPrevEvent = () => { const prev = [...visible].reverse().find(e => e.timestamp_secs < time - 1); if (prev) seekTo(prev.timestamp_secs) }
 
   const startAIScan = async () => {
     if (!videoUrl) return
@@ -407,10 +435,7 @@ export default function VideoAnalyst({
       clearInterval(iv)
       if (!res.ok) { const err = await res.json(); throw new Error(err.error ?? 'Analysis failed') }
       const { events: detected } = await res.json()
-      setSuggestions((detected as any[]).filter(e => e.event_type && e.event_type !== 'NONE').map(e => ({
-        id: crypto.randomUUID(), timestamp_secs: Math.round(e.timestamp_seconds), event_type: e.event_type,
-        confidence: e.confidence ?? 0.8, description: e.description, status: 'pending' as const,
-      })))
+      setSuggestions((detected as any[]).filter(e => e.event_type && e.event_type !== 'NONE').map(e => ({ id: crypto.randomUUID(), timestamp_secs: Math.round(e.timestamp_seconds), event_type: e.event_type, confidence: e.confidence ?? 0.8, description: e.description, status: 'pending' as const })))
       setScanState({ running: false, pct: 100 }); setTab('ai')
     } catch (err: any) { clearInterval(iv); setScanState({ running: false, pct: 0 }); alert(`Scan failed: ${err.message}`) }
   }
@@ -433,8 +458,7 @@ export default function VideoAnalyst({
       const res = await fetch('/api/review', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ matchId, orgId, name: reviewName, description: reviewDesc, eventIds: reviewSelected, clipBeforeSecs: clipBefore, clipAfterSecs: clipAfter }) })
       const { reviewSet } = await res.json()
       const link = `${window.location.origin}/review/${reviewSet.token}`
-      setReviewLink(link); setReviewSets(prev => [reviewSet, ...prev])
-      setReviewName(''); setReviewDesc(''); setReviewSelected([])
+      setReviewLink(link); setReviewSets(prev => [reviewSet, ...prev]); setReviewName(''); setReviewDesc(''); setReviewSelected([])
     } catch { alert('Failed to create review') }
     finally { setBuildingReview(false) }
   }
@@ -465,8 +489,83 @@ export default function VideoAnalyst({
     <button onClick={onClick} title={title} style={{ width: wide ? 'auto' : 28, padding: wide ? '0 10px' : 0, height: 28, borderRadius: 4, background: '#ffffff0d', border: '1px solid #ffffff12', color: DIM, fontSize: 11, cursor: 'pointer', flexShrink: 0, fontWeight: 700, fontFamily: FF, whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{label}</button>
   )
 
+  const SortHeader = ({ col, label }: { col: string; label: string }) => {
+    const active = playerSortCol === col
+    const arrow = active ? (playerSortDir === 'desc' ? ' ↓' : ' ↑') : ''
+    return (
+      <th onClick={() => handleSort(col)} style={{ padding: '8px 10px', textAlign: 'right', fontSize: 9, fontWeight: 700, letterSpacing: 1.5, color: active ? GOLD : MUTED, cursor: 'pointer', whiteSpace: 'nowrap', userSelect: 'none' }}>
+        {label.toUpperCase()}{arrow}
+      </th>
+    )
+  }
+
+  // ── Squads modal component ────────────────────────────────────────────────
+  const SquadsModal = () => {
+    const TeamPanel = ({ team }: { team: 'home' | 'away' }) => {
+      const isHome = team === 'home'
+      const color = isHome ? homeTeam.color : awayTeam.color
+      const name  = isHome ? homeTeam.name : awayTeam.name
+      const players = isHome ? modalHomePlayers : modalAwayPlayers
+      const parseState = isHome ? homeParseState : awayParseState
+      const sheetRef = isHome ? homeSheetRef : awaySheetRef
+      return (
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 14, fontWeight: 900, color, fontFamily: FF, letterSpacing: 0.5, marginBottom: 10 }}>{name} <span style={{ fontSize: 11, color: MUTED, fontWeight: 400 }}>{players.length} players</span></div>
+          <div
+            style={{ border: `2px dashed ${parseState === 'parsing' ? color : BD}`, borderRadius: 8, padding: '16px', textAlign: 'center', cursor: 'pointer', marginBottom: 10, background: '#060912', transition: 'border-color 0.15s' }}
+            onDragOver={e => { e.preventDefault(); e.currentTarget.style.borderColor = color }}
+            onDragLeave={e => { e.currentTarget.style.borderColor = BD }}
+            onDrop={e => { e.preventDefault(); e.currentTarget.style.borderColor = BD; const f = e.dataTransfer.files[0]; if (f) parseTeamSheet(f, team) }}
+            onClick={() => sheetRef.current?.click()}
+          >
+            {parseState === 'parsing' ? <div style={{ color, fontSize: 12, fontWeight: 700 }}>🤖 Reading...</div>
+             : parseState === 'done'    ? <div style={{ color: '#16a34a', fontSize: 11 }}>✓ Parsed — drop to re-scan</div>
+             : parseState === 'error'   ? <div style={{ color: '#ef4444', fontSize: 11 }}>⚠️ Failed — try again</div>
+             : <><div style={{ fontSize: 20, marginBottom: 4 }}>📋</div><div style={{ fontSize: 12, fontWeight: 700, color: TEXT }}>Drop team sheet photo</div><div style={{ fontSize: 10, color: MUTED, marginTop: 2 }}>or click to browse</div></>}
+            <input ref={sheetRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) parseTeamSheet(f, team) }} />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3, maxHeight: 220, overflowY: 'auto', marginBottom: 8 }}>
+            {players.map((p, i) => (
+              <div key={i} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <input type="number" value={p.shirt_number} onChange={e => updateModalPlayer(team, i, 'shirt_number', e.target.value)} style={{ width: 44, padding: '4px 6px', border: `1px solid ${BD}`, borderRadius: 4, fontSize: 11, textAlign: 'center', fontFamily: FF, color: TEXT, background: BG }} />
+                <input type="text" value={p.name} onChange={e => updateModalPlayer(team, i, 'name', e.target.value)} style={{ flex: 1, padding: '4px 8px', border: `1px solid ${BD}`, borderRadius: 4, fontSize: 11, fontFamily: FF, color: TEXT, background: BG }} />
+                <button onClick={() => removeModalPlayer(team, i)} style={{ background: 'none', border: 'none', color: MUTED, cursor: 'pointer', fontSize: 14 }}>✕</button>
+              </div>
+            ))}
+          </div>
+          <button onClick={() => addModalPlayer(team)} style={{ width: '100%', padding: '5px 0', background: 'transparent', border: `1px dashed ${BD}`, borderRadius: 4, color: MUTED, fontSize: 11, cursor: 'pointer', fontFamily: FF }}>+ Add player</button>
+        </div>
+      )
+    }
+
+    return (
+      <div onClick={() => setShowSquadsModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }}>
+        <div onClick={e => e.stopPropagation()} style={{ background: CARD, border: `1px solid ${BD}`, borderRadius: 12, padding: 24, width: '90%', maxWidth: 700, maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 40px 80px rgba(0,0,0,0.6)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+            <div style={{ fontSize: 16, fontWeight: 900, color: TEXT, letterSpacing: 1, fontFamily: FF }}>👥 SQUAD MANAGEMENT</div>
+            <button onClick={() => setShowSquadsModal(false)} style={{ background: 'none', border: 'none', color: MUTED, fontSize: 18, cursor: 'pointer' }}>✕</button>
+          </div>
+          <div style={{ display: 'flex', gap: 20, marginBottom: 20 }}>
+            <TeamPanel team="home" />
+            <div style={{ width: 1, background: BD }}/>
+            <TeamPanel team="away" />
+          </div>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            <button onClick={() => setShowSquadsModal(false)} style={{ padding: '8px 16px', background: 'transparent', border: `1px solid ${BD}`, color: MUTED, fontFamily: FF, fontSize: 12, borderRadius: 4, cursor: 'pointer' }}>Cancel</button>
+            <button onClick={saveSquads} disabled={savingSquads} style={{ padding: '9px 24px', background: GOLD, color: '#000', fontFamily: FF, fontSize: 13, fontWeight: 900, border: 'none', borderRadius: 4, cursor: 'pointer', letterSpacing: 1 }}>
+              {savingSquads ? 'SAVING...' : 'SAVE SQUADS'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div style={{ fontFamily: FF, background: BG, color: TEXT, height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+
+      {/* Squads modal */}
+      {showSquadsModal && <SquadsModal />}
 
       {/* HEADER */}
       <div style={{ background: NAV, padding: '10px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, borderBottom: `1px solid ${BD}` }}>
@@ -495,6 +594,8 @@ export default function VideoAnalyst({
             <div style={{ fontSize: 11, color: MUTED }}>{homeTeam.name} vs {awayTeam.name}</div>
             {scanState.running && <div style={{ color: GOLD, fontSize: 10, marginTop: 2, letterSpacing: 1 }}>🤖 SCANNING {scanState.pct}%</div>}
           </div>
+          {/* Squads button */}
+          <button onClick={() => setShowSquadsModal(true)} style={{ padding: '5px 12px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: '#ffffff0d', color: DIM, border: `1px solid ${BD}`, borderRadius: 4, cursor: 'pointer', letterSpacing: 1 }}>👥 SQUADS</button>
           <button onClick={generateShareLink} style={{ padding: '5px 12px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: copying ? '#16a34a' : '#ffffff0d', color: copying ? '#fff' : GOLD, border: `1px solid ${copying ? '#16a34a' : GOLD + '44'}`, borderRadius: 4, cursor: 'pointer', letterSpacing: 1 }}>
             {copying ? '✓ COPIED' : '🔗 SHARE'}
           </button>
@@ -522,21 +623,9 @@ export default function VideoAnalyst({
               isYoutube ? (
                 <div style={{ position: 'relative', width: '100%', height: isFullscreen ? '100vh' : '52vh' }}>
                   <div id="yt-embed" style={{ width: '100%', height: '100%' }} />
-                  {/* Transparent overlay: click to seek, double-click to play/pause */}
-                  <div
-                    style={{ position: 'absolute', inset: 0, cursor: 'crosshair', zIndex: 5 }}
-                    onClick={e => {
-                      if (!ytReadyRef.current) return
-                      const dur = ytPlayerRef.current.getDuration()
-                      const r = e.currentTarget.getBoundingClientRect()
-                      const t = Math.round(((e.clientX - r.left) / r.width) * dur)
-                      ytPlayerRef.current.seekTo(t, true)
-                      setTime(t)
-                    }}
-                    onDoubleClick={() => {
-                      if (!ytReadyRef.current) return
-                      playing ? ytPlayerRef.current.pauseVideo() : ytPlayerRef.current.playVideo()
-                    }}
+                  <div style={{ position: 'absolute', inset: 0, cursor: 'crosshair', zIndex: 5 }}
+                    onClick={e => { if (!ytReadyRef.current) return; const dur = ytPlayerRef.current.getDuration(); const r = e.currentTarget.getBoundingClientRect(); const t = Math.round(((e.clientX - r.left) / r.width) * dur); ytPlayerRef.current.seekTo(t, true); setTime(t) }}
+                    onDoubleClick={() => { if (!ytReadyRef.current) return; playing ? ytPlayerRef.current.pauseVideo() : ytPlayerRef.current.playVideo() }}
                   />
                 </div>
               ) : (
@@ -549,8 +638,6 @@ export default function VideoAnalyst({
             )}
             <div style={{ position: 'absolute', top: 10, left: 12, background: 'rgba(0,0,0,0.8)', color: GOLD, fontFamily: MONO, fontSize: 16, padding: '3px 10px', borderRadius: 3, letterSpacing: 3, zIndex: 10 }}>{formatTime(time)}</div>
             <div style={{ position: 'absolute', top: 10, right: 12, background: 'rgba(0,0,0,0.8)', color: DIM, fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 3, letterSpacing: 2, zIndex: 10 }}>{time < duration / 2 ? '1ST HALF' : '2ND HALF'}</div>
-
-            {/* Player HUD */}
             {hudDisplay && (
               <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', background: 'rgba(0,0,0,0.9)', border: `2px solid ${hudDisplay.color}`, borderRadius: 12, padding: '16px 32px', textAlign: 'center', zIndex: 9999, pointerEvents: 'none', minWidth: 180 }}>
                 <div style={{ color: hudDisplay.color, fontFamily: FF, fontSize: 13, fontWeight: 700, letterSpacing: 2, marginBottom: 6 }}>{hudDisplay.eventLabel.toUpperCase()}</div>
@@ -558,8 +645,6 @@ export default function VideoAnalyst({
                 <div style={{ color: '#ffffff50', fontSize: 10, marginTop: 6, letterSpacing: 1 }}>TYPE SHIRT NUMBER</div>
               </div>
             )}
-
-            {/* Toast */}
             {toast && (
               <div style={{ position: 'absolute', bottom: 32, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', border: `2px solid ${toast.color}`, borderRadius: 8, padding: '10px 24px', display: 'flex', alignItems: 'center', gap: 12, zIndex: 9998, pointerEvents: 'none' }}>
                 <div style={{ width: 10, height: 10, borderRadius: '50%', background: toast.color, boxShadow: `0 0 10px ${toast.color}` }}/>
@@ -571,29 +656,19 @@ export default function VideoAnalyst({
             )}
           </div>
 
-          {/* Controls bar */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', background: NAV, borderBottom: `1px solid ${BD}`, flexShrink: 0 }}>
             {ctrlBtn(skipToPrevEvent, '⏮', 'Previous event (↑)')}
             {ctrlBtn(() => skipSeconds(-5), '-5s', 'Rewind 5s (←)', true)}
-            <button onClick={playPause} style={{ width: 32, height: 32, borderRadius: '50%', background: GOLD, border: 'none', color: '#000', fontSize: 12, cursor: 'pointer', flexShrink: 0, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {playing ? '⏸' : '▶'}
-            </button>
+            <button onClick={playPause} style={{ width: 32, height: 32, borderRadius: '50%', background: GOLD, border: 'none', color: '#000', fontSize: 12, cursor: 'pointer', flexShrink: 0, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{playing ? '⏸' : '▶'}</button>
             {ctrlBtn(() => skipSeconds(5), '+5s', 'Forward 5s (→)', true)}
             {ctrlBtn(skipToNextEvent, '⏭', 'Next event (↓)')}
-
-            {/* Progress bar — native video only */}
             {!isYoutube ? (
               <div style={{ flex: 1, height: 3, background: '#ffffff10', borderRadius: 2, cursor: 'pointer', position: 'relative', margin: '0 6px' }} onClick={seekFromProgressBar}>
                 <div style={{ height: '100%', width: `${(time / actualDuration()) * 100}%`, background: GOLD, borderRadius: 2 }}/>
                 <div style={{ position: 'absolute', top: '50%', left: `${(time / actualDuration()) * 100}%`, transform: 'translate(-50%,-50%)', width: 10, height: 10, borderRadius: '50%', background: GOLD, boxShadow: `0 0 6px ${GOLD}` }}/>
               </div>
-            ) : (
-              <div style={{ flex: 1 }}/>
-            )}
-
+            ) : <div style={{ flex: 1 }}/>}
             <span style={{ fontFamily: MONO, fontSize: 10, color: MUTED, whiteSpace: 'nowrap' }}>{formatTime(time)} / {formatTime(duration)}</span>
-
-            {/* Volume / speed / fullscreen — native video only */}
             {!isYoutube && (
               <>
                 <div style={{ position: 'relative' }}>
@@ -618,7 +693,6 @@ export default function VideoAnalyst({
                 {ctrlBtn(toggleFullscreen, '⛶', 'Fullscreen')}
               </>
             )}
-
             <button onClick={() => setShowScanConfirm(true)} disabled={scanState.running || !videoUrl} style={{ padding: '5px 14px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: scanState.running ? '#ffffff0d' : GOLD + '22', border: `1px solid ${GOLD}44`, color: GOLD, borderRadius: 4, cursor: 'pointer', whiteSpace: 'nowrap', letterSpacing: 1, opacity: videoUrl ? 1 : 0.3 }}>
               {scanState.running ? `🤖 ${scanState.pct}%` : '🤖 AI SCAN'}
             </button>
@@ -626,7 +700,7 @@ export default function VideoAnalyst({
 
           {showScanConfirm && (
             <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }}>
-              <div style={{ background: '#111827', border: `1px solid ${BD}`, borderRadius: 12, padding: 28, maxWidth: 400, width: '90%', boxShadow: '0 40px 80px rgba(0,0,0,0.5)' }}>
+              <div style={{ background: '#111827', border: `1px solid ${BD}`, borderRadius: 12, padding: 28, maxWidth: 400, width: '90%' }}>
                 <div style={{ fontSize: 18, fontWeight: 900, marginBottom: 8, color: TEXT, letterSpacing: 1 }}>🤖 RUN AI ANALYSIS?</div>
                 <div style={{ fontSize: 13, color: DIM, lineHeight: 1.7, marginBottom: 20 }}>Gemini will watch the <strong style={{ color: TEXT }}>entire video</strong> and return all events with timestamps in a single pass.</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 22 }}>
@@ -645,7 +719,6 @@ export default function VideoAnalyst({
             </div>
           )}
 
-          {/* Event buttons */}
           <div style={{ background: CARD, borderBottom: `1px solid ${BD}`, padding: '8px 12px', flexShrink: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', gap: 4, marginRight: 6 }}>
@@ -667,18 +740,12 @@ export default function VideoAnalyst({
                 </div>
               )}
             </div>
-
-            {(activeTeam === 'home' ? homePlayers : awayPlayers).length > 0 && (
-              <div style={{ marginTop: 6, fontSize: 10, color: MUTED, letterSpacing: 0.5 }}>
-                💡 Hotkey + shirt number (e.g. <span style={{ fontFamily: MONO, color: DIM }}>T</span> then <span style={{ fontFamily: MONO, color: DIM }}>15</span> = Tackle #15) · <span style={{ color: DIM }}>← → skip 5s · ↑ ↓ jump events</span>
-              </div>
-            )}
-            {(activeTeam === 'home' ? homePlayers : awayPlayers).length === 0 && (
-              <div style={{ marginTop: 4, fontSize: 10, color: MUTED }}>
-                <span style={{ color: DIM }}>← → skip 5s · ↑ ↓ jump between events{filters.length > 0 ? ` (filtered: ${filters.join(', ')})` : ''}</span>
-              </div>
-            )}
-
+            <div style={{ marginTop: 4, fontSize: 10, color: MUTED }}>
+              {(activeTeam === 'home' ? homePlayers : awayPlayers).length > 0
+                ? <span>💡 Hotkey + shirt (e.g. <span style={{ fontFamily: MONO, color: DIM }}>T15</span> = Tackle #15) · </span>
+                : null}
+              <span style={{ color: DIM }}>← → skip 5s · ↑ ↓ jump events{filters.length > 0 ? ` (${filters.join(', ')})` : ''}</span>
+            </div>
             {lastEv && sportConfig.events[lastEv.event_type]?.outcomes && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, paddingTop: 8, borderTop: `1px solid ${BD}`, flexWrap: 'wrap' }}>
                 <span style={{ fontSize: 10, color: sportConfig.events[lastEv.event_type].color, fontWeight: 700, letterSpacing: 1.5 }}>SET OUTCOME:</span>
@@ -690,15 +757,11 @@ export default function VideoAnalyst({
             )}
           </div>
 
-          {/* Timeline + event log */}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '10px 12px', gap: 8, background: PANEL }}>
             <div style={{ position: 'relative', height: 20, background: '#ffffff06', borderRadius: 3, flexShrink: 0, cursor: 'pointer', border: `1px solid ${BD}` }}
               onClick={e => { const r = e.currentTarget.getBoundingClientRect(); seekTo(Math.round(((e.clientX - r.left) / r.width) * actualDuration())) }}>
               <div style={{ position: 'absolute', top: 0, bottom: 0, left: '50%', width: 1, background: '#ffffff08' }}/>
-              {events.map(e => {
-                const cfg = sportConfig.events[e.event_type]
-                return <div key={e.id} onClick={ev => { ev.stopPropagation(); seekTo(e.timestamp_secs) }} style={{ position: 'absolute', top: '50%', left: `${(e.timestamp_secs / actualDuration()) * 100}%`, transform: 'translate(-50%,-50%)', width: 6, height: 6, borderRadius: '50%', background: cfg?.color ?? MUTED, cursor: 'pointer', zIndex: 2 }} title={`${cfg?.label ?? e.event_type} ${formatTime(e.timestamp_secs)}`}/>
-              })}
+              {events.map(e => { const cfg = sportConfig.events[e.event_type]; return <div key={e.id} onClick={ev => { ev.stopPropagation(); seekTo(e.timestamp_secs) }} style={{ position: 'absolute', top: '50%', left: `${(e.timestamp_secs / actualDuration()) * 100}%`, transform: 'translate(-50%,-50%)', width: 6, height: 6, borderRadius: '50%', background: cfg?.color ?? MUTED, cursor: 'pointer', zIndex: 2 }} title={`${cfg?.label ?? e.event_type} ${formatTime(e.timestamp_secs)}`}/> })}
               <div style={{ position: 'absolute', top: 0, bottom: 0, left: `${(time / actualDuration()) * 100}%`, width: 2, background: GOLD, zIndex: 4, borderRadius: 1, boxShadow: `0 0 4px ${GOLD}` }}/>
             </div>
             <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', flexShrink: 0 }}>
@@ -788,90 +851,170 @@ export default function VideoAnalyst({
 
       {/* STATS TAB */}
       {tab === 'stats' && (
-        <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 10, overflowY: 'auto', flex: 1, background: PANEL }}>
-          <div style={{ background: NAV, borderRadius: 8, padding: '20px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: `1px solid ${BD}` }}>
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, color: homeTeam.color, opacity: 0.8 }}>{homeTeam.name.toUpperCase()}</div>
-              <div style={{ fontSize: 72, fontWeight: 900, color: homeTeam.color, lineHeight: 1 }}>{stats.home.score}</div>
-              <div style={{ fontSize: 10, color: MUTED, marginTop: 4, letterSpacing: 1 }}>{stats.home.tries} TRIES · {stats.home.penalties} PEN</div>
-            </div>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 3, color: MUTED }}>FULL TIME</div>
-              <div style={{ fontSize: 16, fontFamily: MONO, color: GOLD, marginTop: 6, letterSpacing: 3 }}>{formatTime(time)}</div>
-              <div style={{ fontSize: 10, color: MUTED, marginTop: 6, letterSpacing: 1 }}>{events.length} EVENTS</div>
-            </div>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, color: awayTeam.color, opacity: 0.8 }}>{awayTeam.name.toUpperCase()}</div>
-              <div style={{ fontSize: 72, fontWeight: 900, color: awayTeam.color, lineHeight: 1 }}>{stats.away.score}</div>
-              <div style={{ fontSize: 10, color: MUTED, marginTop: 4, letterSpacing: 1 }}>{stats.away.tries} TRIES · {stats.away.penalties} PEN</div>
-            </div>
-          </div>
-          <div style={{ background: CARD, border: `1px solid ${BD}`, borderRadius: 8, padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 2, color: MUTED, marginBottom: 6 }}>BALL IN PLAY</div>
-              <div style={{ fontSize: 36, fontWeight: 900, color: TEXT, fontFamily: MONO }}>{formatTime(stats.ballInPlaySeconds)}</div>
-              <div style={{ fontSize: 10, color: MUTED, marginTop: 2, letterSpacing: 1 }}>{stats.ballInPlayPct}% OF MATCH</div>
-            </div>
-            <div style={{ display: 'flex', gap: 28 }}>
-              {[['RUCKS', stats.home.rucks + stats.away.rucks, '#ea580c'], ['TACKLES', stats.home.tackles + stats.away.tackles, '#3b82f6'], ['PENALTIES', stats.home.penalties + stats.away.penalties, '#ef4444']].map(([l,v,c]) => (
-                <div key={l as string} style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: 28, fontWeight: 900, color: c as string }}>{v as number}</div>
-                  <div style={{ fontSize: 9, color: MUTED, letterSpacing: 2 }}>{l as string}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div style={{ background: CARD, border: `1px solid ${BD}`, borderRadius: 8, padding: '16px 20px' }}>
-            <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 2, color: MUTED, marginBottom: 16 }}>MATCH STATISTICS</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '50px 1fr 110px 1fr 50px', gap: 10, marginBottom: 12 }}>
-              <div style={{ fontSize: 11, fontWeight: 900, color: homeTeam.color, textAlign: 'center' }}>{homeTeam.abbr}</div>
-              <div/><div/><div/>
-              <div style={{ fontSize: 11, fontWeight: 900, color: awayTeam.color, textAlign: 'center' }}>{awayTeam.abbr}</div>
-            </div>
-            <StatBar label="TRIES"      hv={stats.home.tries}        av={stats.away.tries}/>
-            <StatBar label="PENALTIES"  hv={stats.home.penalties}    av={stats.away.penalties}/>
-            <StatBar label="KNOCK ONS"  hv={stats.home.knockOns}     av={stats.away.knockOns}/>
-            <StatBar label="TACKLES"    hv={stats.home.tackles}      av={stats.away.tackles}/>
-            <StatBar label="RUCKS"      hv={stats.home.rucks}        av={stats.away.rucks}/>
-            <StatBar label="LO WON"     hv={stats.home.lineoutsWon}  av={stats.away.lineoutsWon}/>
-            <StatBar label="LO LOST"    hv={stats.home.lineoutsLost} av={stats.away.lineoutsLost}/>
-            <StatBar label="SCRUM WON"  hv={stats.home.scrumsWon}    av={stats.away.scrumsWon}/>
-            <StatBar label="SCRUM LOST" hv={stats.home.scrumsLost}   av={stats.away.scrumsLost}/>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            {[
-              { label: 'LINEOUT %', hw: stats.home.lineoutsWon, ht: stats.home.lineoutsTotal, hp: stats.home.lineoutPct, aw: stats.away.lineoutsWon, at: stats.away.lineoutsTotal, ap: stats.away.lineoutPct },
-              { label: 'SCRUM %',   hw: stats.home.scrumsWon,   ht: stats.home.scrumsTotal,   hp: stats.home.scrumPct,    aw: stats.away.scrumsWon,   at: stats.away.scrumsTotal,   ap: stats.away.scrumPct },
-            ].map(({ label, hw, ht, hp: hpct, aw, at, ap }) => (
-              <div key={label} style={{ background: CARD, border: `1px solid ${BD}`, borderRadius: 8, padding: '14px 16px' }}>
-                <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 2, color: MUTED, marginBottom: 12 }}>{label}</div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ textAlign: 'center' }}><div style={{ fontSize: 32, fontWeight: 900, color: homeTeam.color }}>{hpct}%</div><div style={{ fontSize: 10, color: MUTED }}>{homeTeam.abbr} · {hw}/{ht}</div></div>
-                  <div style={{ fontSize: 12, color: BD }}>vs</div>
-                  <div style={{ textAlign: 'center' }}><div style={{ fontSize: 32, fontWeight: 900, color: awayTeam.color }}>{ap}%</div><div style={{ fontSize: 10, color: MUTED }}>{awayTeam.abbr} · {aw}/{at}</div></div>
-                </div>
-              </div>
+        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', background: PANEL }}>
+
+          {/* Stats sub-tabs */}
+          <div style={{ display: 'flex', background: CARD, borderBottom: `1px solid ${BD}`, flexShrink: 0, paddingLeft: 14 }}>
+            {(['match', 'players'] as StatsSubTab[]).map(st => (
+              <button key={st} onClick={() => setStatsSubTab(st)} style={{ padding: '8px 20px', fontFamily: FF, fontSize: 11, fontWeight: 700, letterSpacing: 1.5, border: 'none', background: 'none', cursor: 'pointer', color: statsSubTab === st ? '#fff' : MUTED, borderBottom: statsSubTab === st ? `2px solid ${GOLD}` : '2px solid transparent', marginBottom: -1 }}>
+                {st === 'match' ? '◈ MATCH STATS' : '👤 PLAYER STATS'}
+              </button>
             ))}
           </div>
-          <div style={{ background: CARD, border: `1px solid ${BD}`, borderRadius: 8, padding: '16px 20px' }}>
-            <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 2, color: MUTED, marginBottom: 12 }}>EVENT BREAKDOWN</div>
-            <div style={{ display: 'flex', gap: 16, marginBottom: 12 }}>
-              {[homeTeam, awayTeam].map(t => (
-                <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: 2, background: t.color }}/><span style={{ color: t.color, letterSpacing: 1 }}>{t.abbr}</span>
+
+          {/* MATCH STATS */}
+          {statsSubTab === 'match' && (
+            <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 10, overflowY: 'auto', flex: 1 }}>
+              <div style={{ background: NAV, borderRadius: 8, padding: '20px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: `1px solid ${BD}` }}>
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, color: homeTeam.color, opacity: 0.8 }}>{homeTeam.name.toUpperCase()}</div>
+                  <div style={{ fontSize: 72, fontWeight: 900, color: homeTeam.color, lineHeight: 1 }}>{stats.home.score}</div>
+                  <div style={{ fontSize: 10, color: MUTED, marginTop: 4, letterSpacing: 1 }}>{stats.home.tries} TRIES · {stats.home.penalties} PEN</div>
                 </div>
-              ))}
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 3, color: MUTED }}>FULL TIME</div>
+                  <div style={{ fontSize: 16, fontFamily: MONO, color: GOLD, marginTop: 6, letterSpacing: 3 }}>{formatTime(time)}</div>
+                  <div style={{ fontSize: 10, color: MUTED, marginTop: 6, letterSpacing: 1 }}>{events.length} EVENTS</div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, color: awayTeam.color, opacity: 0.8 }}>{awayTeam.name.toUpperCase()}</div>
+                  <div style={{ fontSize: 72, fontWeight: 900, color: awayTeam.color, lineHeight: 1 }}>{stats.away.score}</div>
+                  <div style={{ fontSize: 10, color: MUTED, marginTop: 4, letterSpacing: 1 }}>{stats.away.tries} TRIES · {stats.away.penalties} PEN</div>
+                </div>
+              </div>
+              <div style={{ background: CARD, border: `1px solid ${BD}`, borderRadius: 8, padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 2, color: MUTED, marginBottom: 6 }}>BALL IN PLAY</div>
+                  <div style={{ fontSize: 36, fontWeight: 900, color: TEXT, fontFamily: MONO }}>{formatTime(stats.ballInPlaySeconds)}</div>
+                  <div style={{ fontSize: 10, color: MUTED, marginTop: 2, letterSpacing: 1 }}>{stats.ballInPlayPct}% OF MATCH</div>
+                </div>
+                <div style={{ display: 'flex', gap: 28 }}>
+                  {[['RUCKS', stats.home.rucks + stats.away.rucks, '#ea580c'], ['TACKLES', stats.home.tackles + stats.away.tackles, '#3b82f6'], ['PENALTIES', stats.home.penalties + stats.away.penalties, '#ef4444']].map(([l,v,c]) => (
+                    <div key={l as string} style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: 28, fontWeight: 900, color: c as string }}>{v as number}</div>
+                      <div style={{ fontSize: 9, color: MUTED, letterSpacing: 2 }}>{l as string}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div style={{ background: CARD, border: `1px solid ${BD}`, borderRadius: 8, padding: '16px 20px' }}>
+                <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 2, color: MUTED, marginBottom: 16 }}>MATCH STATISTICS</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '50px 1fr 110px 1fr 50px', gap: 10, marginBottom: 12 }}>
+                  <div style={{ fontSize: 11, fontWeight: 900, color: homeTeam.color, textAlign: 'center' }}>{homeTeam.abbr}</div>
+                  <div/><div/><div/>
+                  <div style={{ fontSize: 11, fontWeight: 900, color: awayTeam.color, textAlign: 'center' }}>{awayTeam.abbr}</div>
+                </div>
+                <StatBar label="TRIES"      hv={stats.home.tries}        av={stats.away.tries}/>
+                <StatBar label="PENALTIES"  hv={stats.home.penalties}    av={stats.away.penalties}/>
+                <StatBar label="KNOCK ONS"  hv={stats.home.knockOns}     av={stats.away.knockOns}/>
+                <StatBar label="TACKLES"    hv={stats.home.tackles}      av={stats.away.tackles}/>
+                <StatBar label="RUCKS"      hv={stats.home.rucks}        av={stats.away.rucks}/>
+                <StatBar label="LO WON"     hv={stats.home.lineoutsWon}  av={stats.away.lineoutsWon}/>
+                <StatBar label="LO LOST"    hv={stats.home.lineoutsLost} av={stats.away.lineoutsLost}/>
+                <StatBar label="SCRUM WON"  hv={stats.home.scrumsWon}    av={stats.away.scrumsWon}/>
+                <StatBar label="SCRUM LOST" hv={stats.home.scrumsLost}   av={stats.away.scrumsLost}/>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                {[
+                  { label: 'LINEOUT %', hw: stats.home.lineoutsWon, ht: stats.home.lineoutsTotal, hp: stats.home.lineoutPct, aw: stats.away.lineoutsWon, at: stats.away.lineoutsTotal, ap: stats.away.lineoutPct },
+                  { label: 'SCRUM %',   hw: stats.home.scrumsWon,   ht: stats.home.scrumsTotal,   hp: stats.home.scrumPct,    aw: stats.away.scrumsWon,   at: stats.away.scrumsTotal,   ap: stats.away.scrumPct },
+                ].map(({ label, hw, ht, hp: hpct, aw, at, ap }) => (
+                  <div key={label} style={{ background: CARD, border: `1px solid ${BD}`, borderRadius: 8, padding: '14px 16px' }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 2, color: MUTED, marginBottom: 12 }}>{label}</div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ textAlign: 'center' }}><div style={{ fontSize: 32, fontWeight: 900, color: homeTeam.color }}>{hpct}%</div><div style={{ fontSize: 10, color: MUTED }}>{homeTeam.abbr} · {hw}/{ht}</div></div>
+                      <div style={{ fontSize: 12, color: BD }}>vs</div>
+                      <div style={{ textAlign: 'center' }}><div style={{ fontSize: 32, fontWeight: 900, color: awayTeam.color }}>{ap}%</div><div style={{ fontSize: 10, color: MUTED }}>{awayTeam.abbr} · {aw}/{at}</div></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ background: CARD, border: `1px solid ${BD}`, borderRadius: 8, padding: '16px 20px' }}>
+                <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 2, color: MUTED, marginBottom: 12 }}>EVENT BREAKDOWN</div>
+                <div style={{ display: 'flex', gap: 16, marginBottom: 12 }}>
+                  {[homeTeam, awayTeam].map(t => (
+                    <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700 }}>
+                      <div style={{ width: 8, height: 8, borderRadius: 2, background: t.color }}/><span style={{ color: t.color, letterSpacing: 1 }}>{t.abbr}</span>
+                    </div>
+                  ))}
+                </div>
+                <ResponsiveContainer width="100%" height={160}>
+                  <BarChart data={barData} margin={{ top: 0, right: 0, bottom: 24, left: -20 }}>
+                    <XAxis dataKey="name" tick={{ fill: MUTED, fontSize: 8, fontFamily: 'sans-serif' }} axisLine={false} tickLine={false} angle={-30} textAnchor="end"/>
+                    <YAxis tick={{ fill: MUTED, fontSize: 9 }} axisLine={false} tickLine={false}/>
+                    <Tooltip contentStyle={{ background: CARD, border: `1px solid ${BD}`, borderRadius: 4, fontSize: 11 }} labelStyle={{ color: TEXT }} cursor={{ fill: '#ffffff04' }}/>
+                    <Bar dataKey={homeTeam.abbr} fill={homeTeam.color} radius={[2,2,0,0]}/>
+                    <Bar dataKey={awayTeam.abbr} fill={awayTeam.color} radius={[2,2,0,0]}/>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             </div>
-            <ResponsiveContainer width="100%" height={160}>
-              <BarChart data={barData} margin={{ top: 0, right: 0, bottom: 24, left: -20 }}>
-                <XAxis dataKey="name" tick={{ fill: MUTED, fontSize: 8, fontFamily: 'sans-serif' }} axisLine={false} tickLine={false} angle={-30} textAnchor="end"/>
-                <YAxis tick={{ fill: MUTED, fontSize: 9 }} axisLine={false} tickLine={false}/>
-                <Tooltip contentStyle={{ background: CARD, border: `1px solid ${BD}`, borderRadius: 4, fontSize: 11 }} labelStyle={{ color: TEXT }} cursor={{ fill: '#ffffff04' }}/>
-                <Bar dataKey={homeTeam.abbr} fill={homeTeam.color} radius={[2,2,0,0]}/>
-                <Bar dataKey={awayTeam.abbr} fill={awayTeam.color} radius={[2,2,0,0]}/>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          )}
+
+          {/* PLAYER STATS */}
+          {statsSubTab === 'players' && (
+            <div style={{ flex: 1, overflowY: 'auto', padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {/* Team selector */}
+              <div style={{ display: 'flex', gap: 6 }}>
+                {[homeTeam, awayTeam].map(tm => (
+                  <button key={tm.id} onClick={() => setPlayerSortTeam(tm.id)} style={{ padding: '6px 18px', fontFamily: FF, fontSize: 12, fontWeight: 700, borderRadius: 4, border: `1px solid ${tm.color}44`, cursor: 'pointer', color: playerSortTeam === tm.id ? '#000' : tm.color, background: playerSortTeam === tm.id ? tm.color : tm.color + '11', letterSpacing: 1 }}>{tm.name}</button>
+                ))}
+              </div>
+
+              {sortedPlayerStats.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '60px 20px', color: MUTED }}>
+                  <div style={{ fontSize: 32, marginBottom: 12 }}>👤</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: DIM, marginBottom: 6 }}>No player data yet</div>
+                  <div style={{ fontSize: 12 }}>Code events with shirt numbers to see player stats here.</div>
+                </div>
+              ) : (
+                <div style={{ background: CARD, border: `1px solid ${BD}`, borderRadius: 8, overflow: 'hidden' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr style={{ borderBottom: `1px solid ${BD}`, background: NAV }}>
+                        <th onClick={() => handleSort('shirt')} style={{ padding: '8px 10px', textAlign: 'left', fontSize: 9, fontWeight: 700, letterSpacing: 1.5, color: playerSortCol === 'shirt' ? GOLD : MUTED, cursor: 'pointer', whiteSpace: 'nowrap', userSelect: 'none' }}>
+                          #  {playerSortCol === 'shirt' ? (playerSortDir === 'desc' ? '↓' : '↑') : ''}
+                        </th>
+                        <th onClick={() => handleSort('name')} style={{ padding: '8px 10px', textAlign: 'left', fontSize: 9, fontWeight: 700, letterSpacing: 1.5, color: playerSortCol === 'name' ? GOLD : MUTED, cursor: 'pointer', whiteSpace: 'nowrap', userSelect: 'none' }}>
+                          PLAYER {playerSortCol === 'name' ? (playerSortDir === 'desc' ? '↓' : '↑') : ''}
+                        </th>
+                        {Object.keys(sportConfig.events).map(type => (
+                          <SortHeader key={type} col={type} label={sportConfig.events[type].label} />
+                        ))}
+                        <SortHeader col="total" label="Total" />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sortedPlayerStats.map((row, i) => {
+                        const teamColor = playerSortTeam === 'home' ? homeTeam.color : awayTeam.color
+                        return (
+                          <tr key={row.shirt} style={{ borderBottom: `1px solid ${BD}`, background: i % 2 === 0 ? 'transparent' : '#ffffff04' }}
+                            onMouseEnter={e => { e.currentTarget.style.background = '#ffffff08' }}
+                            onMouseLeave={e => { e.currentTarget.style.background = i % 2 === 0 ? 'transparent' : '#ffffff04' }}>
+                            <td style={{ padding: '8px 10px', fontFamily: MONO, fontSize: 12, fontWeight: 700, color: teamColor }}>#{row.shirt}</td>
+                            <td style={{ padding: '8px 10px', fontSize: 12, color: TEXT, fontWeight: row.name ? 600 : 400 }}>{row.name || <span style={{ color: MUTED, fontStyle: 'italic' }}>Unknown</span>}</td>
+                            {Object.keys(sportConfig.events).map(type => {
+                              const val = row[type] ?? 0
+                              const cfg = sportConfig.events[type]
+                              return (
+                                <td key={type} style={{ padding: '8px 10px', textAlign: 'right', fontFamily: MONO, fontSize: 12, color: val > 0 ? cfg?.color ?? TEXT : MUTED, fontWeight: val > 0 ? 700 : 400 }}>
+                                  {val > 0 ? val : '—'}
+                                </td>
+                              )
+                            })}
+                            <td style={{ padding: '8px 10px', textAlign: 'right', fontFamily: MONO, fontSize: 13, fontWeight: 900, color: GOLD }}>{row.total}</td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                  <div style={{ padding: '8px 12px', fontSize: 10, color: MUTED, borderTop: `1px solid ${BD}` }}>
+                    Click column headers to sort · {sortedPlayerStats.length} players with coded events
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
