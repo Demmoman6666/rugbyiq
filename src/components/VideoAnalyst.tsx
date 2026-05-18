@@ -286,7 +286,7 @@ export default function VideoAnalyst({
   // ── Player stats computation ──────────────────────────────────────────────
   const playerStats = useMemo(() => {
     const teamEvents = events.filter(e => e.team === playerSortTeam && e.shirt_number)
-    const shirtNumbers = [...new Set(teamEvents.map(e => e.shirt_number!))]
+    const shirtNumbers = Array.from(new Set(teamEvents.map(e => e.shirt_number!)))
     const players = playerSortTeam === 'home' ? homePlayers : awayPlayers
     const eventTypes = Object.keys(sportConfig.events)
 
