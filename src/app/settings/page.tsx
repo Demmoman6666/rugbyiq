@@ -1,40 +1,49 @@
 'use client'
-
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
-import { SPORTS_LIST } from '@/lib/sports'
+import Link from 'next/link'
 
-const NAV  = '#0f172a'
-const GOLD = '#0ea5e9'
 const FF   = "'Barlow Condensed', system-ui, sans-serif"
-const MUTED= '#64748b'
 const BD   = '#e2e8f0'
-const BG   = '#f4f6fb'
-const CARD = '#ffffff'
-const TEXT = '#0f172a'
+const GOLD = '#e8a020'
+const NAV  = '#0f172a'
+
+type SettingsTab = 'club' | 'account' | 'billing' | 'analysts'
 
 export default function SettingsPage() {
-  const supabase = createClient()
-  const router   = useRouter()
+  const router       = useRouter()
+  const searchParams = useSearchParams()
+  const supabase     = createClient()
 
-  const [org, setOrg]                   = useState<any>(null)
-  const [members, setMembers]           = useState<any[]>([])
-  const [invites, setInvites]           = useState<any[]>([])
-  const [user, setUser]                 = useState<any>(null)
-  const [loading, setLoading]           = useState(true)
-  const [saving, setSaving]             = useState(false)
-  const [saved, setSaved]               = useState(false)
-  const [inviteEmail, setInviteEmail]   = useState('')
-  const [inviting, setInviting]         = useState(false)
-  const [inviteLink, setInviteLink]     = useState('')
-  const [inviteError, setInviteError]   = useState('')
-  const [copied, setCopied]             = useState(false)
+  const [tab, setTab]       = useState<SettingsTab>((searchParams.get('tab') as SettingsTab) ?? 'club')
+  const [user, setUser]     = useState<any>(null)
+  const [org, setOrg]       = useState<any>(null)
+  const [members, setMembers] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving]   = useState(false)
+  const [saved, setSaved]     = useState(false)
+  const [myRole, setMyRole]   = useState('')
 
-  const [form, setForm] = useState({
-    name: '', home_ground: '', website: '',
-    primary_color: '#00d4aa', secondary_color: '#0f172a', sport: 'rugby'
-  })
+  // Club form
+  const [clubName, setClubName]   = useState('')
+  const [sport, setSport]         = useState('rugby')
+  const [homeColor, setHomeColor] = useState('#00d4aa')
+  const [awayColor, setAwayColor] = useState('#ef4444')
+  const [ground, setGround]       = useState('')
+  const [website, setWebsite]     = useState('')
+
+  // Account form
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [pwError, setPwError]   = useState('')
+  const [pwSaved, setPwSaved]   = useState(false)
+
+  // Invite
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteRole, setInviteRole]   = useState('analyst')
+  const [inviteSent, setInviteSent]   = useState(false)
+  const [inviteError, setInviteError] = useState('')
 
   useEffect(() => {
     const load = async () => {
@@ -48,220 +57,296 @@ export default function SettingsPage() {
         .eq('user_id', user.id)
         .single()
 
-      if (!member) { router.push('/onboarding'); return }
+      if (!member) { setLoading(false); return }
 
+      setMyRole(member.role)
       const o = member.organisations as any
-      setOrg({ ...o, userRole: member.role })
-      setForm({
-        name: o.name ?? '',
-        home_ground: o.home_ground ?? '',
-        website: o.website ?? '',
-        primary_color: o.primary_color ?? '#00d4aa',
-        secondary_color: o.secondary_color ?? '#0f172a',
-        sport: o.sport ?? 'rugby',
-      })
+      setOrg(o)
+      setClubName(o.name ?? '')
+      setSport(o.sport ?? 'rugby')
+      setHomeColor(o.primary_color ?? '#00d4aa')
+      setAwayColor(o.secondary_color ?? '#ef4444')
+      setGround(o.home_ground ?? '')
+      setWebsite(o.website ?? '')
 
       const { data: allMembers } = await supabase
         .from('org_members')
-        .select('id, role, user_id, created_at')
+        .select('id, role, user_id, profiles(email, full_name)')
         .eq('org_id', o.id)
-      setMembers(allMembers ?? [])
 
-      const res = await fetch(`/api/invites?orgId=${o.id}`)
-      const { invites } = await res.json()
-      setInvites(invites ?? [])
+      setMembers(allMembers ?? [])
       setLoading(false)
     }
     load()
   }, [])
 
-  const save = async () => {
+  const saveClub = async () => {
+    if (!org) return
     setSaving(true)
     await supabase.from('organisations').update({
-      name: form.name,
-      home_ground: form.home_ground,
-      website: form.website,
-      primary_color: form.primary_color,
-      secondary_color: form.secondary_color,
+      name: clubName, sport, primary_color: homeColor,
+      secondary_color: awayColor, home_ground: ground, website,
     }).eq('id', org.id)
-    setSaving(false)
-    setSaved(true)
+    setSaving(false); setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }
 
+  const savePassword = async () => {
+    setPwError(''); setPwSaved(false)
+    if (newPassword !== confirmPassword) { setPwError('Passwords do not match'); return }
+    if (newPassword.length < 8) { setPwError('Password must be at least 8 characters'); return }
+    const { error } = await supabase.auth.updateUser({ password: newPassword })
+    if (error) { setPwError(error.message); return }
+    setPwSaved(true); setNewPassword(''); setConfirmPassword('')
+    setTimeout(() => setPwSaved(false), 3000)
+  }
+
+  const removeAnalyst = async (memberId: string, userId: string) => {
+    if (userId === user?.id) { alert("You can't remove yourself"); return }
+    if (!confirm('Remove this analyst from the club?')) return
+    await supabase.from('org_members').delete().eq('id', memberId)
+    setMembers(prev => prev.filter(m => m.id !== memberId))
+  }
+
   const sendInvite = async () => {
-    if (!inviteEmail.trim()) return
-    setInviting(true)
-    setInviteError('')
-    setInviteLink('')
+    setInviteError(''); setInviteSent(false)
+    if (!inviteEmail.trim()) { setInviteError('Enter an email address'); return }
     const res = await fetch('/api/invites', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: inviteEmail, orgId: org.id })
+      body: JSON.stringify({ email: inviteEmail, role: inviteRole, orgId: org?.id }),
     })
     const data = await res.json()
-    if (data.error) { setInviteError(data.error); setInviting(false); return }
-    setInviteLink(data.inviteUrl)
-    setInviteEmail('')
-    setInviting(false)
-    const res2 = await fetch(`/api/invites?orgId=${org.id}`)
-    const { invites } = await res2.json()
-    setInvites(invites ?? [])
+    if (data.error) { setInviteError(data.error); return }
+    setInviteSent(true); setInviteEmail('')
+    setTimeout(() => setInviteSent(false), 4000)
   }
 
-  const copyLink = () => {
-    navigator.clipboard.writeText(inviteLink)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+  const signOut = async () => {
+    await supabase.auth.signOut()
+    router.push('/login')
   }
 
-  if (loading) return (
-    <div style={{ fontFamily: FF, background: BG, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: MUTED }}>Loading…</div>
-  )
+  const inputStyle: React.CSSProperties = {
+    width: '100%', padding: '9px 12px', background: '#f8fafc',
+    border: `1px solid ${BD}`, borderRadius: 6, fontSize: 14,
+    fontFamily: FF, color: NAV, outline: 'none', boxSizing: 'border-box',
+  }
 
-  const planLabels: Record<string, string> = { starter: 'Starter', pro: 'Pro', club: 'Club' }
-  const planColors: Record<string, string> = { starter: MUTED, pro: GOLD, club: '#00d4aa' }
+  const labelStyle: React.CSSProperties = {
+    fontSize: 11, fontWeight: 700, letterSpacing: 1.5,
+    color: '#94a3b8', display: 'block', marginBottom: 6,
+  }
 
-  const Field = ({ label, value, onChange, placeholder = '', type = 'text' }: any) => (
-    <div style={{ marginBottom: 16 }}>
-      <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, color: MUTED, display: 'block', marginBottom: 6 }}>{label}</label>
-      <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
-        style={{ width: '100%', padding: '9px 12px', fontFamily: FF, fontSize: 13, border: `1px solid ${BD}`, borderRadius: 6, outline: 'none', color: TEXT, background: '#fff', boxSizing: 'border-box' }} />
-    </div>
-  )
+  if (loading) return <div style={{ fontFamily: FF, background: '#f8fafc', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>Loading...</div>
 
-  const currentSport = SPORTS_LIST.find(s => s.id === form.sport)
+  const tabs: { key: SettingsTab; label: string; icon: string }[] = [
+    { key: 'club',     label: 'Club Profile',    icon: '🏉' },
+    { key: 'account',  label: 'Account',         icon: '👤' },
+    { key: 'billing',  label: 'Plans & Billing',  icon: '💳' },
+    { key: 'analysts', label: 'Analysts',         icon: '👥' },
+  ]
 
   return (
-    <div style={{ fontFamily: FF, background: BG, minHeight: '100vh' }}>
-
-      <div style={{ background: NAV, padding: '12px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+    <div style={{ fontFamily: FF, background: '#f8fafc', minHeight: '100vh' }}>
+      {/* Header */}
+      <div style={{ background: NAV, padding: '12px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid #1e2d3d` }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <button onClick={() => router.push('/dashboard')} style={{ background: 'transparent', border: 'none', color: '#4a5a7a', cursor: 'pointer', fontSize: 20, padding: 0 }}>←</button>
-          <div style={{ fontSize: 20, fontWeight: 900, letterSpacing: 3, color: '#fff' }}>CLUB<span style={{ color: GOLD }}>CODE</span></div>
+          <Link href="/dashboard" style={{ fontSize: 20, fontWeight: 900, letterSpacing: 3, color: '#fff', textDecoration: 'none' }}>CLUB<span style={{ color: GOLD }}>CODE</span></Link>
+          <div style={{ width: 1, height: 18, background: '#1e2d3d' }}/>
+          <div style={{ fontSize: 10, letterSpacing: 3, color: '#4a5568' }}>SETTINGS</div>
         </div>
-        <div style={{ fontSize: 12, color: '#4a5a7a', letterSpacing: 1 }}>CLUB SETTINGS</div>
+        <Link href="/dashboard" style={{ fontSize: 12, color: '#94a3b8', textDecoration: 'none', fontWeight: 700, letterSpacing: 1 }}>← DASHBOARD</Link>
       </div>
 
-      <div style={{ maxWidth: 720, margin: '0 auto', padding: '32px 20px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div style={{ maxWidth: 800, margin: '0 auto', padding: '32px 24px' }}>
+        <div style={{ display: 'flex', gap: 24 }}>
 
-        {/* CLUB DETAILS */}
-        <div style={{ background: CARD, border: `1px solid ${BD}`, borderRadius: 12, padding: '24px 28px' }}>
-          <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: 2, color: MUTED, marginBottom: 20 }}>CLUB DETAILS</div>
-          <Field label="CLUB NAME" value={form.name} onChange={(v: string) => setForm(f => ({ ...f, name: v }))} placeholder="e.g. Penallta RFC" />
-          <Field label="HOME GROUND" value={form.home_ground} onChange={(v: string) => setForm(f => ({ ...f, home_ground: v }))} placeholder="e.g. Ystrad Fawr" />
-          <Field label="WEBSITE" value={form.website} onChange={(v: string) => setForm(f => ({ ...f, website: v }))} placeholder="https://..." />
-
-          {/* SPORT — LOCKED */}
-          <div style={{ marginBottom: 20 }}>
-            <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, color: MUTED, display: 'block', marginBottom: 8 }}>SPORT</label>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: '#f8fafc', border: `1px solid ${BD}`, borderRadius: 8, padding: '12px 16px' }}>
-              <span style={{ fontSize: 24 }}>{currentSport?.icon}</span>
-              <div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: TEXT }}>{currentSport?.name}</div>
-                <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>🔒 Sport is locked after club creation. Contact support to change it.</div>
-              </div>
-            </div>
-          </div>
-
-          {/* COLOURS */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
-            {[
-              { label: 'PRIMARY COLOUR', key: 'primary_color' },
-              { label: 'SECONDARY COLOUR', key: 'secondary_color' }
-            ].map(({ label, key }) => (
-              <div key={key}>
-                <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, color: MUTED, display: 'block', marginBottom: 6 }}>{label}</label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <input type="color" value={(form as any)[key]} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
-                    style={{ width: 40, height: 36, border: `1px solid ${BD}`, borderRadius: 4, cursor: 'pointer', padding: 2 }} />
-                  <span style={{ fontSize: 12, color: MUTED, fontFamily: 'monospace' }}>{(form as any)[key]}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <button onClick={save} disabled={saving}
-            style={{ padding: '10px 24px', fontFamily: FF, fontSize: 13, fontWeight: 700, background: saved ? '#16a34a' : NAV, color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', letterSpacing: 1 }}>
-            {saved ? '✓ Saved' : saving ? 'Saving…' : 'Save Changes'}
-          </button>
-        </div>
-
-        {/* SUBSCRIPTION */}
-        <div style={{ background: CARD, border: `1px solid ${BD}`, borderRadius: 12, padding: '24px 28px' }}>
-          <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: 2, color: MUTED, marginBottom: 16 }}>SUBSCRIPTION</div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
-              <span style={{ fontSize: 22, fontWeight: 900, color: planColors[org?.plan ?? 'starter'] }}>{planLabels[org?.plan ?? 'starter']}</span>
-              <span style={{ fontSize: 12, color: MUTED, marginLeft: 8 }}>plan</span>
-            </div>
-            <button onClick={() => router.push('/dashboard/upgrade')}
-              style={{ padding: '8px 18px', fontFamily: FF, fontSize: 12, fontWeight: 700, background: GOLD, border: 'none', color: '#fff', borderRadius: 6, cursor: 'pointer' }}>
-              {org?.plan === 'starter' ? '⚡ Upgrade' : 'Manage Plan'}
-            </button>
-          </div>
-        </div>
-
-        {/* TEAM MEMBERS */}
-        <div style={{ background: CARD, border: `1px solid ${BD}`, borderRadius: 12, padding: '24px 28px' }}>
-          <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: 2, color: MUTED, marginBottom: 16 }}>TEAM MEMBERS</div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 24 }}>
-            {members.map(m => (
-              <div key={m.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: BG, borderRadius: 8, border: `1px solid ${BD}` }}>
-                <div style={{ fontSize: 13, color: TEXT }}>
-                  {m.user_id === user?.id
-                    ? <span style={{ fontWeight: 700, color: NAV }}>You</span>
-                    : <span style={{ color: MUTED, fontFamily: 'monospace', fontSize: 11 }}>{m.user_id.slice(0, 12)}…</span>}
-                </div>
-                <span style={{ fontSize: 10, fontWeight: 700, color: m.role === 'admin' ? GOLD : MUTED, background: m.role === 'admin' ? GOLD + '22' : MUTED + '22', padding: '2px 8px', borderRadius: 10, textTransform: 'uppercase' }}>
-                  {m.role}
-                </span>
-              </div>
-            ))}
-          </div>
-
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, color: MUTED, marginBottom: 10 }}>INVITE ANALYST</div>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-            <input
-              value={inviteEmail}
-              onChange={e => setInviteEmail(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && sendInvite()}
-              placeholder="analyst@club.com"
-              style={{ flex: 1, padding: '9px 12px', fontFamily: FF, fontSize: 13, border: `1px solid ${BD}`, borderRadius: 6, outline: 'none', color: TEXT }}
-            />
-            <button onClick={sendInvite} disabled={inviting}
-              style={{ padding: '9px 18px', fontFamily: FF, fontSize: 13, fontWeight: 700, background: NAV, color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>
-              {inviting ? '…' : 'Invite'}
-            </button>
-          </div>
-
-          {inviteError && <div style={{ fontSize: 11, color: '#ef4444', marginBottom: 8 }}>{inviteError}</div>}
-
-          {inviteLink && (
-            <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 8, padding: '12px 14px', marginBottom: 16 }}>
-              <div style={{ fontSize: 11, color: '#16a34a', fontWeight: 700, marginBottom: 6 }}>✓ Invite link ready — send this to your analyst:</div>
-              <div style={{ fontSize: 11, color: '#15803d', wordBreak: 'break-all', fontFamily: 'monospace', marginBottom: 8 }}>{inviteLink}</div>
-              <button onClick={copyLink}
-                style={{ padding: '5px 12px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: copied ? '#16a34a' : '#15803d', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer' }}>
-                {copied ? '✓ Copied!' : 'Copy Link'}
+          {/* Sidebar */}
+          <div style={{ width: 180, flexShrink: 0 }}>
+            <div style={{ background: '#fff', border: `1px solid ${BD}`, borderRadius: 10, overflow: 'hidden' }}>
+              {tabs.map(t => (
+                <button key={t.key} onClick={() => setTab(t.key)} style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '12px 16px', background: tab === t.key ? GOLD + '18' : 'transparent', border: 'none', borderLeft: tab === t.key ? `3px solid ${GOLD}` : '3px solid transparent', color: tab === t.key ? NAV : '#64748b', fontFamily: FF, fontSize: 13, fontWeight: tab === t.key ? 700 : 400, cursor: 'pointer', textAlign: 'left' }}>
+                  <span>{t.icon}</span>{t.label}
+                </button>
+              ))}
+              <div style={{ borderTop: `1px solid ${BD}` }}/>
+              <button onClick={signOut} style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '12px 16px', background: 'transparent', border: 'none', borderLeft: '3px solid transparent', color: '#ef4444', fontFamily: FF, fontSize: 13, fontWeight: 400, cursor: 'pointer', textAlign: 'left' }}>
+                <span>🚪</span>Log out
               </button>
             </div>
-          )}
+          </div>
 
-          {invites.filter(i => !i.accepted).length > 0 && (
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, color: MUTED, marginBottom: 8 }}>PENDING INVITES</div>
-              {invites.filter(i => !i.accepted).map(inv => (
-                <div key={inv.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: BG, borderRadius: 6, border: `1px solid ${BD}`, marginBottom: 4 }}>
-                  <span style={{ fontSize: 12, color: TEXT }}>{inv.email}</span>
-                  <span style={{ fontSize: 10, color: GOLD, fontWeight: 700 }}>PENDING</span>
+          {/* Content */}
+          <div style={{ flex: 1 }}>
+
+            {/* CLUB PROFILE */}
+            {tab === 'club' && (
+              <div style={{ background: '#fff', border: `1px solid ${BD}`, borderRadius: 10, padding: '24px 28px' }}>
+                <div style={{ fontSize: 18, fontWeight: 900, color: NAV, marginBottom: 4, fontFamily: FF }}>Club Profile</div>
+                <div style={{ fontSize: 13, color: '#64748b', marginBottom: 24 }}>How your club appears across ClubCode.</div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+                  <div style={{ gridColumn: '1/-1' }}>
+                    <label style={labelStyle}>CLUB NAME</label>
+                    <input value={clubName} onChange={e => setClubName(e.target.value)} style={inputStyle} placeholder="e.g. Penallta RFC" />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>SPORT</label>
+                    <select value={sport} onChange={e => setSport(e.target.value)} style={{ ...inputStyle }}>
+                      <option value="rugby">Rugby Union</option>
+                      <option value="rugby_league">Rugby League</option>
+                      <option value="football">Football</option>
+                      <option value="hockey">Hockey</option>
+                      <option value="netball">Netball</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={labelStyle}>HOME GROUND</label>
+                    <input value={ground} onChange={e => setGround(e.target.value)} style={inputStyle} placeholder="e.g. Ystrad Fawr" />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>WEBSITE</label>
+                    <input value={website} onChange={e => setWebsite(e.target.value)} style={inputStyle} placeholder="https://yourclub.co.uk" />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>PRIMARY COLOUR (HOME)</label>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <input type="color" value={homeColor} onChange={e => setHomeColor(e.target.value)} style={{ width: 44, height: 36, border: `1px solid ${BD}`, borderRadius: 6, cursor: 'pointer', padding: 2, background: '#f8fafc' }} />
+                      <input value={homeColor} onChange={e => setHomeColor(e.target.value)} style={{ ...inputStyle, flex: 1 }} placeholder="#00d4aa" />
+                    </div>
+                  </div>
+                  <div>
+                    <label style={labelStyle}>SECONDARY COLOUR (AWAY)</label>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <input type="color" value={awayColor} onChange={e => setAwayColor(e.target.value)} style={{ width: 44, height: 36, border: `1px solid ${BD}`, borderRadius: 6, cursor: 'pointer', padding: 2, background: '#f8fafc' }} />
+                      <input value={awayColor} onChange={e => setAwayColor(e.target.value)} style={{ ...inputStyle, flex: 1 }} placeholder="#ef4444" />
+                    </div>
+                  </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
 
+                <button onClick={saveClub} disabled={saving} style={{ padding: '10px 28px', background: saving ? '#94a3b8' : saved ? '#16a34a' : NAV, color: '#fff', border: 'none', borderRadius: 6, fontFamily: FF, fontSize: 13, fontWeight: 900, cursor: 'pointer', letterSpacing: 1 }}>
+                  {saving ? 'SAVING...' : saved ? '✓ SAVED' : 'SAVE CHANGES'}
+                </button>
+              </div>
+            )}
+
+            {/* ACCOUNT */}
+            {tab === 'account' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div style={{ background: '#fff', border: `1px solid ${BD}`, borderRadius: 10, padding: '24px 28px' }}>
+                  <div style={{ fontSize: 18, fontWeight: 900, color: NAV, marginBottom: 4 }}>Account Details</div>
+                  <div style={{ fontSize: 13, color: '#64748b', marginBottom: 20 }}>Your login email and password.</div>
+                  <div style={{ marginBottom: 16 }}>
+                    <label style={labelStyle}>EMAIL ADDRESS</label>
+                    <div style={{ ...inputStyle, color: '#64748b', background: '#f1f5f9' }}>{user?.email}</div>
+                  </div>
+                </div>
+                <div style={{ background: '#fff', border: `1px solid ${BD}`, borderRadius: 10, padding: '24px 28px' }}>
+                  <div style={{ fontSize: 16, fontWeight: 900, color: NAV, marginBottom: 4 }}>Change Password</div>
+                  <div style={{ fontSize: 13, color: '#64748b', marginBottom: 20 }}>Must be at least 8 characters.</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
+                    <div>
+                      <label style={labelStyle}>NEW PASSWORD</label>
+                      <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} style={inputStyle} placeholder="••••••••" />
+                    </div>
+                    <div>
+                      <label style={labelStyle}>CONFIRM PASSWORD</label>
+                      <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} style={inputStyle} placeholder="••••••••" />
+                    </div>
+                  </div>
+                  {pwError && <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', fontSize: 12, padding: '8px 12px', borderRadius: 6, marginBottom: 12 }}>{pwError}</div>}
+                  {pwSaved && <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#16a34a', fontSize: 12, padding: '8px 12px', borderRadius: 6, marginBottom: 12 }}>✓ Password updated</div>}
+                  <button onClick={savePassword} style={{ padding: '10px 28px', background: NAV, color: '#fff', border: 'none', borderRadius: 6, fontFamily: FF, fontSize: 13, fontWeight: 900, cursor: 'pointer', letterSpacing: 1 }}>UPDATE PASSWORD</button>
+                </div>
+              </div>
+            )}
+
+            {/* BILLING */}
+            {tab === 'billing' && (
+              <div style={{ background: '#fff', border: `1px solid ${BD}`, borderRadius: 10, padding: '24px 28px' }}>
+                <div style={{ fontSize: 18, fontWeight: 900, color: NAV, marginBottom: 4 }}>Plans & Billing</div>
+                <div style={{ fontSize: 13, color: '#64748b', marginBottom: 24 }}>Manage your subscription and billing details.</div>
+                <div style={{ background: '#f8fafc', border: `1px solid ${BD}`, borderRadius: 8, padding: '16px 20px', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: NAV }}>Current plan</div>
+                    <div style={{ fontSize: 13, color: '#64748b', marginTop: 2 }}>{org?.plan ?? 'Starter'}</div>
+                  </div>
+                  <div style={{ background: GOLD + '22', color: GOLD, border: `1px solid ${GOLD}44`, padding: '4px 14px', borderRadius: 20, fontSize: 11, fontWeight: 700, letterSpacing: 1 }}>{(org?.plan ?? 'STARTER').toUpperCase()}</div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 24 }}>
+                  {[
+                    { name: 'Starter', price: 'Free', features: ['1 match/month', '1 analyst', 'Basic stats'], color: '#64748b' },
+                    { name: 'Pro', price: '£29/mo', features: ['Unlimited matches', '3 analysts', 'AI scanning', 'Review builder'], color: GOLD },
+                    { name: 'Club', price: '£79/mo', features: ['Unlimited everything', '10 analysts', 'Season stats', 'Priority support'], color: '#8b5cf6' },
+                  ].map(plan => (
+                    <div key={plan.name} style={{ border: `2px solid ${org?.plan === plan.name.toLowerCase() ? plan.color : BD}`, borderRadius: 8, padding: '16px 14px', background: org?.plan === plan.name.toLowerCase() ? plan.color + '08' : '#fff' }}>
+                      <div style={{ fontSize: 14, fontWeight: 900, color: plan.color, marginBottom: 2 }}>{plan.name}</div>
+                      <div style={{ fontSize: 20, fontWeight: 900, color: NAV, marginBottom: 10 }}>{plan.price}</div>
+                      {plan.features.map(f => <div key={f} style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>✓ {f}</div>)}
+                    </div>
+                  ))}
+                </div>
+                <div style={{ fontSize: 12, color: '#94a3b8' }}>To upgrade or manage billing, contact <a href="mailto:hello@clubcode.co.uk" style={{ color: GOLD }}>hello@clubcode.co.uk</a></div>
+              </div>
+            )}
+
+            {/* ANALYSTS */}
+            {tab === 'analysts' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {/* Current analysts */}
+                <div style={{ background: '#fff', border: `1px solid ${BD}`, borderRadius: 10, padding: '24px 28px' }}>
+                  <div style={{ fontSize: 18, fontWeight: 900, color: NAV, marginBottom: 4 }}>Team Members</div>
+                  <div style={{ fontSize: 13, color: '#64748b', marginBottom: 20 }}>{members.length} member{members.length !== 1 ? 's' : ''} in your club.</div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {members.map(m => {
+                      const profile = m.profiles as any
+                      const isMe = m.user_id === user?.id
+                      return (
+                        <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', background: '#f8fafc', border: `1px solid ${BD}`, borderRadius: 8 }}>
+                          <div style={{ width: 36, height: 36, borderRadius: '50%', background: isMe ? GOLD : '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 900, color: isMe ? '#000' : '#64748b', flexShrink: 0 }}>
+                            {(profile?.full_name?.[0] ?? profile?.email?.[0] ?? '?').toUpperCase()}
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: NAV }}>{profile?.full_name ?? profile?.email ?? 'Unknown'}</div>
+                            <div style={{ fontSize: 11, color: '#94a3b8' }}>{profile?.email} {isMe && '(you)'}</div>
+                          </div>
+                          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, padding: '3px 10px', borderRadius: 20, background: m.role === 'admin' ? NAV : '#f1f5f9', color: m.role === 'admin' ? '#fff' : '#64748b', border: `1px solid ${m.role === 'admin' ? NAV : BD}` }}>
+                            {(m.role ?? 'analyst').toUpperCase()}
+                          </div>
+                          {!isMe && myRole === 'admin' && (
+                            <button onClick={() => removeAnalyst(m.id, m.user_id)} style={{ padding: '5px 12px', background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', fontFamily: FF, fontSize: 11, fontWeight: 700, borderRadius: 4, cursor: 'pointer' }}>
+                              Remove
+                            </button>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Invite */}
+                {myRole === 'admin' && (
+                  <div style={{ background: '#fff', border: `1px solid ${BD}`, borderRadius: 10, padding: '24px 28px' }}>
+                    <div style={{ fontSize: 16, fontWeight: 900, color: NAV, marginBottom: 4 }}>Invite an Analyst</div>
+                    <div style={{ fontSize: 13, color: '#64748b', marginBottom: 20 }}>They'll receive an email with a link to join your club.</div>
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                      <input type="email" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} onKeyDown={e => e.key === 'Enter' && sendInvite()} placeholder="analyst@example.com" style={{ ...inputStyle, flex: 1 }} />
+                      <select value={inviteRole} onChange={e => setInviteRole(e.target.value)} style={{ ...inputStyle, width: 120 }}>
+                        <option value="analyst">Analyst</option>
+                        <option value="admin">Admin</option>
+                      </select>
+                      <button onClick={sendInvite} style={{ padding: '9px 20px', background: NAV, color: '#fff', border: 'none', borderRadius: 6, fontFamily: FF, fontSize: 13, fontWeight: 900, cursor: 'pointer', whiteSpace: 'nowrap' }}>INVITE</button>
+                    </div>
+                    {inviteError && <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', fontSize: 12, padding: '8px 12px', borderRadius: 6 }}>{inviteError}</div>}
+                    {inviteSent && <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#16a34a', fontSize: 12, padding: '8px 12px', borderRadius: 6 }}>✓ Invite sent to {inviteEmail || 'analyst'}</div>}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   )
