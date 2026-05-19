@@ -312,7 +312,7 @@ function SettingsPageInner() {
                   {[
                     { key: 'starter', name: 'Starter', price: 'Free',   features: ['1 match/month', '1 analyst', 'Basic stats', 'Share links'], color: '#64748b' },
                     { key: 'pro',     name: 'Pro',     price: '£29/mo', features: ['Unlimited matches', '3 analysts', 'AI scanning', 'Review builder', 'Player stats'], color: GOLD },
-                    { key: 'club',    name: 'Club',    price: '£79/mo', features: ['Unlimited everything', '10 analysts', 'Season stats', 'GPS integration', 'Priority support'], color: '#8b5cf6' },
+                    { key: 'club',    name: 'Club',    price: '£99/mo', features: ['Unlimited everything', '10 analysts', 'Season stats', 'GPS integration', 'Priority support'], color: '#8b5cf6' },
                   ].map(plan => {
                     const isCurrent = (org?.plan ?? 'starter') === plan.key
                     const isDowngrade = plan.key === 'starter' && !isCurrent
