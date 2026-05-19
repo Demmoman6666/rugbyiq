@@ -13,7 +13,7 @@ const DIM   = '#94a3b8'
 const CARD  = '#111827'
 const BG    = '#0a0e1a'
 
-const ADMIN_EMAILS = ['corey@heduc8c.co.uk'] // ← replace with your actual email
+const ADMIN_EMAILS = ['corey@heduc8c.co.uk']
 
 type AdminTab = 'users' | 'clubs' | 'subscriptions'
 
@@ -36,14 +36,11 @@ export default function AdminPage() {
 
   useEffect(() => {
     const check = async () => {
-      const { data: { user }, data: { session } } = await supabase.auth.getUser().then(async r => ({
-        data: { user: r.data.user, session: (await supabase.auth.getSession()).data.session }
-      }))
-      if (!user || !ADMIN_EMAILS.includes(user.email ?? '')) {
-        router.push('/dashboard')
-        return
-      }
-      setToken(session?.access_token ?? '')
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) { router.push('/login'); return }
+      const email = session.user.email ?? ''
+      if (!ADMIN_EMAILS.includes(email)) { router.push('/dashboard'); return }
+      setToken(session.access_token)
       setAuthed(true)
       setLoading(false)
     }
@@ -127,8 +124,6 @@ export default function AdminPage() {
 
   return (
     <div style={{ fontFamily: FF, background: BG, minHeight: '100vh', color: TEXT }}>
-
-      {/* Header */}
       <div style={{ background: NAV, borderBottom: `1px solid ${BD}`, padding: '12px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <div style={{ fontSize: 20, fontWeight: 900, letterSpacing: 3, color: '#fff' }}>CLUB<span style={{ color: GOLD }}>CODE</span></div>
@@ -148,8 +143,6 @@ export default function AdminPage() {
       )}
 
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 28px' }}>
-
-        {/* Stats row */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 24 }}>
           <Stat label="TOTAL USERS" value={users.length} />
           <Stat label="TOTAL CLUBS" value={orgs.length} />
@@ -158,7 +151,6 @@ export default function AdminPage() {
           <Stat label="CLUB" value={orgs.filter(o => o.plan === 'club').length} color="#8b5cf6" />
         </div>
 
-        {/* Tabs */}
         <div style={{ display: 'flex', borderBottom: `1px solid ${BD}`, marginBottom: 20 }}>
           {(['users', 'clubs', 'subscriptions'] as AdminTab[]).map(t => (
             <button key={t} onClick={() => setTab(t)} style={{ padding: '10px 22px', fontFamily: FF, fontSize: 12, fontWeight: 700, letterSpacing: 1.5, border: 'none', background: 'none', cursor: 'pointer', color: tab === t ? '#fff' : MUTED, borderBottom: tab === t ? `2px solid ${GOLD}` : '2px solid transparent', marginBottom: -1, textTransform: 'uppercase' }}>
@@ -167,7 +159,6 @@ export default function AdminPage() {
           ))}
         </div>
 
-        {/* USERS TAB */}
         {tab === 'users' && (
           <div style={{ background: CARD, border: `1px solid ${BD}`, borderRadius: 8, overflow: 'hidden' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -193,36 +184,27 @@ export default function AdminPage() {
                     <td style={{ padding: '10px 14px', fontSize: 11, color: MUTED }}>{u.last_sign_in_at ? new Date(u.last_sign_in_at).toLocaleDateString('en-GB') : 'Never'}</td>
                     <td style={{ padding: '10px 14px' }}>
                       <div style={{ display: 'flex', gap: 6 }}>
-                        <button onClick={() => sendReset(u.email)} style={{ padding: '4px 10px', background: GOLD + '22', border: `1px solid ${GOLD}44`, color: GOLD, fontFamily: FF, fontSize: 10, fontWeight: 700, borderRadius: 4, cursor: 'pointer', letterSpacing: 0.5 }}>
-                          RESET PW
-                        </button>
+                        <button onClick={() => sendReset(u.email)} style={{ padding: '4px 10px', background: GOLD + '22', border: `1px solid ${GOLD}44`, color: GOLD, fontFamily: FF, fontSize: 10, fontWeight: 700, borderRadius: 4, cursor: 'pointer', letterSpacing: 0.5 }}>RESET PW</button>
                         {u.org_id && (
-                          <button onClick={() => setPlanEditing(planEditing === u.org_id ? null : u.org_id)} style={{ padding: '4px 10px', background: '#ffffff0d', border: `1px solid ${BD}`, color: DIM, fontFamily: FF, fontSize: 10, fontWeight: 700, borderRadius: 4, cursor: 'pointer' }}>
-                            PLAN
-                          </button>
+                          <button onClick={() => setPlanEditing(planEditing === u.org_id ? null : u.org_id)} style={{ padding: '4px 10px', background: '#ffffff0d', border: `1px solid ${BD}`, color: DIM, fontFamily: FF, fontSize: 10, fontWeight: 700, borderRadius: 4, cursor: 'pointer' }}>PLAN</button>
                         )}
                       </div>
                       {planEditing === u.org_id && (
                         <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
                           {['starter', 'pro', 'club'].map(p => (
-                            <button key={p} onClick={() => updatePlan(u.org_id, p)} style={{ padding: '3px 8px', background: PLAN_COLOR[p] + '22', border: `1px solid ${PLAN_COLOR[p]}44`, color: PLAN_COLOR[p], fontFamily: FF, fontSize: 10, fontWeight: 700, borderRadius: 4, cursor: 'pointer' }}>
-                              {p.toUpperCase()}
-                            </button>
+                            <button key={p} onClick={() => updatePlan(u.org_id, p)} style={{ padding: '3px 8px', background: PLAN_COLOR[p] + '22', border: `1px solid ${PLAN_COLOR[p]}44`, color: PLAN_COLOR[p], fontFamily: FF, fontSize: 10, fontWeight: 700, borderRadius: 4, cursor: 'pointer' }}>{p.toUpperCase()}</button>
                           ))}
                         </div>
                       )}
                     </td>
                   </tr>
                 ))}
-                {filteredUsers.length === 0 && (
-                  <tr><td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: MUTED, fontSize: 12 }}>No users found</td></tr>
-                )}
+                {filteredUsers.length === 0 && <tr><td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: MUTED, fontSize: 12 }}>No users found</td></tr>}
               </tbody>
             </table>
           </div>
         )}
 
-        {/* CLUBS TAB */}
         {tab === 'clubs' && (
           <div style={{ background: CARD, border: `1px solid ${BD}`, borderRadius: 8, overflow: 'hidden' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -250,23 +232,18 @@ export default function AdminPage() {
                     <td style={{ padding: '10px 14px' }}>
                       <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                         {['starter', 'pro', 'club'].map(p => (
-                          <button key={p} onClick={() => updatePlan(o.id, p)} style={{ padding: '3px 8px', background: o.plan === p ? PLAN_COLOR[p] : PLAN_COLOR[p] + '22', border: `1px solid ${PLAN_COLOR[p]}44`, color: o.plan === p ? (p === 'pro' ? '#000' : '#fff') : PLAN_COLOR[p], fontFamily: FF, fontSize: 9, fontWeight: 700, borderRadius: 4, cursor: 'pointer', letterSpacing: 0.5 }}>
-                            {p.toUpperCase()}
-                          </button>
+                          <button key={p} onClick={() => updatePlan(o.id, p)} style={{ padding: '3px 8px', background: o.plan === p ? PLAN_COLOR[p] : PLAN_COLOR[p] + '22', border: `1px solid ${PLAN_COLOR[p]}44`, color: o.plan === p ? (p === 'pro' ? '#000' : '#fff') : PLAN_COLOR[p], fontFamily: FF, fontSize: 9, fontWeight: 700, borderRadius: 4, cursor: 'pointer', letterSpacing: 0.5 }}>{p.toUpperCase()}</button>
                         ))}
                       </div>
                     </td>
                   </tr>
                 ))}
-                {filteredOrgs.length === 0 && (
-                  <tr><td colSpan={8} style={{ padding: '40px', textAlign: 'center', color: MUTED, fontSize: 12 }}>No clubs found</td></tr>
-                )}
+                {filteredOrgs.length === 0 && <tr><td colSpan={8} style={{ padding: '40px', textAlign: 'center', color: MUTED, fontSize: 12 }}>No clubs found</td></tr>}
               </tbody>
             </table>
           </div>
         )}
 
-        {/* SUBSCRIPTIONS TAB */}
         {tab === 'subscriptions' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
@@ -282,23 +259,15 @@ export default function AdminPage() {
                 </div>
               ))}
             </div>
-
             <div style={{ background: CARD, border: `1px solid ${BD}`, borderRadius: 8, padding: '20px 24px' }}>
               <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 1.5, color: MUTED, marginBottom: 16 }}>MONTHLY RECURRING REVENUE</div>
-              <div style={{ fontSize: 52, fontWeight: 900, color: GOLD }}>
-                £{orgs.filter(o => o.plan === 'pro').length * 29 + orgs.filter(o => o.plan === 'club').length * 79}
-              </div>
-              <div style={{ fontSize: 12, color: MUTED, marginTop: 8 }}>
-                {orgs.filter(o => o.plan !== 'starter' && o.plan).length} paying clubs · {orgs.length} total
-              </div>
+              <div style={{ fontSize: 52, fontWeight: 900, color: GOLD }}>£{orgs.filter(o => o.plan === 'pro').length * 29 + orgs.filter(o => o.plan === 'club').length * 79}</div>
+              <div style={{ fontSize: 12, color: MUTED, marginTop: 8 }}>{orgs.filter(o => o.plan !== 'starter' && o.plan).length} paying clubs · {orgs.length} total</div>
             </div>
-
             <div style={{ background: CARD, border: `1px solid ${BD}`, borderRadius: 8, padding: '20px 24px' }}>
               <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 1.5, color: MUTED, marginBottom: 12 }}>STRIPE DASHBOARD</div>
               <div style={{ fontSize: 13, color: DIM, marginBottom: 16 }}>For detailed billing history, failed payments, and invoice management go directly to Stripe.</div>
-              <a href="https://dashboard.stripe.com" target="_blank" rel="noreferrer" style={{ padding: '10px 20px', background: '#635bff', color: '#fff', textDecoration: 'none', fontFamily: FF, fontSize: 13, fontWeight: 700, borderRadius: 6, display: 'inline-block', letterSpacing: 0.5 }}>
-                Open Stripe Dashboard →
-              </a>
+              <a href="https://dashboard.stripe.com" target="_blank" rel="noreferrer" style={{ padding: '10px 20px', background: '#635bff', color: '#fff', textDecoration: 'none', fontFamily: FF, fontSize: 13, fontWeight: 700, borderRadius: 6, display: 'inline-block', letterSpacing: 0.5 }}>Open Stripe Dashboard →</a>
             </div>
           </div>
         )}
