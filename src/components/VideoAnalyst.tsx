@@ -644,14 +644,14 @@ export default function VideoAnalyst({
             <div style={{ position: 'absolute', top: 10, left: 12, background: 'rgba(0,0,0,0.8)', color: GOLD, fontFamily: MONO, fontSize: 16, padding: '3px 10px', borderRadius: 3, letterSpacing: 3, zIndex: 10 }}>{formatTime(time)}</div>
             <div style={{ position: 'absolute', top: 10, right: 12, background: 'rgba(0,0,0,0.8)', color: DIM, fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 3, letterSpacing: 2, zIndex: 10 }}>{time < duration / 2 ? '1ST HALF' : '2ND HALF'}</div>
             {hudDisplay && (
-              <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', background: 'rgba(0,0,0,0.9)', border: `2px solid ${hudDisplay.color}`, borderRadius: 12, padding: '16px 32px', textAlign: 'center', zIndex: 9999, pointerEvents: 'none', minWidth: 180 }}>
+              <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', background: 'rgba(0,0,0,0.9)', border: `2px solid ${hudDisplay.color}`, borderRadius: 12, padding: '16px 32px', textAlign: 'center', zIndex: 999999, pointerEvents: 'none', minWidth: 180 }}>
                 <div style={{ color: hudDisplay.color, fontFamily: FF, fontSize: 13, fontWeight: 700, letterSpacing: 2, marginBottom: 6 }}>{hudDisplay.eventLabel.toUpperCase()}</div>
                 <div style={{ fontFamily: MONO, fontSize: 40, fontWeight: 900, color: '#fff', letterSpacing: 8, minHeight: 48 }}>{hudDisplay.digits || <span style={{ color: '#ffffff30' }}>_</span>}</div>
                 <div style={{ color: '#ffffff50', fontSize: 10, marginTop: 6, letterSpacing: 1 }}>TYPE SHIRT NUMBER</div>
               </div>
             )}
             {toast && (
-              <div style={{ position: 'absolute', bottom: 32, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', border: `2px solid ${toast.color}`, borderRadius: 8, padding: '10px 24px', display: 'flex', alignItems: 'center', gap: 12, zIndex: 9998, pointerEvents: 'none' }}>
+              <div style={{ position: 'fixed', bottom: 40, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', border: `2px solid ${toast.color}`, borderRadius: 8, padding: '10px 24px', display: 'flex', alignItems: 'center', gap: 12, zIndex: 999999, pointerEvents: 'none' }}>
                 <div style={{ width: 10, height: 10, borderRadius: '50%', background: toast.color, boxShadow: `0 0 10px ${toast.color}` }}/>
                 <span style={{ color: toast.color, fontWeight: 900, fontSize: 16, letterSpacing: 1.5, fontFamily: FF }}>{toast.label}</span>
                 <span style={{ color: DIM, fontSize: 12, fontFamily: FF }}>{toast.team}</span>
