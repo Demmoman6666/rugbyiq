@@ -35,6 +35,20 @@ export default function OnboardingPage() {
       })
       const data = await res.json()
       if (data.error) throw new Error(data.error)
+
+      // Set activeOrgId so /clubs redirects straight to dashboard
+      if (data.orgId) {
+        localStorage.setItem('activeOrgId', data.orgId)
+      } else {
+        // Fallback — fetch the org we just created
+        const { data: member } = await supabase
+          .from('org_members')
+          .select('org_id')
+          .eq('user_id', user.id)
+          .single()
+        if (member?.org_id) localStorage.setItem('activeOrgId', member.org_id)
+      }
+
       router.push('/dashboard')
     } catch (err: any) {
       setError(err.message)

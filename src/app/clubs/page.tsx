@@ -62,6 +62,12 @@ export default function ClubsPage() {
         return
       }
 
+      // Clear stale activeOrgId if it doesn't match any club
+      const activeId = localStorage.getItem('activeOrgId')
+      if (activeId && !clubs.find((c: any) => c.id === activeId)) {
+        localStorage.removeItem('activeOrgId')
+      }
+
       setClubs(clubs)
       setLoading(false)
     }
