@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase-server'
 
-const ADMIN_EMAILS = ['corey@heduc8c.co.uk']
+const ADMIN_EMAILS = ['corey@heduc8.co.uk']
 
 export async function GET(req: NextRequest) {
   const supabase = createServiceClient()

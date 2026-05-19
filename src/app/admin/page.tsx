@@ -13,7 +13,7 @@ const DIM   = '#94a3b8'
 const CARD  = '#111827'
 const BG    = '#0a0e1a'
 
-const ADMIN_EMAILS = ['corey@heduc8c.co.uk']
+const ADMIN_EMAILS = ['corey@heduc8.co.uk']
 
 type AdminTab = 'users' | 'clubs' | 'subscriptions'
 
