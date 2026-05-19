@@ -16,8 +16,8 @@ export async function GET(req: NextRequest) {
   const { data: matches } = await supabase.from('matches').select('org_id')
   const enriched = (orgs ?? []).map((org: any) => ({
     ...org,
-    member_count: members?.filter(m => m.org_id === org.id).length ?? 0,
-    match_count: matches?.filter(m => m.org_id === org.id).length ?? 0,
+    member_count: members?.filter((m: any) => m.org_id === org.id).length ?? 0,
+    match_count: matches?.filter((m: any) => m.org_id === org.id).length ?? 0,
   }))
   return NextResponse.json({ orgs: enriched })
 }
