@@ -169,7 +169,7 @@ export default function VideoAnalyst({
       try { ytPlayerRef.current?.destroy() } catch (_) {}
       ytPlayerRef.current = new (window as any).YT.Player('yt-embed', {
         videoId: youtubeId,
-        playerVars: { controls: 1, modestbranding: 1, rel: 0 },
+        playerVars: { controls: 1, modestbranding: 1, rel: 0, fs: 0 },
         events: {
           onReady: () => { ytReadyRef.current = true; setDuration(Math.floor(ytPlayerRef.current.getDuration())) },
           onStateChange: (e: any) => setPlaying(e.data === 1),
@@ -415,18 +415,7 @@ export default function VideoAnalyst({
   }
 
   const toggleFullscreen = () => {
-    if (isYoutube) {
-      if (!ytReadyRef.current) return
-      const iframe = ytPlayerRef.current?.getIframe() as HTMLElement
-      if (iframe) {
-        if (!document.fullscreenElement) iframe.requestFullscreen().catch(() => {
-          // fallback: fullscreen the container
-          videoContainerRef.current?.requestFullscreen()
-        })
-        else document.exitFullscreen()
-      }
-      return
-    }
+    // Always fullscreen the container so our HUD/toast overlays remain visible
     if (!document.fullscreenElement) videoContainerRef.current?.requestFullscreen()
     else document.exitFullscreen()
   }
@@ -629,7 +618,7 @@ export default function VideoAnalyst({
               isYoutube ? (
                 <div style={{ position: 'relative', width: '100%', height: isFullscreen ? '100vh' : '52vh' }}>
                   <div id="yt-embed" style={{ width: '100%', height: '100%' }} />
-                  <div style={{ position: 'absolute', inset: 0, cursor: 'pointer', zIndex: 5 }}
+                  <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: '15%', cursor: 'pointer', zIndex: 5 }}
                     onClick={() => { if (!ytReadyRef.current) return; playing ? ytPlayerRef.current.pauseVideo() : ytPlayerRef.current.playVideo() }}
                   />
                 </div>
