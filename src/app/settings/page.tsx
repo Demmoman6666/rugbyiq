@@ -270,7 +270,25 @@ function SettingsPageInner() {
                     <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: '#94a3b8', marginBottom: 4 }}>CURRENT PLAN</div>
                     <div style={{ fontSize: 22, fontWeight: 900, color: NAV }}>{(org?.plan ?? 'starter').charAt(0).toUpperCase() + (org?.plan ?? 'starter').slice(1)}</div>
                   </div>
-                  <div style={{ background: GOLD + '22', color: GOLD, border: `1px solid ${GOLD}44`, padding: '6px 18px', borderRadius: 20, fontSize: 12, fontWeight: 700, letterSpacing: 1 }}>{(org?.plan ?? 'STARTER').toUpperCase()}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ background: GOLD + '22', color: GOLD, border: `1px solid ${GOLD}44`, padding: '6px 18px', borderRadius: 20, fontSize: 12, fontWeight: 700, letterSpacing: 1 }}>{(org?.plan ?? 'STARTER').toUpperCase()}</div>
+                    {(org?.plan ?? 'starter') !== 'starter' && (
+                      <button
+                        onClick={async () => {
+                          const res = await fetch('/api/stripe/portal', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ returnUrl: window.location.href }),
+                          })
+                          const { url, error } = await res.json()
+                          if (error) alert(error)
+                          else window.location.href = url
+                        }}
+                        style={{ padding: '7px 16px', background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', fontFamily: FF, fontSize: 12, fontWeight: 700, borderRadius: 6, cursor: 'pointer' }}>
+                        Manage / Cancel
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
                   {[
@@ -290,7 +308,20 @@ function SettingsPageInner() {
                         {isCurrent ? (
                           <div style={{ padding: '8px 0', textAlign: 'center', fontSize: 12, fontWeight: 700, color: plan.color, background: plan.color + '18', borderRadius: 6, letterSpacing: 1 }}>CURRENT PLAN</div>
                         ) : isDowngrade ? (
-                          <div style={{ padding: '8px 0', textAlign: 'center', fontSize: 11, color: '#94a3b8' }}>Contact us to downgrade</div>
+                          <button
+                            onClick={async () => {
+                              const res = await fetch('/api/stripe/portal', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ returnUrl: window.location.href }),
+                              })
+                              const { url, error } = await res.json()
+                              if (error) alert(error)
+                              else window.location.href = url
+                            }}
+                            style={{ padding: '10px 0', background: '#f8fafc', color: '#64748b', border: '1px solid #e2e8f0', borderRadius: 6, fontFamily: FF, fontSize: 12, fontWeight: 700, cursor: 'pointer', letterSpacing: 1, width: '100%' }}>
+                            DOWNGRADE →
+                          </button>
                         ) : (
                           <button
                             onClick={async () => {
@@ -310,6 +341,26 @@ function SettingsPageInner() {
                       </div>
                     )
                   })}
+                </div>
+                <div style={{ background: '#fff', border: `1px solid ${BD}`, borderRadius: 10, padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: NAV, marginBottom: 4 }}>Payment Details</div>
+                    <div style={{ fontSize: 13, color: '#64748b' }}>Update your card, billing address or payment method via the Stripe portal.</div>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      const res = await fetch('/api/stripe/portal', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ returnUrl: window.location.href }),
+                      })
+                      const { url, error } = await res.json()
+                      if (error) alert(error)
+                      else window.location.href = url
+                    }}
+                    style={{ padding: '9px 20px', background: NAV, color: '#fff', border: 'none', borderRadius: 6, fontFamily: FF, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                    Update Payment Details →
+                  </button>
                 </div>
                 <div style={{ fontSize: 11, color: '#94a3b8', textAlign: 'center' }}>Secure payment via Stripe · Cancel anytime · VAT may apply</div>
               </div>
