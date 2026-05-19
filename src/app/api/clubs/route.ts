@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
 
   const { data: org, error: orgError } = await service
     .from('organisations')
-    .insert({ name, sport: sport ?? 'rugby', plan: plan ?? 'starter' })
+    .insert({ name, slug: name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-'), sport: sport ?? 'rugby', plan: plan ?? 'starter' })
     .select()
     .single()
 
