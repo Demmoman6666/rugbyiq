@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
   const { data: orgs } = await supabase.from('organisations').select('id, name, plan, sport, created_at, home_ground, website').order('created_at', { ascending: false })
   const { data: members } = await supabase.from('org_members').select('org_id, user_id')
   const { data: matches } = await supabase.from('matches').select('org_id')
-  const enriched = (orgs ?? []).map(org => ({
+  const enriched = (orgs ?? []).map((org: any) => ({
     ...org,
     member_count: members?.filter(m => m.org_id === org.id).length ?? 0,
     match_count: matches?.filter(m => m.org_id === org.id).length ?? 0,
