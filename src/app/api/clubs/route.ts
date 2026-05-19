@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerComponentClient } from '@/lib/supabase-server'
+import { createServerComponentClient, createServiceClient } from '@/lib/supabase-server'
 
 // GET /api/clubs — get all clubs for the current user
 export async function GET(req: NextRequest) {
@@ -29,8 +29,10 @@ export async function POST(req: NextRequest) {
   const { name, sport, plan } = await req.json()
   if (!name || !plan) return NextResponse.json({ error: 'name and plan required' }, { status: 400 })
 
-  // Create the organisation
-  const { data: org, error: orgError } = await supabase
+  // Use service client to bypass RLS for org creation
+  const service = createServiceClient()
+
+  const { data: org, error: orgError } = await service
     .from('organisations')
     .insert({ name, sport: sport ?? 'rugby', plan: plan ?? 'starter' })
     .select()
@@ -38,8 +40,7 @@ export async function POST(req: NextRequest) {
 
   if (orgError) return NextResponse.json({ error: orgError.message }, { status: 500 })
 
-  // Add the user as admin
-  const { error: memberError } = await supabase
+  const { error: memberError } = await service
     .from('org_members')
     .insert({ org_id: org.id, user_id: user.id, role: 'admin' })
 
