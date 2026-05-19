@@ -29,7 +29,14 @@ export default function LoginPage() {
       ? await supabase.auth.signInWithPassword({ email, password })
       : await supabase.auth.signUp({ email, password })
     if (error) { setError(error.message); setLoading(false); return }
-    window.location.href = '/clubs'
+    // Check for invite token in URL — redirect back to accept-invite
+    const params = new URLSearchParams(window.location.search)
+    const inviteToken = params.get('invite')
+    if (inviteToken) {
+      window.location.href = `/accept-invite?token=${inviteToken}`
+    } else {
+      window.location.href = '/clubs'
+    }
   }
 
   const inputStyle: React.CSSProperties = {

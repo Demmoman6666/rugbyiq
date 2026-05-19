@@ -129,3 +129,24 @@ export async function PATCH(req: NextRequest) {
 
   return NextResponse.json({ success: true, orgId: invite.org_id })
 }
+
+// DELETE /api/invites?id=xxx — cancel a pending invite
+export async function DELETE(req: NextRequest) {
+  const supabase = await createServerComponentClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 })
+
+  const id = req.nextUrl.searchParams.get('id')
+  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+
+  // Verify the user is admin of the org this invite belongs to
+  const { data: invite } = await supabase.from('invites').select('org_id').eq('id', id).single()
+  if (!invite) return NextResponse.json({ error: 'Invite not found' }, { status: 404 })
+
+  const { data: member } = await supabase.from('org_members').select('role').eq('org_id', invite.org_id).eq('user_id', user.id).single()
+  if (!member || member.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
+  const { error } = await supabase.from('invites').delete().eq('id', id)
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ success: true })
+}

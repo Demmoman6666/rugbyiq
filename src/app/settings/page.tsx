@@ -115,8 +115,9 @@ function SettingsPageInner() {
   const removeAnalyst = async (memberId: string, userId: string) => {
     if (userId === user?.id) { alert("You can't remove yourself"); return }
     if (!confirm('Remove this analyst from the club?')) return
-    await supabase.from('org_members').delete().eq('id', memberId)
-    setMembers(prev => prev.filter(m => m.id !== memberId))
+    const res = await fetch(`/api/members?id=${memberId}`, { method: 'DELETE' })
+    if (res.ok) setMembers(prev => prev.filter(m => m.id !== memberId))
+    else alert('Failed to remove analyst')
   }
 
   const sendInvite = async () => {
@@ -432,8 +433,8 @@ function SettingsPageInner() {
                             <div style={{ fontSize: 11, color: '#92400e', marginTop: 2 }}>⏳ Pending · {inv.role} · expires {new Date(inv.expires_at).toLocaleDateString('en-GB')}</div>
                           </div>
                           <button onClick={async () => {
-                            await supabase.from('invites').delete().eq('id', inv.id)
-                            setPendingInvites(prev => prev.filter(i => i.id !== inv.id))
+                            const res = await fetch(`/api/invites?id=${inv.id}`, { method: 'DELETE' })
+                            if (res.ok) setPendingInvites(prev => prev.filter(i => i.id !== inv.id))
                           }} style={{ padding: '4px 10px', background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', fontFamily: FF, fontSize: 11, fontWeight: 700, borderRadius: 4, cursor: 'pointer' }}>
                             Cancel
                           </button>
