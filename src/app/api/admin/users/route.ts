@@ -21,8 +21,8 @@ export async function GET(req: NextRequest) {
     .from('org_members')
     .select('user_id, role, org_id, organisations(name, plan)')
 
-  const enriched = users.map(u => {
-    const member = members?.find(m => m.user_id === u.id)
+  const enriched = users.map((u: any) => {
+    const member = members?.find((m: any) => m.user_id === u.id)
     return {
       id: u.id,
       email: u.email,
