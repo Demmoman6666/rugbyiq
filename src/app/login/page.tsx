@@ -29,7 +29,7 @@ export default function LoginPage() {
       ? await supabase.auth.signInWithPassword({ email, password })
       : await supabase.auth.signUp({ email, password })
     if (error) { setError(error.message); setLoading(false); return }
-    window.location.href = '/dashboard'
+    window.location.href = '/clubs'
   }
 
   const inputStyle: React.CSSProperties = {

@@ -1,88 +1,102 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-import { Resend } from 'resend'
+import { createServerComponentClient, createServiceClient } from '@/lib/supabase-server'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
-
-const resend = new Resend(process.env.RESEND_API_KEY)
-
+// POST /api/invites — create an invite (admin only)
 export async function POST(req: NextRequest) {
-  try {
-    const { email, orgId, role = 'analyst' } = await req.json()
-    if (!email || !orgId) return NextResponse.json({ error: 'email and orgId required' }, { status: 400 })
+  const supabase = await createServerComponentClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 })
 
-    const token = crypto.randomUUID().replace(/-/g, '').substring(0, 24)
+  const { email, role, orgId } = await req.json()
+  if (!email || !orgId) return NextResponse.json({ error: 'email and orgId required' }, { status: 400 })
 
-    const { data: existing } = await supabase
-      .from('invites')
-      .select('id')
-      .eq('org_id', orgId)
-      .eq('email', email)
-      .eq('accepted', false)
-      .single()
+  // Check the requesting user is admin of this org
+  const { data: member } = await supabase
+    .from('org_members')
+    .select('role')
+    .eq('org_id', orgId)
+    .eq('user_id', user.id)
+    .single()
 
-    if (existing) return NextResponse.json({ error: 'Invite already sent to this email' }, { status: 400 })
-
-    const { data: org } = await supabase
-      .from('organisations')
-      .select('name')
-      .eq('id', orgId)
-      .single()
-
-    const { data, error } = await supabase
-      .from('invites')
-      .insert({ org_id: orgId, email, role, token })
-      .select()
-      .single()
-
-    if (error) throw error
-
-    const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL}/invite/${token}`
-
-    await resend.emails.send({
-      from: 'ClubCode <noreply@clubcode.co.uk>',
-      to: email,
-      subject: `You've been invited to join ${org?.name ?? 'a club'} on ClubCode`,
-      html: `
-        <div style="font-family: system-ui, sans-serif; max-width: 500px; margin: 0 auto; padding: 32px; background: #f8fafc;">
-          <div style="background: #ffffff; border-radius: 12px; padding: 32px; border: 1px solid #e2e8f0;">
-            <h1 style="font-size: 24px; font-weight: 900; letter-spacing: 2px; color: #0f172a; margin: 0 0 8px;">
-              CLUB<span style="color: #0ea5e9;">CODE</span>
-            </h1>
-            <p style="font-size: 13px; color: #64748b; margin: 0 0 28px; letter-spacing: 1px;">MATCH ANALYSIS PLATFORM</p>
-            <h2 style="font-size: 20px; font-weight: 700; color: #0f172a; margin: 0 0 12px;">You've been invited!</h2>
-            <p style="font-size: 15px; color: #475569; line-height: 1.6; margin: 0 0 24px;">
-              You've been invited to join <strong>${org?.name ?? 'a club'}</strong> on ClubCode as an ${role}.
-            </p>
-            <a href="${inviteUrl}" style="display: inline-block; padding: 13px 28px; background: #0f172a; color: #ffffff; font-weight: 700; font-size: 15px; border-radius: 8px; text-decoration: none; letter-spacing: 1px;">
-              Accept Invite →
-            </a>
-            <p style="font-size: 12px; color: #94a3b8; margin: 24px 0 0;">
-              This invite link is single-use. If you didn't expect this email you can safely ignore it.
-            </p>
-          </div>
-        </div>
-      `
-    })
-
-    return NextResponse.json({ token, inviteUrl })
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
+  if (!member || member.role !== 'admin') {
+    return NextResponse.json({ error: 'Only admins can invite analysts' }, { status: 403 })
   }
+
+  // Create invite token
+  const { data: invite, error } = await supabase
+    .from('invites')
+    .insert({ org_id: orgId, email: email.toLowerCase().trim(), role: role ?? 'analyst' })
+    .select()
+    .single()
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // Send invite email via Supabase (uses their SMTP)
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.clubcode.co.uk'
+  const inviteUrl = `${siteUrl}/accept-invite?token=${invite.token}`
+
+  // Get org name for the email
+  const { data: org } = await supabase.from('organisations').select('name').eq('id', orgId).single()
+
+  await supabase.auth.admin.inviteUserByEmail(email, {
+    data: { inviteToken: invite.token, orgName: org?.name },
+    redirectTo: inviteUrl,
+  })
+
+  return NextResponse.json({ success: true, inviteUrl })
 }
 
+// GET /api/invites?token=xxx — look up a pending invite
 export async function GET(req: NextRequest) {
-  const orgId = req.nextUrl.searchParams.get('orgId')
-  if (!orgId) return NextResponse.json({ error: 'orgId required' }, { status: 400 })
+  const token = req.nextUrl.searchParams.get('token')
+  if (!token) return NextResponse.json({ error: 'token required' }, { status: 400 })
 
-  const { data } = await supabase
+  const supabase = await createServerComponentClient()
+  const { data: invite } = await supabase
+    .from('invites')
+    .select('*, organisations(name, plan)')
+    .eq('token', token)
+    .eq('accepted', false)
+    .gt('expires_at', new Date().toISOString())
+    .single()
+
+  if (!invite) return NextResponse.json({ error: 'Invalid or expired invite' }, { status: 404 })
+  return NextResponse.json({ invite })
+}
+
+// PATCH /api/invites — accept an invite
+export async function PATCH(req: NextRequest) {
+  const supabase = await createServerComponentClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 })
+
+  const { token } = await req.json()
+
+  // Find the invite
+  const { data: invite } = await supabase
     .from('invites')
     .select('*')
-    .eq('org_id', orgId)
-    .order('created_at', { ascending: false })
+    .eq('token', token)
+    .eq('accepted', false)
+    .gt('expires_at', new Date().toISOString())
+    .single()
 
-  return NextResponse.json({ invites: data ?? [] })
+  if (!invite) return NextResponse.json({ error: 'Invalid or expired invite' }, { status: 404 })
+
+  // Check email matches
+  if (invite.email !== user.email?.toLowerCase()) {
+    return NextResponse.json({ error: 'This invite was sent to a different email address' }, { status: 403 })
+  }
+
+  // Add to org — upsert in case they're already a member
+  const { error: memberError } = await supabase
+    .from('org_members')
+    .upsert({ org_id: invite.org_id, user_id: user.id, role: invite.role }, { onConflict: 'org_id,user_id' })
+
+  if (memberError) return NextResponse.json({ error: memberError.message }, { status: 500 })
+
+  // Mark invite as accepted
+  await supabase.from('invites').update({ accepted: true }).eq('id', invite.id)
+
+  return NextResponse.json({ success: true, orgId: invite.org_id })
 }
