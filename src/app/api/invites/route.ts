@@ -112,11 +112,6 @@ export async function PATCH(req: NextRequest) {
 
   if (!invite) return NextResponse.json({ error: 'Invalid or expired invite' }, { status: 404 })
 
-  // Check email matches
-  if (invite.email !== user.email?.toLowerCase()) {
-    return NextResponse.json({ error: 'This invite was sent to a different email address' }, { status: 403 })
-  }
-
   // Add to org — upsert in case they're already a member
   const { error: memberError } = await supabase
     .from('org_members')
