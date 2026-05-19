@@ -112,10 +112,29 @@ export async function PATCH(req: NextRequest) {
 
   if (!invite) return NextResponse.json({ error: 'Invalid or expired invite' }, { status: 404 })
 
-  // Add to org — upsert in case they're already a member
-  const { error: memberError } = await supabase
+  // Check email matches — invite is only valid for the email it was sent to
+  if (invite.email.toLowerCase() !== user.email?.toLowerCase().trim()) {
+    return NextResponse.json({ 
+      error: `This invite was sent to ${invite.email}. Please log in with that email address to accept.` 
+    }, { status: 403 })
+  }
+
+  // Check if already a member
+  const { data: existing } = await supabase
     .from('org_members')
-    .upsert({ org_id: invite.org_id, user_id: user.id, role: invite.role }, { onConflict: 'org_id,user_id' })
+    .select('id')
+    .eq('org_id', invite.org_id)
+    .eq('user_id', user.id)
+    .single()
+
+  // Add to org — only insert if not already a member
+  let memberError = null
+  if (!existing) {
+    const { error } = await supabase
+      .from('org_members')
+      .insert({ org_id: invite.org_id, user_id: user.id, role: invite.role })
+    memberError = error
+  }
 
   if (memberError) return NextResponse.json({ error: memberError.message }, { status: 500 })
 
