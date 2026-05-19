@@ -41,6 +41,7 @@ function SettingsPageInner() {
 
   // Invite
   const [inviteEmail, setInviteEmail] = useState('')
+  const [pendingInvites, setPendingInvites] = useState<any[]>([])
   const [inviteRole, setInviteRole]   = useState('analyst')
   const [inviteSent, setInviteSent]   = useState(false)
   const [inviteError, setInviteError] = useState('')
@@ -68,6 +69,16 @@ function SettingsPageInner() {
       setAwayColor(o.secondary_color ?? '#ef4444')
       setGround(o.home_ground ?? '')
       setWebsite(o.website ?? '')
+
+      // Load pending invites
+      const { data: inviteData } = await supabase
+        .from('invites')
+        .select('*')
+        .eq('org_id', o.id)
+        .eq('accepted', false)
+        .gt('expires_at', new Date().toISOString())
+        .order('created_at', { ascending: false })
+      setPendingInvites(inviteData ?? [])
 
       const { data: allMembers } = await supabase
         .from('org_members')
@@ -118,7 +129,13 @@ function SettingsPageInner() {
     })
     const data = await res.json()
     if (data.error) { setInviteError(data.error); return }
-    setInviteSent(true); setInviteEmail('')
+    setInviteSent(true)
+    // Reload pending invites
+    if (org?.id) {
+      const { data } = await supabase.from('invites').select('*').eq('org_id', org.id).eq('accepted', false).gt('expires_at', new Date().toISOString()).order('created_at', { ascending: false })
+      setPendingInvites(data ?? [])
+    }
+    setInviteEmail('')
     setTimeout(() => setInviteSent(false), 4000)
   }
 
@@ -404,7 +421,28 @@ function SettingsPageInner() {
                 {/* Invite */}
                 {myRole === 'admin' && (
                   <div style={{ background: '#fff', border: `1px solid ${BD}`, borderRadius: 10, padding: '24px 28px' }}>
-                    <div style={{ fontSize: 16, fontWeight: 900, color: NAV, marginBottom: 4 }}>Invite an Analyst</div>
+                    {pendingInvites.length > 0 && (
+                  <div style={{ marginBottom: 20 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: '#94a3b8', marginBottom: 10 }}>PENDING INVITES</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {pendingInvites.map(inv => (
+                        <div key={inv.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8 }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: NAV }}>{inv.email}</div>
+                            <div style={{ fontSize: 11, color: '#92400e', marginTop: 2 }}>⏳ Pending · {inv.role} · expires {new Date(inv.expires_at).toLocaleDateString('en-GB')}</div>
+                          </div>
+                          <button onClick={async () => {
+                            await supabase.from('invites').delete().eq('id', inv.id)
+                            setPendingInvites(prev => prev.filter(i => i.id !== inv.id))
+                          }} style={{ padding: '4px 10px', background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', fontFamily: FF, fontSize: 11, fontWeight: 700, borderRadius: 4, cursor: 'pointer' }}>
+                            Cancel
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div style={{ fontSize: 16, fontWeight: 900, color: NAV, marginBottom: 4 }}>Invite an Analyst</div>
                     <div style={{ fontSize: 13, color: '#64748b', marginBottom: 20 }}>They'll receive an email with a link to join your club.</div>
                     <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
                       <input type="email" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} onKeyDown={e => e.key === 'Enter' && sendInvite()} placeholder="analyst@example.com" style={{ ...inputStyle, flex: 1 }} />
