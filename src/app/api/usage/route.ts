@@ -8,7 +8,7 @@ const supabase = createClient(
 
 const PLAN_LIMITS: Record<string, number> = {
   starter: 1,
-  pro: 999,
+  pro: 4,
   club: 999,
 }
 
