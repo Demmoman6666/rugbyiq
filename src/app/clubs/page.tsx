@@ -89,34 +89,6 @@ export default function ClubsPage() {
     router.push('/dashboard')
   }
 
-  const createClub = async () => {
-    if (!newClub.name.trim()) return
-    setCreating(true)
-    const res = await fetch('/api/clubs', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newClub),
-    })
-    const { org, error } = await res.json()
-    if (error) { alert(error); setCreating(false); return }
-
-    // If paid plan, redirect to checkout
-    if (newClub.plan !== 'starter') {
-      localStorage.setItem('activeOrgId', org.id)
-      const checkoutRes = await fetch('/api/stripe/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: newClub.plan, orgId: org.id }),
-      })
-      const { url } = await checkoutRes.json()
-      if (url) { window.location.href = url; return }
-    }
-
-    localStorage.setItem('activeOrgId', org.id)
-    router.push('/dashboard')
-  }
-
-  if (loading) return (
     <div style={{ fontFamily: FF, background: BG, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: GOLD, fontSize: 16, letterSpacing: 2 }}>
       LOADING...
     </div>
