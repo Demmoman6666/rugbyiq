@@ -49,7 +49,7 @@ export default function OnboardingPage() {
         if (member?.org_id) localStorage.setItem('activeOrgId', member.org_id)
       }
 
-      router.push('/dashboard')
+      router.push('/plan')
     } catch (err: any) {
       setError(err.message)
       setLoading(false)
