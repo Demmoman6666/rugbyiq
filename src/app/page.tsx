@@ -23,7 +23,7 @@ const PLANS = [
     cta: 'Start free trial', highlight: true, color: '#0ea5e9'
   },
   {
-    name: 'Club', price: '£69', period: '/mo',
+    name: 'Club', price: '£99', period: '/mo',
     features: ['Everything in Pro', '5 analyst seats', 'Multiple teams', 'Season statistics', 'Priority support'],
     cta: 'Get started', highlight: false, color: '#8b5cf6'
   },

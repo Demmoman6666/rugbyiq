@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'RugbyIQ Analyst — AI-Powered Rugby Analysis',
-  description: 'Upload any rugby footage. Code events with hotkeys or let AI detect scrums, lineouts, tackles, tries automatically.',
+  title: 'ClubCode — AI-Powered Sports Analysis',
+  description: 'Code matches, analyse footage and share insights with your team — powered by AI.',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
