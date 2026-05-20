@@ -76,16 +76,15 @@ function SettingsPageInner() {
         .eq('id', user.id)
         .maybeSingle()
 
-      let memberQuery = supabase
-        .from('org_members')
-        .select('org_id, role, organisations(*)')
-        .eq('user_id', user.id)
-
+      let member: any = null
       if (profile?.active_org_id) {
-        memberQuery = (memberQuery as any).eq('org_id', profile.active_org_id)
+        const { data } = await supabase.from('org_members').select('org_id, role, organisations(*)').eq('user_id', user.id).eq('org_id', profile.active_org_id).maybeSingle()
+        member = data
       }
-
-      const { data: member } = await memberQuery.maybeSingle()
+      if (!member) {
+        const { data } = await supabase.from('org_members').select('org_id, role, organisations(*)').eq('user_id', user.id).maybeSingle()
+        member = data
+      }
 
       if (!member) { setLoading(false); return }
 

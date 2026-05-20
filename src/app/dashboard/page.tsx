@@ -41,14 +41,15 @@ export default function DashboardPage() {
         .eq('id', user.id)
         .maybeSingle()
 
-      let memberQuery = supabase
-        .from('org_members')
-        .select('org_id, organisations(plan, name)')
-        .eq('user_id', user.id)
-
-      if (profile?.active_org_id) memberQuery = (memberQuery as any).eq('org_id', profile.active_org_id)
-
-      const { data: member } = await memberQuery.maybeSingle()
+      let member: any = null
+      if (profile?.active_org_id) {
+        const { data } = await supabase.from('org_members').select('org_id, organisations(plan, name)').eq('user_id', user.id).eq('org_id', profile.active_org_id).maybeSingle()
+        member = data
+      }
+      if (!member) {
+        const { data } = await supabase.from('org_members').select('org_id, organisations(plan, name)').eq('user_id', user.id).maybeSingle()
+        member = data
+      }
 
       if (member) {
         const org = member.organisations as any

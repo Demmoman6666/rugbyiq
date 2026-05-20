@@ -142,10 +142,22 @@ export default function VideoAnalyst({
     const loadSport = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
-      const { data: member } = await supabase.from('org_members').select('org_id, organisations(sport)').eq('user_id', user.id).single()
+      // Get active org from profile
+      const { data: profile } = await supabase.from('profiles').select('active_org_id').eq('id', user.id).maybeSingle()
+      const activeOrgId = profile?.active_org_id
+
+      let member: any = null
+      if (activeOrgId) {
+        const { data } = await supabase.from('org_members').select('org_id, organisations(sport, plan)').eq('user_id', user.id).eq('org_id', activeOrgId).maybeSingle()
+        member = data
+      }
+      if (!member) {
+        const { data } = await supabase.from('org_members').select('org_id, organisations(sport, plan)').eq('user_id', user.id).maybeSingle()
+        member = data
+      }
       if (member) {
         const sport = (member.organisations as any)?.sport ?? 'rugby'
-        const orgPlan = (member.organisations as any)?.plan ?? 'starter'
+        const orgPlan = (member?.organisations as any)?.plan ?? 'starter'
         setSportConfig(getSportConfig(sport))
         setOrgId(member.org_id)
         setPlan(orgPlan)
