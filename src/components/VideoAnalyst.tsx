@@ -81,6 +81,7 @@ export default function VideoAnalyst({
   const [buildingReview, setBuildingReview] = useState(false)
   const [reviewLink, setReviewLink]         = useState('')
   const [orgId, setOrgId]                   = useState('')
+  const [plan, setPlan]                     = useState('starter')
   const [isFullscreen, setIsFullscreen]     = useState(false)
   const [homePlayers, setHomePlayers]       = useState<Player[]>([])
   const [awayPlayers, setAwayPlayers]       = useState<Player[]>([])
@@ -144,8 +145,10 @@ export default function VideoAnalyst({
       const { data: member } = await supabase.from('org_members').select('org_id, organisations(sport)').eq('user_id', user.id).single()
       if (member) {
         const sport = (member.organisations as any)?.sport ?? 'rugby'
+        const orgPlan = (member.organisations as any)?.plan ?? 'starter'
         setSportConfig(getSportConfig(sport))
         setOrgId(member.org_id)
+        setPlan(orgPlan)
       }
       const reviewRes = await fetch(`/api/review?matchId=${matchId}`)
       const reviewData = await reviewRes.json()
@@ -590,7 +593,7 @@ export default function VideoAnalyst({
             <div style={{ fontSize: 11, color: MUTED }}>{homeTeam.name} vs {awayTeam.name}</div>
             {scanState.running && <div style={{ color: GOLD, fontSize: 10, marginTop: 2, letterSpacing: 1 }}>🤖 SCANNING {scanState.pct}%</div>}
           </div>
-          <button onClick={() => setShowSquadsModal(true)} style={{ padding: '5px 12px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: '#ffffff0d', color: DIM, border: `1px solid ${BD}`, borderRadius: 4, cursor: 'pointer', letterSpacing: 1 }}>👥 SQUADS</button>
+          <button onClick={() => { if (plan !== 'club') { alert('Team sheets are only available on the Club plan. Upgrade in Settings → Plans & Billing.'); return } setShowSquadsModal(true) }} style={{ padding: '5px 12px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: '#ffffff0d', color: plan === 'club' ? DIM : MUTED, border: `1px solid ${BD}`, borderRadius: 4, cursor: plan === 'club' ? 'pointer' : 'not-allowed', letterSpacing: 1, opacity: plan === 'club' ? 1 : 0.4 }}>{plan === 'club' ? '👥 SQUADS' : '🔒 SQUADS'}</button>
           <button onClick={generateShareLink} style={{ padding: '5px 12px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: copying ? '#16a34a' : '#ffffff0d', color: copying ? '#fff' : GOLD, border: `1px solid ${copying ? '#16a34a' : GOLD + '44'}`, borderRadius: 4, cursor: 'pointer', letterSpacing: 1 }}>
             {copying ? '✓ COPIED' : '🔗 SHARE'}
           </button>
@@ -601,9 +604,9 @@ export default function VideoAnalyst({
       {/* TABS */}
       <div style={{ display: 'flex', background: NAV, borderBottom: `1px solid ${BD}`, flexShrink: 0 }}>
         {(['code','ai','stats','review'] as Tab[]).map(t => (
-          <button key={t} onClick={() => setTab(t)} style={{ padding: '10px 24px', fontFamily: FF, fontSize: 12, fontWeight: 700, letterSpacing: 1.5, border: 'none', background: 'none', cursor: 'pointer', color: tab === t ? '#fff' : MUTED, borderBottom: tab === t ? `2px solid ${GOLD}` : '2px solid transparent', marginBottom: -1, transition: 'color 0.15s' }}>
+          <button key={t} onClick={() => { if (t === 'ai' && plan !== 'club') { alert('AI Review is only available on the Club plan. Upgrade in Settings → Plans & Billing.'); return } setTab(t) }} style={{ padding: '10px 24px', fontFamily: FF, fontSize: 12, fontWeight: 700, letterSpacing: 1.5, border: 'none', background: 'none', cursor: 'pointer', color: tab === t ? '#fff' : MUTED, borderBottom: tab === t ? `2px solid ${GOLD}` : '2px solid transparent', marginBottom: -1, transition: 'color 0.15s' }}>
             {t === 'code'   && '▶  CODE MATCH'}
-            {t === 'ai'     && <>🤖  AI REVIEW {pendingSuggestions.length > 0 && <span style={{ background: GOLD, color: '#000', fontSize: 9, fontWeight: 900, padding: '1px 6px', borderRadius: 10, marginLeft: 6 }}>{pendingSuggestions.length}</span>}</>}
+            {t === 'ai'     && <>{plan === 'club' ? '🤖' : '🔒'}  AI REVIEW {pendingSuggestions.length > 0 && plan === 'club' && <span style={{ background: GOLD, color: '#000', fontSize: 9, fontWeight: 900, padding: '1px 6px', borderRadius: 10, marginLeft: 6 }}>{pendingSuggestions.length}</span>}</>}
             {t === 'stats'  && '◈  STATISTICS'}
             {t === 'review' && '🎬  REVIEW BUILDER'}
           </button>
@@ -688,8 +691,8 @@ export default function VideoAnalyst({
               </>
             )}
             {ctrlBtn(toggleFullscreen, '⛶', 'Fullscreen')}
-            <button onClick={() => setShowScanConfirm(true)} disabled={scanState.running || !videoUrl} style={{ padding: '5px 14px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: scanState.running ? '#ffffff0d' : GOLD + '22', border: `1px solid ${GOLD}44`, color: GOLD, borderRadius: 4, cursor: 'pointer', whiteSpace: 'nowrap', letterSpacing: 1, opacity: videoUrl ? 1 : 0.3 }}>
-              {scanState.running ? `🤖 ${scanState.pct}%` : '🤖 AI SCAN'}
+            <button onClick={() => { if (plan !== 'club') { alert('AI Scan is only available on the Club plan. Upgrade in Settings → Plans & Billing.'); return } setShowScanConfirm(true) }} disabled={scanState.running || !videoUrl} style={{ padding: '5px 14px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: scanState.running ? '#ffffff0d' : plan === 'club' ? GOLD + '22' : '#ffffff0d', border: `1px solid ${plan === 'club' ? GOLD + '44' : BD}`, color: plan === 'club' ? GOLD : MUTED, borderRadius: 4, cursor: 'pointer', whiteSpace: 'nowrap', letterSpacing: 1, opacity: videoUrl ? 1 : 0.3 }}>
+              {scanState.running ? `🤖 ${scanState.pct}%` : plan === 'club' ? '🤖 AI SCAN' : '🔒 AI SCAN'}
             </button>
           </div>
 
