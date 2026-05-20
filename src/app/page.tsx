@@ -19,12 +19,12 @@ const PLANS = [
   },
   {
     name: 'Pro', price: '£29', period: '/mo',
-    features: ['Unlimited matches', 'AI scan included', '2 analyst seats', 'Shareable links', 'PDF export'],
+    features: ['Unlimited matches', 'AI scan included', '3 analyst seats', 'Shareable links', 'Player stats'],
     cta: 'Start free trial', highlight: true, color: '#0ea5e9'
   },
   {
     name: 'Club', price: '£99', period: '/mo',
-    features: ['Everything in Pro', '5 analyst seats', 'Multiple teams', 'Season statistics', 'Priority support'],
+    features: ['Everything in Pro', '10 analyst seats', 'Multiple teams', 'Season statistics', 'Priority support'],
     cta: 'Get started', highlight: false, color: '#8b5cf6'
   },
 ]
@@ -43,7 +43,7 @@ export default function LandingPage() {
         <div style={{ fontSize: 24, fontWeight: 900, letterSpacing: 3, color: '#0f172a' }}>CLUB<span style={{ color: '#0ea5e9' }}>CODE</span></div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <Link href="/login" style={{ padding: '7px 16px', fontSize: 13, fontWeight: 700, color: '#64748b' }}>Sign in</Link>
-          <Link href="/login" style={{ padding: '8px 20px', background: '#0f172a', color: '#fff', fontSize: 13, fontWeight: 900, borderRadius: 6 }}>Start free →</Link>
+          <Link href="/login?signup=true" style={{ padding: '8px 20px', background: '#0f172a', color: '#fff', fontSize: 13, fontWeight: 900, borderRadius: 6 }}>Start free →</Link>
         </div>
       </nav>
 
@@ -59,7 +59,7 @@ export default function LandingPage() {
           Upload any footage. Code events with hotkeys, or let AI detect scrums, lineouts, tackles, and tries automatically. Built for amateur clubs.
         </p>
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-          <Link href="/login" style={{ padding: '14px 32px', background: '#0f172a', color: '#fff', fontSize: 17, fontWeight: 900, borderRadius: 8, letterSpacing: 1 }}>Start for free →</Link>
+          <Link href="/login?signup=true" style={{ padding: '14px 32px', background: '#0f172a', color: '#fff', fontSize: 17, fontWeight: 900, borderRadius: 8, letterSpacing: 1 }}>Start for free →</Link>
           <Link href="#features" style={{ padding: '14px 28px', background: '#f8fafc', color: '#0f172a', fontSize: 17, fontWeight: 700, borderRadius: 8, border: '1px solid #e2e8f0' }}>See how it works</Link>
         </div>
         <div style={{ marginTop: 20, fontSize: 12, color: '#94a3b8' }}>No credit card required · Free tier available</div>
@@ -132,7 +132,7 @@ export default function LandingPage() {
                     </div>
                   ))}
                 </div>
-                <Link href="/login" style={{ display: 'block', textAlign: 'center', padding: '12px 20px', background: plan.highlight ? '#0ea5e9' : '#0f172a', color: '#fff', fontSize: 14, fontWeight: 900, borderRadius: 8, letterSpacing: 1 }}>
+                <Link href="/login?signup=true" style={{ display: 'block', textAlign: 'center', padding: '12px 20px', background: plan.highlight ? '#0ea5e9' : '#0f172a', color: '#fff', fontSize: 14, fontWeight: 900, borderRadius: 8, letterSpacing: 1 }}>
                   {plan.cta}
                 </Link>
               </div>
@@ -148,7 +148,7 @@ export default function LandingPage() {
             Ready to level up your<br/><span style={{ color: '#0ea5e9' }}>analysis game?</span>
           </div>
           <div style={{ fontSize: 16, color: '#64748b', marginBottom: 32 }}>Join clubs already using ClubCode to gain a competitive edge.</div>
-          <Link href="/login" style={{ display: 'inline-block', padding: '14px 36px', background: '#0ea5e9', color: '#fff', fontSize: 17, fontWeight: 900, borderRadius: 8, letterSpacing: 1 }}>
+          <Link href="/login?signup=true" style={{ display: 'inline-block', padding: '14px 36px', background: '#0ea5e9', color: '#fff', fontSize: 17, fontWeight: 900, borderRadius: 8, letterSpacing: 1 }}>
             Get started free →
           </Link>
         </div>
@@ -157,7 +157,7 @@ export default function LandingPage() {
       {/* FOOTER */}
       <footer style={{ borderTop: '1px solid #1e293b', background: '#0f172a', padding: '28px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
         <div style={{ fontSize: 18, fontWeight: 900, letterSpacing: 3, color: '#fff' }}>CLUB<span style={{ color: '#0ea5e9' }}>CODE</span></div>
-        <div style={{ fontSize: 12, color: '#475569' }}>© {new Date().getFullYear()} ClubCode · Built for amateur rugby clubs</div>
+        <div style={{ fontSize: 12, color: '#475569' }}>© {new Date().getFullYear()} ClubCode · Built for amateur sports clubs</div>
       </footer>
     </div>
   )
