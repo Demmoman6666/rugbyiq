@@ -53,7 +53,24 @@ export default function ClubsPage() {
       if (!fetchedClubs || fetchedClubs.length === 0) {
         try {
           const { data: { user: u } } = await supabase.auth.getUser()
-          const fullName = u?.user_metadata?.full_name ?? u?.email?.split('@')[0] ?? 'My'
+          const fullName = (u?.user_metadata?.full_name ?? u?.email?.split('@')[0] ?? 'My').replace(/'/g, '')
+          const slug = `${fullName.toLowerCase().replace(/[^a-z0-9]/g, '-')}-workspace`
+
+          // Check if a workspace with this slug already exists for this user
+          const { data: existing } = await supabase
+            .from('organisations')
+            .select('id')
+            .eq('slug', slug)
+            .single()
+
+          if (existing?.id) {
+            // Org exists but wasn't linked — just link it
+            await supabase.from('org_members').upsert({ org_id: existing.id, user_id: u!.id, role: 'admin' })
+            await supabase.from('profiles').update({ active_org_id: existing.id }).eq('id', u!.id)
+            router.push('/dashboard')
+            return
+          }
+
           const createRes = await fetch('/api/clubs', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
