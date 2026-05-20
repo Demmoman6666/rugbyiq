@@ -61,14 +61,7 @@ export default function LoginPage() {
         <Link href="/" style={{ fontSize: 22, fontWeight: 900, letterSpacing: 3, color: '#0f172a', textDecoration: 'none' }}>
           CLUB<span style={{ color: '#e8a020' }}>CODE</span>
         </Link>
-        {mode !== 'forgot' && (
-          <div style={{ fontSize: 13, color: '#64748b' }}>
-            {mode === 'signup' ? 'Already have an account? ' : "Don't have an account? "}
-            <button onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError('') }} style={{ background: 'none', border: 'none', color: '#0ea5e9', fontFamily: FF, fontSize: 13, fontWeight: 700, cursor: 'pointer', padding: 0 }}>
-              {mode === 'signup' ? 'Sign in' : 'Sign up free'}
-            </button>
-          </div>
-        )}
+
       </nav>
 
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
@@ -88,9 +81,17 @@ export default function LoginPage() {
               <div style={{ fontSize: 26, fontWeight: 900, marginBottom: 4, color: '#0f172a' }}>
                 {mode === 'login' ? 'Sign in' : mode === 'signup' ? 'Create account' : 'Reset password'}
               </div>
-              <div style={{ fontSize: 13, color: '#64748b', marginBottom: 24, lineHeight: 1.5 }}>
+              <div style={{ fontSize: 13, color: '#64748b', marginBottom: 12, lineHeight: 1.5 }}>
                 {mode === 'forgot' ? "Enter your email and we'll send a reset link." : mode === 'login' ? 'Welcome back to ClubCode.' : 'Start your free trial today.'}
               </div>
+              {mode !== 'forgot' && (
+                <div style={{ fontSize: 13, color: '#64748b', marginBottom: 20 }}>
+                  {mode === 'signup' ? 'Already have an account? ' : "Don't have an account? "}
+                  <button onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError('') }} style={{ background: 'none', border: 'none', color: '#0ea5e9', fontFamily: FF, fontSize: 13, fontWeight: 700, cursor: 'pointer', padding: 0 }}>
+                    {mode === 'signup' ? 'Sign in' : 'Sign up free'}
+                  </button>
+                </div>
+              )}
 
               <div style={{ marginBottom: 14 }}>
                 <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: '#94a3b8', display: 'block', marginBottom: 6 }}>EMAIL</label>
