@@ -2,6 +2,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import VideoAnalyst from '@/components/VideoAnalyst'
+import { useOrg } from '@/lib/OrgContext'
 import { createClient } from '@/lib/supabase'
 import type { Match, Player, ParsedPlayer } from '@/lib/types'
 import Link from 'next/link'
@@ -26,6 +27,7 @@ export default function MatchPage() {
   const [ytError, setYtError]     = useState('')
 
   // Team sheet state
+  const { isClub } = useOrg()
   const [step, setStep]           = useState<'video' | 'squads' | 'ready'>('video')
   const [homePlayers, setHomePlayers] = useState<ParsedPlayer[]>([])
   const [awayPlayers, setAwayPlayers] = useState<ParsedPlayer[]>([])
@@ -64,7 +66,7 @@ export default function MatchPage() {
         xhr.open('PUT', uploadUrl); xhr.setRequestHeader('Content-Type', file.type); xhr.send(file)
       })
       const { data: updated } = await supabase.from('matches').update({ video_url: publicUrl, video_public_url: publicUrl, status: 'coding' }).eq('id', match.id).select().single()
-      if (updated) { setMatch(updated as Match); setStep('squads') }
+      if (updated) { setMatch(updated as Match); setStep(isClub ? 'squads' : 'ready') }
     } catch (err: any) { setUploadError(err.message) }
     finally { setUploading(false) }
   }
@@ -75,7 +77,7 @@ export default function MatchPage() {
     const m = ytUrl.trim().match(/(?:v=|youtu\.be\/|embed\/)([a-zA-Z0-9_-]{11})/)
     if (!m) { setYtError('Invalid YouTube URL — paste the full link from your browser'); return }
     const { data: updated } = await supabase.from('matches').update({ video_public_url: ytUrl.trim(), status: 'coding' }).eq('id', match.id).select().single()
-    if (updated) { setMatch(updated as Match); setStep('squads') }
+    if (updated) { setMatch(updated as Match); setStep(isClub ? 'squads' : 'ready') }
   }
 
   const parseTeamSheet = async (file: File, team: 'home' | 'away') => {
