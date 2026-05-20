@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
     .eq('org_id', orgId)
 
   // Get profiles separately using service client (bypasses RLS)
-  const userIds = (members ?? []).map(m => m.user_id)
+  const userIds = (members ?? []).map((m: any) => m.user_id)
   const { data: profiles } = await service
     .from('profiles')
     .select('id, email, full_name')
