@@ -13,7 +13,13 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError]       = useState('')
   const [loading, setLoading]   = useState(false)
-  const [mode, setMode]         = useState<'login' | 'signup' | 'forgot'>('login')
+  const [mode, setMode]         = useState<'login' | 'signup' | 'forgot'>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get('signup') || params.get('invite')) return 'signup'
+    }
+    return 'login'
+  })
   const [resetSent, setResetSent] = useState(false)
 
   const handle = async () => {
@@ -29,7 +35,6 @@ export default function LoginPage() {
       ? await supabase.auth.signInWithPassword({ email, password })
       : await supabase.auth.signUp({ email, password })
     if (error) { setError(error.message); setLoading(false); return }
-    // Check for invite token in URL — redirect back to accept-invite
     const params = new URLSearchParams(window.location.search)
     const inviteToken = params.get('invite')
     if (inviteToken) {
@@ -59,9 +64,9 @@ export default function LoginPage() {
         </Link>
         {mode !== 'forgot' && (
           <div style={{ fontSize: 13, color: '#64748b' }}>
-            {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
+            {mode === 'signup' ? 'Already have an account? ' : "Don't have an account? "}
             <button onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError('') }} style={{ background: 'none', border: 'none', color: '#0ea5e9', fontFamily: FF, fontSize: 13, fontWeight: 700, cursor: 'pointer', padding: 0 }}>
-              {mode === 'login' ? 'Sign up free' : 'Sign in'}
+              {mode === 'signup' ? 'Sign in' : 'Sign up free'}
             </button>
           </div>
         )}
@@ -70,7 +75,6 @@ export default function LoginPage() {
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
         <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: '36px 32px', width: '100%', maxWidth: 380, boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
 
-          {/* Forgot password — success */}
           {mode === 'forgot' && resetSent ? (
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: 40, marginBottom: 12 }}>📧</div>
@@ -86,7 +90,7 @@ export default function LoginPage() {
                 {mode === 'login' ? 'Sign in' : mode === 'signup' ? 'Create account' : 'Reset password'}
               </div>
               <div style={{ fontSize: 13, color: '#64748b', marginBottom: 24, lineHeight: 1.5 }}>
-                {mode === 'forgot' ? 'Enter your email and we\'ll send a reset link.' : mode === 'login' ? 'Welcome back to ClubCode.' : 'Start your free trial today.'}
+                {mode === 'forgot' ? "Enter your email and we'll send a reset link." : mode === 'login' ? 'Welcome back to ClubCode.' : 'Start your free trial today.'}
               </div>
 
               <div style={{ marginBottom: 14 }}>
