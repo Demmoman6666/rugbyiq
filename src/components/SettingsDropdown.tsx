@@ -27,7 +27,7 @@ export default function SettingsDropdown({ matchId }: Props) {
   const signOut = async () => {
     const supabase = createClient()
     await supabase.auth.signOut()
-    window.location.href = '/login'
+    window.location.href = '/'
   }
 
   const deleteMatch = async () => {

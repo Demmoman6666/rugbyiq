@@ -142,7 +142,7 @@ function SettingsPageInner() {
 
   const signOut = async () => {
     await supabase.auth.signOut()
-    router.push('/login')
+    router.push('/')
   }
 
   const inputStyle: React.CSSProperties = {

@@ -1,3 +1,7 @@
+'use client'
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase'
 import Link from 'next/link'
 
 const FF = "'Barlow Condensed', system-ui, sans-serif"
@@ -30,6 +34,17 @@ const PLANS = [
 ]
 
 export default function LandingPage() {
+  const router = useRouter()
+  const supabase = createClient()
+
+  useEffect(() => {
+    const check = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) router.push('/clubs')
+    }
+    check()
+  }, [])
+
   return (
     <div style={{ fontFamily: FF, background: '#ffffff', color: '#0f172a', minHeight: '100vh' }}>
       <style>{`
