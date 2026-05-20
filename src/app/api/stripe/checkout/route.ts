@@ -11,7 +11,7 @@ const PRICES = {
 
 export async function POST(req: NextRequest) {
   try {
-    const { plan, orgId, userId, email } = await req.json()
+    const { plan, orgId, userId, email, successUrl: customSuccessUrl } = await req.json()
     const priceId = PRICES[plan as keyof typeof PRICES]
     if (!priceId) return NextResponse.json({ error: 'Invalid plan' }, { status: 400 })
 
@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
       line_items: [{ price: priceId, quantity: 1 }],
       customer_email: email,
       metadata: { orgId, userId, plan },
-      success_url: `${siteUrl}/dashboard?upgraded=true`,
+      success_url: customSuccessUrl ?? `${siteUrl}/dashboard?upgraded=true`,
       cancel_url: `${siteUrl}/settings?tab=billing`,
     })
 

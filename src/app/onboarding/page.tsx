@@ -1,54 +1,63 @@
 'use client'
-
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
-import { SPORTS_LIST } from '@/lib/sports'
 
+const FF   = "'Barlow Condensed', system-ui, sans-serif"
 const NAV  = '#0f172a'
 const GOLD = '#0ea5e9'
-const FF   = "'Barlow Condensed', system-ui, sans-serif"
 const MUTED= '#64748b'
+const BD   = '#e2e8f0'
 
 export default function OnboardingPage() {
   const supabase = createClient()
   const router   = useRouter()
-  const [clubName, setClubName] = useState('')
-  const [sport, setSport]       = useState('')
-  const [loading, setLoading]   = useState(false)
-  const [error, setError]       = useState('')
-  const [step, setStep]         = useState<'sport' | 'name'>('sport')
+  const [loading, setLoading] = useState(false)
+  const [error, setError]     = useState('')
 
-  const createOrg = async () => {
-    if (!clubName.trim()) { setError('Please enter your club name'); return }
-    if (!sport) { setError('Please select a sport'); return }
-    setLoading(true)
+  // Personal details
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName]   = useState('')
+  const [phone, setPhone]         = useState('')
+  const [address1, setAddress1]   = useState('')
+  const [address2, setAddress2]   = useState('')
+  const [city, setCity]           = useState('')
+  const [postcode, setPostcode]   = useState('')
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%', padding: '10px 12px', fontFamily: FF, fontSize: 14,
+    background: '#f8fafc', border: `1px solid ${BD}`, borderRadius: 6,
+    color: NAV, outline: 'none', boxSizing: 'border-box',
+  }
+
+  const labelStyle: React.CSSProperties = {
+    fontSize: 11, fontWeight: 700, letterSpacing: 1.5,
+    color: '#94a3b8', display: 'block', marginBottom: 6,
+  }
+
+  const save = async () => {
+    if (!firstName.trim() || !lastName.trim()) { setError('Please enter your first and last name'); return }
+    setLoading(true); setError('')
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not logged in')
-      const slug = clubName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-')
 
-      const res = await fetch('/api/onboarding', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: clubName, slug, sport, userId: user.id })
+      // Save to profiles table
+      await supabase.from('profiles').upsert({
+        id: user.id,
+        full_name: `${firstName.trim()} ${lastName.trim()}`,
+        email: user.email,
       })
-      const data = await res.json()
-      if (data.error) throw new Error(data.error)
 
-      // Set activeOrgId so /clubs redirects straight to dashboard
-      if (data.orgId) {
-        localStorage.setItem('activeOrgId', data.orgId)
-      } else {
-        // Fallback — fetch the org we just created
-        const { data: member } = await supabase
-          .from('org_members')
-          .select('org_id')
-          .eq('user_id', user.id)
-          .single()
-        if (member?.org_id) localStorage.setItem('activeOrgId', member.org_id)
-      }
+      // Save extra details to user metadata
+      await supabase.auth.updateUser({
+        data: {
+          full_name: `${firstName.trim()} ${lastName.trim()}`,
+          phone, address1, address2, city, postcode,
+        }
+      })
 
+      // Go to plan selection
       router.push('/plan')
     } catch (err: any) {
       setError(err.message)
@@ -57,91 +66,67 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div style={{ fontFamily: FF, background: NAV, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ background: '#1e293b', borderRadius: 12, padding: '40px 36px', maxWidth: 520, width: '90%' }}>
-        <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{ fontSize: 24, fontWeight: 900, letterSpacing: 3, color: '#fff', marginBottom: 4 }}>
-            CLUB<span style={{ color: GOLD }}>CODE</span>
-          </div>
-          <div style={{ fontSize: 11, letterSpacing: 3, color: '#4a5a7a', marginBottom: 24 }}>WELCOME</div>
-          {step === 'sport' ? (
-            <>
-              <div style={{ fontSize: 20, fontWeight: 700, color: '#fff', marginBottom: 8 }}>What sport does your club play?</div>
-              <div style={{ fontSize: 13, color: MUTED }}>This sets up the right event tags for your analysis</div>
-            </>
-          ) : (
-            <>
-              <div style={{ fontSize: 20, fontWeight: 700, color: '#fff', marginBottom: 8 }}>What's your club called?</div>
-              <div style={{ fontSize: 13, color: MUTED }}>You can update this later in Settings</div>
-            </>
-          )}
+    <div style={{ fontFamily: FF, background: '#f8fafc', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <nav style={{ background: NAV, padding: '14px 28px', display: 'flex', alignItems: 'center' }}>
+        <div style={{ fontSize: 20, fontWeight: 900, letterSpacing: 3, color: '#fff' }}>
+          CLUB<span style={{ color: '#e8a020' }}>CODE</span>
         </div>
+      </nav>
 
-        {step === 'sport' ? (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 24 }}>
-            {SPORTS_LIST.map(s => (
-              <button
-                key={s.id}
-                onClick={() => setSport(s.id)}
-                style={{
-                  padding: '16px 12px',
-                  borderRadius: 8,
-                  border: sport === s.id ? `2px solid ${GOLD}` : '2px solid #334155',
-                  background: sport === s.id ? `${GOLD}22` : 'transparent',
-                  color: '#fff',
-                  cursor: 'pointer',
-                  fontFamily: FF,
-                  fontSize: 15,
-                  fontWeight: 700,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: 8,
-                  transition: 'all 0.15s'
-                }}
-              >
-                <span style={{ fontSize: 28 }}>{s.icon}</span>
-                {s.name}
-              </button>
-            ))}
-          </div>
-        ) : (
-          <div style={{ marginBottom: 20 }}>
-            <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, color: MUTED, display: 'block', marginBottom: 6 }}>CLUB NAME</label>
-            <input
-              autoFocus
-              value={clubName}
-              onChange={e => setClubName(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && createOrg()}
-              placeholder="e.g. Penallta RFC"
-              style={{ width: '100%', padding: '10px 12px', fontFamily: FF, fontSize: 14, background: '#0f172a', border: `1px solid ${error ? '#ef4444' : '#2d3a4a'}`, borderRadius: 6, color: '#fff', outline: 'none', boxSizing: 'border-box' }}
-            />
-            {error && <div style={{ fontSize: 11, color: '#ef4444', marginTop: 6 }}>{error}</div>}
-          </div>
-        )}
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+        <div style={{ background: '#fff', border: `1px solid ${BD}`, borderRadius: 12, padding: '36px 32px', width: '100%', maxWidth: 500, boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
 
-        {step === 'sport' ? (
-          <button
-            onClick={() => { if (!sport) { setError('Please select a sport'); return } setError(''); setStep('name') }}
-            disabled={!sport}
-            style={{ width: '100%', padding: '13px 0', fontFamily: FF, fontSize: 15, fontWeight: 900, background: sport ? GOLD : '#334155', border: 'none', color: '#fff', borderRadius: 6, cursor: sport ? 'pointer' : 'default', letterSpacing: 1 }}
-          >
-            Continue →
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 3, color: '#94a3b8', marginBottom: 8 }}>STEP 1 OF 2</div>
+          <div style={{ fontSize: 26, fontWeight: 900, color: NAV, marginBottom: 4 }}>Your details</div>
+          <div style={{ fontSize: 13, color: MUTED, marginBottom: 28 }}>Tell us a bit about yourself before choosing your plan.</div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+            <div>
+              <label style={labelStyle}>FIRST NAME *</label>
+              <input value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="Corey" style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>LAST NAME *</label>
+              <input value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Tucker" style={inputStyle} />
+            </div>
+          </div>
+
+          <div style={{ marginBottom: 14 }}>
+            <label style={labelStyle}>PHONE NUMBER</label>
+            <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="+44 7700 900000" style={inputStyle} />
+          </div>
+
+          <div style={{ marginBottom: 14 }}>
+            <label style={labelStyle}>ADDRESS LINE 1</label>
+            <input value={address1} onChange={e => setAddress1(e.target.value)} placeholder="123 High Street" style={inputStyle} />
+          </div>
+
+          <div style={{ marginBottom: 14 }}>
+            <label style={labelStyle}>ADDRESS LINE 2</label>
+            <input value={address2} onChange={e => setAddress2(e.target.value)} placeholder="Blackwood" style={inputStyle} />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 20 }}>
+            <div>
+              <label style={labelStyle}>CITY / TOWN</label>
+              <input value={city} onChange={e => setCity(e.target.value)} placeholder="Caerphilly" style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>POSTCODE</label>
+              <input value={postcode} onChange={e => setPostcode(e.target.value)} placeholder="NP12 1AA" style={{ ...inputStyle, textTransform: 'uppercase' }} />
+            </div>
+          </div>
+
+          {error && <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', fontSize: 12, padding: '8px 12px', borderRadius: 6, marginBottom: 16 }}>{error}</div>}
+
+          <button onClick={save} disabled={loading} style={{ width: '100%', padding: '13px 0', background: NAV, color: '#fff', border: 'none', borderRadius: 8, fontFamily: FF, fontSize: 15, fontWeight: 900, cursor: loading ? 'default' : 'pointer', letterSpacing: 1, opacity: loading ? 0.6 : 1 }}>
+            {loading ? 'Saving...' : 'Continue to Plan Selection →'}
           </button>
-        ) : (
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={() => setStep('sport')} style={{ padding: '13px 0', width: 48, fontFamily: FF, fontSize: 15, fontWeight: 900, background: 'transparent', border: '1px solid #334155', color: '#fff', borderRadius: 6, cursor: 'pointer' }}>←</button>
-            <button
-              onClick={createOrg}
-              disabled={loading}
-              style={{ flex: 1, padding: '13px 0', fontFamily: FF, fontSize: 15, fontWeight: 900, background: GOLD, border: 'none', color: '#fff', borderRadius: 6, cursor: loading ? 'default' : 'pointer', letterSpacing: 1, opacity: loading ? 0.7 : 1 }}
-            >
-              {loading ? 'Creating…' : 'Create Club →'}
-            </button>
-          </div>
-        )}
 
-        {error && step === 'sport' && <div style={{ fontSize: 11, color: '#ef4444', marginTop: 8, textAlign: 'center' }}>{error}</div>}
+          <div style={{ fontSize: 12, color: '#94a3b8', textAlign: 'center', marginTop: 14 }}>
+            * Required fields
+          </div>
+        </div>
       </div>
     </div>
   )
