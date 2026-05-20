@@ -60,7 +60,7 @@ export default function ClubsPage() {
         })
         const { org } = await createRes.json()
         if (org?.id) {
-          localStorage.setItem('activeOrgId', org.id)
+          await supabase.from('profiles').update({ active_org_id: org.id }).eq('id', user.id)
           router.push('/dashboard')
         }
         return
@@ -84,8 +84,9 @@ export default function ClubsPage() {
     load()
   }, [])
 
-  const selectClub = (orgId: string) => {
-    localStorage.setItem('activeOrgId', orgId)
+  const selectClub = async (orgId: string) => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) await supabase.from('profiles').update({ active_org_id: orgId }).eq('id', user.id)
     router.push('/dashboard')
   }
 

@@ -8,11 +8,13 @@ interface OrgContextType {
   orgName: string
   isClub: boolean
   loading: boolean
+  setActiveOrg: (orgId: string) => void
   refetch: () => void
 }
 
 const OrgContext = createContext<OrgContextType>({
-  plan: 'starter', orgId: '', orgName: '', isClub: false, loading: true, refetch: () => {}
+  plan: 'starter', orgId: '', orgName: '', isClub: false, loading: true,
+  setActiveOrg: () => {}, refetch: () => {}
 })
 
 export function OrgProvider({ children }: { children: ReactNode }) {
@@ -22,34 +24,56 @@ export function OrgProvider({ children }: { children: ReactNode }) {
   const [orgName, setOrgName] = useState('')
   const [loading, setLoading] = useState(true)
 
-  const fetch = async () => {
+  const load = async () => {
     setLoading(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { setLoading(false); return }
 
-      const activeOrgId = typeof window !== 'undefined' ? localStorage.getItem('activeOrgId') : null
+      // Get the user's active_org_id from their profile
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('active_org_id')
+        .eq('id', user.id)
+        .single()
 
-      let query = supabase
+      // Get all their memberships
+      const { data: memberships } = await supabase
         .from('org_members')
         .select('org_id, organisations(id, name, plan)')
         .eq('user_id', user.id)
 
-      if (activeOrgId) query = (query as any).eq('org_id', activeOrgId)
+      if (!memberships || memberships.length === 0) { setLoading(false); return }
 
-      const { data: member } = await query.single()
+      // Use saved active org or fall back to first
+      let member = profile?.active_org_id
+        ? memberships.find(m => m.org_id === profile.active_org_id)
+        : null
+      if (!member) member = memberships[0]
+
       const org = member?.organisations as any
       setPlan(org?.plan ?? 'starter')
-      setOrgId(org?.id ?? member?.org_id ?? '')
+      setOrgId(org?.id ?? '')
       setOrgName(org?.name ?? '')
     } catch {}
     setLoading(false)
   }
 
-  useEffect(() => { fetch() }, [])
+  const setActiveOrg = async (id: string) => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    // Save to database — works on any device
+    await supabase
+      .from('profiles')
+      .update({ active_org_id: id })
+      .eq('id', user.id)
+    load()
+  }
+
+  useEffect(() => { load() }, [])
 
   return (
-    <OrgContext.Provider value={{ plan, orgId, orgName, isClub: plan === 'club', loading, refetch: fetch }}>
+    <OrgContext.Provider value={{ plan, orgId, orgName, isClub: plan === 'club', loading, setActiveOrg, refetch: load }}>
       {children}
     </OrgContext.Provider>
   )
