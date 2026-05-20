@@ -18,17 +18,17 @@ const FEATURES = [
 const PLANS = [
   {
     name: 'Starter', price: 'Free', period: '',
-    features: ['1 match per month', 'Manual event coding', 'All event types', 'Stats dashboard'],
+    features: ['1 match per month', 'Manual event coding', 'All event types', 'Stats dashboard', 'Share links'],
     cta: 'Get started free', highlight: false, color: '#64748b'
   },
   {
     name: 'Pro', price: '£29', period: '/mo',
-    features: ['Unlimited matches', 'AI scan included', '3 analyst seats', 'Shareable links', 'Player stats'],
+    features: ['4 matches per month', 'Manual event coding', 'Player stats', 'Stats dashboard', 'Share links'],
     cta: 'Start free trial', highlight: true, color: '#0ea5e9'
   },
   {
     name: 'Club', price: '£99', period: '/mo',
-    features: ['Everything in Pro', '10 analyst seats', 'Multiple teams', 'Season statistics', 'Priority support'],
+    features: ['Unlimited matches', 'Up to 20 analyst seats', 'AI scan & AI Review', 'Team sheets', 'Season statistics', 'Priority support'],
     cta: 'Get started', highlight: false, color: '#8b5cf6'
   },
 ]
