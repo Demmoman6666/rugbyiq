@@ -38,7 +38,11 @@ function OnboardingInner() {
     check()
   }, [])
 
-  if (checking) return null
+  if (checking) return (
+    <div style={{ fontFamily: "'Barlow Condensed', system-ui, sans-serif", background: '#f8fafc', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
+      Loading...
+    </div>
+  )
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName]   = useState('')
   const [phone, setPhone]         = useState('')
