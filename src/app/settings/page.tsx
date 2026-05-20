@@ -69,11 +69,23 @@ function SettingsPageInner() {
       setCity(meta.city ?? '')
       setPostcode(meta.postcode ?? '')
 
-      const { data: member } = await supabase
+      // Get active org from profile
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('active_org_id')
+        .eq('id', user.id)
+        .maybeSingle()
+
+      let memberQuery = supabase
         .from('org_members')
         .select('org_id, role, organisations(*)')
         .eq('user_id', user.id)
-        .single()
+
+      if (profile?.active_org_id) {
+        memberQuery = (memberQuery as any).eq('org_id', profile.active_org_id)
+      }
+
+      const { data: member } = await memberQuery.maybeSingle()
 
       if (!member) { setLoading(false); return }
 
@@ -141,10 +153,13 @@ function SettingsPageInner() {
 
   const removeAnalyst = async (memberId: string, userId: string) => {
     if (userId === user?.id) { alert("You can't remove yourself"); return }
-    if (!confirm('Remove this analyst from the club?')) return
+    if (!confirm('Remove this analyst? They will immediately lose access to this club.')) return
     const res = await fetch(`/api/members?id=${memberId}`, { method: 'DELETE' })
-    if (res.ok) setMembers(prev => prev.filter(m => m.id !== memberId))
-    else alert('Failed to remove analyst')
+    if (res.ok) {
+      setMembers(prev => prev.filter(m => m.id !== memberId))
+    } else {
+      alert('Failed to remove analyst')
+    }
   }
 
   const sendInvite = async () => {

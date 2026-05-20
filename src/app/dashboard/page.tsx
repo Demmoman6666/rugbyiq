@@ -34,17 +34,21 @@ export default function DashboardPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/login'); return }
 
-      // Support multi-club — use activeOrgId from localStorage if set
-      const activeOrgId = typeof window !== 'undefined' ? localStorage.getItem('activeOrgId') : null
+      // Use active_org_id from profiles (no localStorage)
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('active_org_id')
+        .eq('id', user.id)
+        .maybeSingle()
 
       let memberQuery = supabase
         .from('org_members')
         .select('org_id, organisations(plan, name)')
         .eq('user_id', user.id)
 
-      if (activeOrgId) memberQuery = memberQuery.eq('org_id', activeOrgId)
+      if (profile?.active_org_id) memberQuery = (memberQuery as any).eq('org_id', profile.active_org_id)
 
-      const { data: member } = await memberQuery.single()
+      const { data: member } = await memberQuery.maybeSingle()
 
       if (member) {
         const org = member.organisations as any
@@ -64,7 +68,7 @@ export default function DashboardPage() {
 
         if (data) setMatches(data)
       } else {
-        router.push('/clubs')
+        router.push('/onboarding')
         return
       }
       setLoading(false)
