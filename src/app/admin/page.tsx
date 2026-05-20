@@ -82,6 +82,22 @@ export default function AdminPage() {
     setPlanEditing(null)
   }
 
+  const deleteUser = async (userId: string, email: string) => {
+    if (!confirm(`Permanently delete user ${email}? This cannot be undone.`)) return
+    const res = await fetch('/api/admin/delete-user', { method: 'POST', headers: { ...h, 'Content-Type': 'application/json' }, body: JSON.stringify({ userId }) })
+    const d = await res.json()
+    if (d.success) { setUsers(p => p.filter(u => u.id !== userId)); notify(`✓ User ${email} deleted`) }
+    else notify(`✕ ${d.error}`)
+  }
+
+  const deleteOrg = async (orgId: string, name: string) => {
+    if (!confirm(`Permanently delete club "${name}" and ALL its matches and data? This cannot be undone.`)) return
+    const res = await fetch('/api/admin/delete-org', { method: 'POST', headers: { ...h, 'Content-Type': 'application/json' }, body: JSON.stringify({ orgId }) })
+    const d = await res.json()
+    if (d.success) { setOrgs(p => p.filter(o => o.id !== orgId)); notify(`✓ Club "${name}" deleted`) }
+    else notify(`✕ ${d.error}`)
+  }
+
   const fu = users.filter(u => !search || u.email?.toLowerCase().includes(search.toLowerCase()) || u.org_name?.toLowerCase().includes(search.toLowerCase()))
   const fo = orgs.filter(o => !search || o.name?.toLowerCase().includes(search.toLowerCase()))
   const fm = matches.filter(m => !search || (m.home_team + m.away_team).toLowerCase().includes(search.toLowerCase()) || (m.organisations as any)?.name?.toLowerCase().includes(search.toLowerCase()))
@@ -200,8 +216,9 @@ export default function AdminPage() {
                         <td style={{ ...td, fontSize: 11, color: MUTED }}>{o.home_ground??'—'}</td>
                         <td style={{ ...td, fontSize: 11, color: MUTED }}>{o.created_at?new Date(o.created_at).toLocaleDateString('en-GB'):'—'}</td>
                         <td style={td}>
-                          <div style={{ display: 'flex', gap: 4 }}>
+                          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                             {['starter','pro','club'].map(p => <button key={p} onClick={()=>updatePlan(o.id,p)} style={{ padding:'3px 8px', background: o.plan===p?PLAN_COLOR[p]:PLAN_COLOR[p]+'22', border:`1px solid ${PLAN_COLOR[p]}44`, color: o.plan===p?(p==='pro'?'#000':'#fff'):PLAN_COLOR[p], fontFamily:FF, fontSize:9, fontWeight:700, borderRadius:4, cursor:'pointer' }}>{p.toUpperCase()}</button>)}
+                            <button onClick={()=>deleteOrg(o.id,o.name)} style={{ padding:'3px 8px', background:RED+'22', border:`1px solid ${RED}44`, color:RED, fontFamily:FF, fontSize:9, fontWeight:700, borderRadius:4, cursor:'pointer' }}>DELETE</button>
                           </div>
                         </td>
                       </tr>
@@ -234,6 +251,7 @@ export default function AdminPage() {
                           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                             <button onClick={()=>sendReset(u.email)} style={{ padding:'4px 10px', background:GOLD+'22', border:`1px solid ${GOLD}44`, color:GOLD, fontFamily:FF, fontSize:10, fontWeight:700, borderRadius:4, cursor:'pointer' }}>RESET PW</button>
                             {u.org_id && <button onClick={()=>setPlanEditing(planEditing===u.org_id?null:u.org_id)} style={{ padding:'4px 10px', background:'#ffffff0d', border:`1px solid ${BD}`, color:DIM, fontFamily:FF, fontSize:10, fontWeight:700, borderRadius:4, cursor:'pointer' }}>PLAN</button>}
+                            <button onClick={()=>deleteUser(u.id, u.email)} style={{ padding:'4px 10px', background:RED+'22', border:`1px solid ${RED}44`, color:RED, fontFamily:FF, fontSize:10, fontWeight:700, borderRadius:4, cursor:'pointer' }}>DELETE</button>
                           </div>
                           {planEditing===u.org_id && (
                             <div style={{ display:'flex', gap:4, marginTop:6 }}>
