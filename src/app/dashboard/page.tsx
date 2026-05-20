@@ -64,7 +64,7 @@ export default function DashboardPage() {
 
         if (data) setMatches(data)
       } else {
-        router.push('/onboarding')
+        router.push('/clubs')
         return
       }
       setLoading(false)
