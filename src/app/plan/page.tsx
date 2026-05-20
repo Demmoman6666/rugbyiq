@@ -77,27 +77,8 @@ export default function PlanPage() {
   }, [])
 
   const selectPlan = async (planKey: string) => {
-    // Store plan choice for after personal details
-    localStorage.setItem('selectedPlan', planKey)
     setLoading(true)
-
-    if (planKey === 'starter') {
-      // Starter — collect personal details then auto-create org
-      router.push('/onboarding')
-      return
-    }
-
-    if (planKey === 'pro') {
-      // Pro — collect personal details, then Stripe checkout
-      router.push('/onboarding')
-      return
-    }
-
-    if (planKey === 'club') {
-      // Club — collect personal details, then club creation + Stripe
-      router.push('/onboarding')
-      return
-    }
+    router.push(`/onboarding?plan=${planKey}`)
   }
 
   return (
