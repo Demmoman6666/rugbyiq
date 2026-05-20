@@ -52,7 +52,19 @@ export default function ClubsPage() {
       const { clubs } = await res.json()
 
       if (!clubs || clubs.length === 0) {
-        router.push('/onboarding')
+        // Auto-create a personal org for the user so they can start immediately
+        const { data: { user: u } } = await supabase.auth.getUser()
+        const fullName = u?.user_metadata?.full_name ?? u?.email?.split('@')[0] ?? 'My Club'
+        const res = await fetch('/api/clubs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: `${fullName}'s Club`, sport: 'rugby', plan: 'starter' }),
+        })
+        const { org } = await res.json()
+        if (org?.id) {
+          localStorage.setItem('activeOrgId', org.id)
+          router.push('/dashboard')
+        }
         return
       }
 
@@ -116,7 +128,7 @@ export default function ClubsPage() {
     <div style={{ fontFamily: FF, background: BG, minHeight: '100vh', color: TEXT }}>
       <div style={{ background: NAV, borderBottom: `1px solid ${BD}`, padding: '14px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ fontSize: 20, fontWeight: 900, letterSpacing: 3, color: '#fff' }}>CLUB<span style={{ color: GOLD }}>CODE</span></div>
-        <button onClick={async () => { await supabase.auth.signOut(); router.push('/login') }} style={{ background: 'none', border: 'none', color: MUTED, fontFamily: FF, fontSize: 12, cursor: 'pointer' }}>Log out</button>
+        <button onClick={async () => { await supabase.auth.signOut(); router.push('/') }} style={{ background: 'none', border: 'none', color: MUTED, fontFamily: FF, fontSize: 12, cursor: 'pointer' }}>Log out</button>
       </div>
 
       <div style={{ maxWidth: 680, margin: '0 auto', padding: '48px 24px' }}>
