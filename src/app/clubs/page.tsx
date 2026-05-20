@@ -3,11 +3,11 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 
-const FF   = "'Barlow Condensed', system-ui, sans-serif"
-const NAV  = '#060912'
-const BD   = '#1e2d3d'
-const GOLD = '#e8a020'
-const TEXT = '#e2e8f0'
+const FF    = "'Barlow Condensed', system-ui, sans-serif"
+const NAV   = '#060912'
+const BD    = '#1e2d3d'
+const GOLD  = '#e8a020'
+const TEXT  = '#e2e8f0'
 const MUTED = '#4a5568'
 const DIM   = '#94a3b8'
 const CARD  = '#111827'
@@ -18,10 +18,10 @@ const ROLE_COLOR: Record<string, string> = { admin: GOLD, analyst: '#10b981' }
 const SPORT_EMOJI: Record<string, string> = { rugby: '🏉', rugby_league: '🏉', football: '⚽', hockey: '🏑', netball: '🏐' }
 
 export default function ClubsPage() {
-  const router  = useRouter()
+  const router   = useRouter()
   const supabase = createClient()
-  const [clubs, setClubs]       = useState<any[]>([])
-  const [loading, setLoading]   = useState(true)
+  const [clubs, setClubs]     = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -47,18 +47,18 @@ export default function ClubsPage() {
       }
 
       const res = await fetch('/api/clubs')
-      const { clubs } = await res.json()
+      const { clubs: fetchedClubs } = await res.json()
 
-      if (!clubs || clubs.length === 0) {
-        // Auto-create a personal org for the user so they can start immediately
+      if (!fetchedClubs || fetchedClubs.length === 0) {
+        // No clubs — auto-create a personal workspace
         const { data: { user: u } } = await supabase.auth.getUser()
-        const fullName = u?.user_metadata?.full_name ?? u?.email?.split('@')[0] ?? 'My Club'
-        const res = await fetch('/api/clubs', {
+        const fullName = u?.user_metadata?.full_name ?? u?.email?.split('@')[0] ?? 'My'
+        const createRes = await fetch('/api/clubs', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: `${fullName}'s Club`, sport: 'rugby', plan: 'starter' }),
+          body: JSON.stringify({ name: `${fullName}'s Workspace`, sport: 'rugby', plan: 'starter' }),
         })
-        const { org } = await res.json()
+        const { org } = await createRes.json()
         if (org?.id) {
           localStorage.setItem('activeOrgId', org.id)
           router.push('/dashboard')
@@ -66,19 +66,19 @@ export default function ClubsPage() {
         return
       }
 
-      if (clubs.length === 1) {
-        localStorage.setItem('activeOrgId', clubs[0].id)
+      if (fetchedClubs.length === 1) {
+        localStorage.setItem('activeOrgId', fetchedClubs[0].id)
         router.push('/dashboard')
         return
       }
 
       // Clear stale activeOrgId if it doesn't match any club
       const activeId = localStorage.getItem('activeOrgId')
-      if (activeId && !clubs.find((c: any) => c.id === activeId)) {
+      if (activeId && !fetchedClubs.find((c: any) => c.id === activeId)) {
         localStorage.removeItem('activeOrgId')
       }
 
-      setClubs(clubs)
+      setClubs(fetchedClubs)
       setLoading(false)
     }
     load()
@@ -89,6 +89,7 @@ export default function ClubsPage() {
     router.push('/dashboard')
   }
 
+  if (loading) return (
     <div style={{ fontFamily: FF, background: BG, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: GOLD, fontSize: 16, letterSpacing: 2 }}>
       LOADING...
     </div>
@@ -107,7 +108,7 @@ export default function ClubsPage() {
           <div style={{ fontSize: 14, color: DIM }}>Choose which club you want to work in today.</div>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {clubs.map(club => (
             <div
               key={club.id}
@@ -133,7 +134,6 @@ export default function ClubsPage() {
             </div>
           ))}
         </div>
-
       </div>
     </div>
   )
