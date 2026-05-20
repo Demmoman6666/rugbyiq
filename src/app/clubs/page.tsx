@@ -22,6 +22,7 @@ export default function ClubsPage() {
   const supabase = createClient()
   const [clubs, setClubs]     = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -50,18 +51,23 @@ export default function ClubsPage() {
       const { clubs: fetchedClubs } = await res.json()
 
       if (!fetchedClubs || fetchedClubs.length === 0) {
-        // No clubs — auto-create a personal workspace
-        const { data: { user: u } } = await supabase.auth.getUser()
-        const fullName = u?.user_metadata?.full_name ?? u?.email?.split('@')[0] ?? 'My'
-        const createRes = await fetch('/api/clubs', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: `${fullName}'s Workspace`, sport: 'rugby', plan: 'starter' }),
-        })
-        const { org } = await createRes.json()
-        if (org?.id) {
-          await supabase.from('profiles').update({ active_org_id: org.id }).eq('id', user.id)
-          router.push('/dashboard')
+        try {
+          const { data: { user: u } } = await supabase.auth.getUser()
+          const fullName = u?.user_metadata?.full_name ?? u?.email?.split('@')[0] ?? 'My'
+          const createRes = await fetch('/api/clubs', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: `${fullName}'s Workspace`, sport: 'rugby', plan: 'starter' }),
+          })
+          const data = await createRes.json()
+          if (data.error) throw new Error(data.error)
+          if (data.org?.id) {
+            await supabase.from('profiles').update({ active_org_id: data.org.id }).eq('id', user.id)
+            router.push('/dashboard')
+          }
+        } catch (err: any) {
+          setError(err.message ?? 'Failed to create workspace. Please refresh.')
+          setLoading(false)
         }
         return
       }
@@ -90,9 +96,17 @@ export default function ClubsPage() {
     router.push('/dashboard')
   }
 
-  if (loading) return (
-    <div style={{ fontFamily: FF, background: BG, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: GOLD, fontSize: 16, letterSpacing: 2 }}>
-      LOADING...
+  if (loading || error) return (
+    <div style={{ fontFamily: FF, background: BG, minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+      {error ? (
+        <>
+          <div style={{ color: '#ef4444', fontSize: 14, maxWidth: 400, textAlign: 'center', lineHeight: 1.6 }}>⚠️ {error}</div>
+          <button onClick={() => window.location.reload()} style={{ padding: '8px 20px', background: GOLD, color: '#000', border: 'none', borderRadius: 6, fontFamily: FF, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Retry</button>
+          <button onClick={async () => { await supabase.auth.signOut(); router.push('/') }} style={{ padding: '8px 20px', background: 'transparent', border: '1px solid #1e2d3d', color: '#94a3b8', borderRadius: 6, fontFamily: FF, fontSize: 12, cursor: 'pointer' }}>Sign out</button>
+        </>
+      ) : (
+        <div style={{ color: GOLD, fontSize: 16, letterSpacing: 2 }}>LOADING...</div>
+      )}
     </div>
   )
 

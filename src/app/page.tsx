@@ -40,7 +40,16 @@ export default function LandingPage() {
   useEffect(() => {
     const check = async () => {
       const { data: { session } } = await supabase.auth.getSession()
-      if (session) router.push('/clubs')
+      if (!session) return
+      // Only redirect if they have an org — don't redirect stuck users
+      const { data: memberships } = await supabase
+        .from('org_members')
+        .select('org_id')
+        .eq('user_id', session.user.id)
+        .limit(1)
+      if (memberships && memberships.length > 0) {
+        router.push('/dashboard')
+      }
     }
     check()
   }, [])
