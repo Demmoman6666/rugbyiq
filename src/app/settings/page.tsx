@@ -98,22 +98,12 @@ function SettingsPageInner() {
       setGround(o.home_ground ?? '')
       setWebsite(o.website ?? '')
 
-      // Load pending invites
-      const { data: inviteData } = await supabase
-        .from('invites')
-        .select('*')
-        .eq('org_id', o.id)
-        .eq('accepted', false)
-        .gt('expires_at', new Date().toISOString())
-        .order('created_at', { ascending: false })
-      setPendingInvites(inviteData ?? [])
-
-      const { data: allMembers } = await supabase
-        .from('org_members')
-        .select('id, role, user_id, profiles(email, full_name)')
-        .eq('org_id', o.id)
-
-      setMembers(allMembers ?? [])
+      // Load members and invites via API (bypasses RLS on profiles)
+      const membersRes = await fetch(`/api/members?orgId=${o.id}`)
+      const membersData = await membersRes.json()
+      setMembers(membersData.members ?? [])
+      setPendingInvites(membersData.invites ?? [])
+      if (membersData.myRole) setMyRole(membersData.myRole)
       setLoading(false)
     }
     load()
@@ -172,10 +162,12 @@ function SettingsPageInner() {
     const data = await res.json()
     if (data.error) { setInviteError(data.error); return }
     setInviteSent(true)
-    // Reload pending invites
+    // Reload members and invites via API
     if (org?.id) {
-      const { data } = await supabase.from('invites').select('*').eq('org_id', org.id).eq('accepted', false).gt('expires_at', new Date().toISOString()).order('created_at', { ascending: false })
-      setPendingInvites(data ?? [])
+      const res = await fetch(`/api/members?orgId=${org.id}`)
+      const data = await res.json()
+      setMembers(data.members ?? [])
+      setPendingInvites(data.invites ?? [])
     }
     setInviteEmail('')
     setTimeout(() => setInviteSent(false), 4000)
@@ -498,22 +490,30 @@ function SettingsPageInner() {
                   <div style={{ background: '#fff', border: `1px solid ${BD}`, borderRadius: 10, padding: '24px 28px' }}>
                     {pendingInvites.length > 0 && (
                   <div style={{ marginBottom: 20 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: '#94a3b8', marginBottom: 10 }}>PENDING INVITES</div>
+                    <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: '#94a3b8', marginBottom: 10 }}>ALL INVITES</div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      {pendingInvites.map(inv => (
-                        <div key={inv.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8 }}>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: 13, fontWeight: 600, color: NAV }}>{inv.email}</div>
-                            <div style={{ fontSize: 11, color: '#92400e', marginTop: 2 }}>⏳ Pending · {inv.role} · expires {new Date(inv.expires_at).toLocaleDateString('en-GB')}</div>
+                      {pendingInvites.map(inv => {
+                        const accepted = inv.accepted
+                        const expired = !accepted && new Date(inv.expires_at) < new Date()
+                        return (
+                          <div key={inv.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: accepted ? '#f0fdf4' : expired ? '#fafafa' : '#fffbeb', border: `1px solid ${accepted ? '#bbf7d0' : expired ? '#e2e8f0' : '#fde68a'}`, borderRadius: 8 }}>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontSize: 13, fontWeight: 600, color: NAV }}>{inv.email}</div>
+                              <div style={{ fontSize: 11, marginTop: 2, color: accepted ? '#16a34a' : expired ? '#94a3b8' : '#92400e' }}>
+                                {accepted ? '✓ Accepted' : expired ? '✕ Expired' : '⏳ Pending'} · {inv.role} · {new Date(inv.expires_at).toLocaleDateString('en-GB')}
+                              </div>
+                            </div>
+                            {!accepted && (
+                              <button onClick={async () => {
+                                const res = await fetch(`/api/invites?id=${inv.id}`, { method: 'DELETE' })
+                                if (res.ok) setPendingInvites(prev => prev.filter(i => i.id !== inv.id))
+                              }} style={{ padding: '4px 10px', background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', fontFamily: FF, fontSize: 11, fontWeight: 700, borderRadius: 4, cursor: 'pointer' }}>
+                                Revoke
+                              </button>
+                            )}
                           </div>
-                          <button onClick={async () => {
-                            const res = await fetch(`/api/invites?id=${inv.id}`, { method: 'DELETE' })
-                            if (res.ok) setPendingInvites(prev => prev.filter(i => i.id !== inv.id))
-                          }} style={{ padding: '4px 10px', background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', fontFamily: FF, fontSize: 11, fontWeight: 700, borderRadius: 4, cursor: 'pointer' }}>
-                            Cancel
-                          </button>
-                        </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   </div>
                 )}
