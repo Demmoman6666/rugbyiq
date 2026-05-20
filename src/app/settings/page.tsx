@@ -39,6 +39,15 @@ function SettingsPageInner() {
   const [pwError, setPwError]   = useState('')
   const [pwSaved, setPwSaved]   = useState(false)
 
+  // Personal details
+  const [fullName, setFullName]   = useState('')
+  const [phone, setPhone]         = useState('')
+  const [address1, setAddress1]   = useState('')
+  const [address2, setAddress2]   = useState('')
+  const [city, setCity]           = useState('')
+  const [postcode, setPostcode]   = useState('')
+  const [detailsSaved, setDetailsSaved] = useState(false)
+
   // Invite
   const [inviteEmail, setInviteEmail] = useState('')
   const [pendingInvites, setPendingInvites] = useState<any[]>([])
@@ -51,6 +60,14 @@ function SettingsPageInner() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/login'); return }
       setUser(user)
+      // Load personal details from user metadata
+      const meta = user.user_metadata ?? {}
+      setFullName(meta.full_name ?? '')
+      setPhone(meta.phone ?? '')
+      setAddress1(meta.address1 ?? '')
+      setAddress2(meta.address2 ?? '')
+      setCity(meta.city ?? '')
+      setPostcode(meta.postcode ?? '')
 
       const { data: member } = await supabase
         .from('org_members')
@@ -112,6 +129,16 @@ function SettingsPageInner() {
     setTimeout(() => setPwSaved(false), 3000)
   }
 
+  const saveDetails = async () => {
+    setDetailsSaved(false)
+    await supabase.auth.updateUser({
+      data: { full_name: fullName, phone, address1, address2, city, postcode }
+    })
+    await supabase.from('profiles').update({ full_name: fullName }).eq('id', user?.id)
+    setDetailsSaved(true)
+    setTimeout(() => setDetailsSaved(false), 3000)
+  }
+
   const removeAnalyst = async (memberId: string, userId: string) => {
     if (userId === user?.id) { alert("You can't remove yourself"); return }
     if (!confirm('Remove this analyst from the club?')) return
@@ -158,11 +185,12 @@ function SettingsPageInner() {
 
   if (loading) return <div style={{ fontFamily: FF, background: '#f8fafc', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>Loading...</div>
 
+  const isClubPlan = org?.plan === 'club'
   const tabs: { key: SettingsTab; label: string; icon: string }[] = [
-    { key: 'club',     label: 'Club Profile',    icon: '🏉' },
+    ...(isClubPlan ? [{ key: 'club' as SettingsTab,     label: 'Club Profile',    icon: '🏉' }] : []),
     { key: 'account',  label: 'Account',         icon: '👤' },
     { key: 'billing',  label: 'Plans & Billing',  icon: '💳' },
-    { key: 'analysts', label: 'Analysts',         icon: '👥' },
+    ...(isClubPlan ? [{ key: 'analysts' as SettingsTab, label: 'Analysts',         icon: '👥' }] : []),
   ]
 
   return (
@@ -259,6 +287,38 @@ function SettingsPageInner() {
                     <label style={labelStyle}>EMAIL ADDRESS</label>
                     <div style={{ ...inputStyle, color: '#64748b', background: '#f1f5f9' }}>{user?.email}</div>
                   </div>
+                </div>
+                <div style={{ background: '#fff', border: `1px solid ${BD}`, borderRadius: 10, padding: '24px 28px' }}>
+                  <div style={{ fontSize: 16, fontWeight: 900, color: NAV, marginBottom: 4 }}>Personal Details</div>
+                  <div style={{ fontSize: 13, color: '#64748b', marginBottom: 20 }}>Your name and contact information.</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+                    <div style={{ gridColumn: '1/-1' }}>
+                      <label style={labelStyle}>FULL NAME</label>
+                      <input value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Corey Tucker" style={inputStyle} />
+                    </div>
+                    <div style={{ gridColumn: '1/-1' }}>
+                      <label style={labelStyle}>PHONE NUMBER</label>
+                      <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="+44 7700 900000" style={inputStyle} />
+                    </div>
+                    <div style={{ gridColumn: '1/-1' }}>
+                      <label style={labelStyle}>ADDRESS LINE 1</label>
+                      <input value={address1} onChange={e => setAddress1(e.target.value)} placeholder="123 High Street" style={inputStyle} />
+                    </div>
+                    <div style={{ gridColumn: '1/-1' }}>
+                      <label style={labelStyle}>ADDRESS LINE 2</label>
+                      <input value={address2} onChange={e => setAddress2(e.target.value)} placeholder="Blackwood" style={inputStyle} />
+                    </div>
+                    <div>
+                      <label style={labelStyle}>CITY / TOWN</label>
+                      <input value={city} onChange={e => setCity(e.target.value)} placeholder="Caerphilly" style={inputStyle} />
+                    </div>
+                    <div>
+                      <label style={labelStyle}>POSTCODE</label>
+                      <input value={postcode} onChange={e => setPostcode(e.target.value)} placeholder="NP12 1AA" style={{ ...inputStyle, textTransform: 'uppercase' }} />
+                    </div>
+                  </div>
+                  {detailsSaved && <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#16a34a', fontSize: 12, padding: '8px 12px', borderRadius: 6, marginBottom: 12 }}>✓ Details saved</div>}
+                  <button onClick={saveDetails} style={{ padding: '10px 28px', background: NAV, color: '#fff', border: 'none', borderRadius: 6, fontFamily: FF, fontSize: 13, fontWeight: 900, cursor: 'pointer', letterSpacing: 1 }}>SAVE DETAILS</button>
                 </div>
                 <div style={{ background: '#fff', border: `1px solid ${BD}`, borderRadius: 10, padding: '24px 28px' }}>
                   <div style={{ fontSize: 16, fontWeight: 900, color: NAV, marginBottom: 4 }}>Change Password</div>
