@@ -73,11 +73,11 @@ export default function LandingPage() {
 
       {/* HERO */}
       <section style={{ maxWidth: 960, margin: '0 auto', padding: '96px 32px 80px', textAlign: 'center' }}>
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#f0f9ff', border: '1px solid #bae6fd', color: '#0284c7', fontSize: 11, fontWeight: 700, letterSpacing: 2, padding: '5px 14px', borderRadius: 20, marginBottom: 32 }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#e8a02011', border: '1px solid #e8a02033', color: '#e8a020', fontSize: 11, fontWeight: 700, letterSpacing: 2, padding: '5px 14px', borderRadius: 20, marginBottom: 32 }}>
           🤖 POWERED BY GEMINI AI
         </div>
         <h1 style={{ fontSize: 'clamp(44px, 8vw, 88px)', fontWeight: 900, lineHeight: 1.02, marginBottom: 24, letterSpacing: -1, color: '#ffffff' }}>
-          Rugby analysis<br/><span style={{ color: '#0ea5e9' }}>the way it should be.</span>
+          Rugby analysis<br/><span style={{ color: '#e8a020' }}>the way it should be.</span>
         </h1>
         <p style={{ fontSize: 20, color: '#4a5568', maxWidth: 560, margin: '0 auto 40px', lineHeight: 1.7, fontWeight: 400 }}>
           Upload any footage. Code events with hotkeys, or let AI detect scrums, lineouts, tackles, and tries automatically. Built for amateur clubs.
@@ -169,7 +169,7 @@ export default function LandingPage() {
       <section style={{ background: '#0f172a', padding: '80px 32px', textAlign: 'center' }}>
         <div style={{ maxWidth: 600, margin: '0 auto' }}>
           <div style={{ fontSize: 44, fontWeight: 900, color: '#ffffff', marginBottom: 16, letterSpacing: -0.5 }}>
-            Ready to level up your<br/><span style={{ color: '#0ea5e9' }}>analysis game?</span>
+            Ready to level up your<br/><span style={{ color: '#e8a020' }}>analysis game?</span>
           </div>
           <div style={{ fontSize: 16, color: '#64748b', marginBottom: 32 }}>Join clubs already using ClubCode to gain a competitive edge.</div>
           <Link href="/login?signup=true" style={{ display: 'inline-block', padding: '14px 36px', background: '#0ea5e9', color: '#fff', fontSize: 17, fontWeight: 900, borderRadius: 8, letterSpacing: 1 }}>
