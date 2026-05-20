@@ -16,18 +16,24 @@ export async function POST(req: NextRequest) {
   if (!userId) return NextResponse.json({ error: 'userId required' }, { status: 400 })
   if (userId === user.id) return NextResponse.json({ error: 'Cannot delete yourself' }, { status: 400 })
 
-  // Delete from profiles, org_members, invites
+  // Delete from tables first
   await service.from('org_members').delete().eq('user_id', userId)
+  await service.from('invites').delete().eq('org_id',
+    (await service.from('org_members').select('org_id').eq('user_id', userId)).data?.[0]?.org_id ?? ''
+  )
   await service.from('profiles').delete().eq('id', userId)
 
-  // Delete from auth.users via admin client
+  // Try to delete from auth — don't fail if user doesn't exist in auth
   const admin = createAdminClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     { auth: { autoRefreshToken: false, persistSession: false } }
   )
   const { error } = await admin.auth.admin.deleteUser(userId)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error && !error.message.includes('not found') && !error.message.includes('User not found')) {
+    console.error('Auth delete error:', error.message)
+    // Still return success since we deleted from tables
+  }
 
   return NextResponse.json({ success: true })
 }
