@@ -456,20 +456,24 @@ function SettingsPageInner() {
                 {/* Current analysts */}
                 <div style={{ background: '#fff', border: `1px solid ${BD}`, borderRadius: 10, padding: '24px 28px' }}>
                   <div style={{ fontSize: 18, fontWeight: 900, color: NAV, marginBottom: 4 }}>Team Members</div>
-                  <div style={{ fontSize: 13, color: '#64748b', marginBottom: 20 }}>{members.length} member{members.length !== 1 ? 's' : ''} in your club.</div>
+                  <div style={{ fontSize: 13, color: '#64748b', marginBottom: 20 }}>{members.length} member{members.length !== 1 ? 's' : ''} · {pendingInvites.filter((i: any) => !i.accepted).length} pending invite{pendingInvites.filter((i: any) => !i.accepted).length !== 1 ? 's' : ''}</div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {members.length === 0 && (
+                      <div style={{ fontSize: 13, color: '#94a3b8', padding: '12px 0' }}>No members yet.</div>
+                    )}
                     {members.map(m => {
-                      const profile = m.profiles as any
                       const isMe = m.user_id === user?.id
+                      const displayEmail = m.email ?? '—'
+                      const displayName = m.full_name ?? displayEmail
                       return (
                         <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', background: '#f8fafc', border: `1px solid ${BD}`, borderRadius: 8 }}>
                           <div style={{ width: 36, height: 36, borderRadius: '50%', background: isMe ? GOLD : '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 900, color: isMe ? '#000' : '#64748b', flexShrink: 0 }}>
-                            {(profile?.full_name?.[0] ?? profile?.email?.[0] ?? '?').toUpperCase()}
+                            {(displayName?.[0] ?? displayEmail?.[0] ?? '?').toUpperCase()}
                           </div>
                           <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: 13, fontWeight: 700, color: NAV }}>{profile?.full_name ?? profile?.email ?? 'Unknown'}</div>
-                            <div style={{ fontSize: 11, color: '#94a3b8' }}>{profile?.email} {isMe && '(you)'}</div>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: NAV }}>{displayName}</div>
+                            <div style={{ fontSize: 11, color: '#94a3b8' }}>{displayEmail} {isMe && '(you)'}</div>
                           </div>
                           <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, padding: '3px 10px', borderRadius: 20, background: m.role === 'admin' ? NAV : '#f1f5f9', color: m.role === 'admin' ? '#fff' : '#64748b', border: `1px solid ${m.role === 'admin' ? NAV : BD}` }}>
                             {(m.role ?? 'analyst').toUpperCase()}

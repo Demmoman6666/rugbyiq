@@ -9,8 +9,10 @@ export async function GET(req: NextRequest) {
   const orgId = req.nextUrl.searchParams.get('orgId')
   if (!orgId) return NextResponse.json({ error: 'orgId required' }, { status: 400 })
 
-  // Verify user is a member of this org
-  const { data: myMembership } = await supabase
+  const service = createServiceClient()
+
+  // Verify user belongs to this org
+  const { data: myMembership } = await service
     .from('org_members')
     .select('role')
     .eq('user_id', user.id)
@@ -19,21 +21,43 @@ export async function GET(req: NextRequest) {
 
   if (!myMembership) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  // Use service client to bypass RLS on profiles
-  const service = createServiceClient()
-
+  // Get members
   const { data: members } = await service
     .from('org_members')
-    .select('id, role, user_id, profiles(email, full_name)')
+    .select('id, role, user_id')
     .eq('org_id', orgId)
 
+  // Get profiles separately using service client (bypasses RLS)
+  const userIds = (members ?? []).map(m => m.user_id)
+  const { data: profiles } = await service
+    .from('profiles')
+    .select('id, email, full_name')
+    .in('id', userIds)
+
+  // Also get emails from auth.users via admin API
+  const profileMap: Record<string, any> = {}
+  for (const p of profiles ?? []) {
+    profileMap[p.id] = p
+  }
+
+  const enrichedMembers = (members ?? []).map(m => ({
+    ...m,
+    email: profileMap[m.user_id]?.email ?? null,
+    full_name: profileMap[m.user_id]?.full_name ?? null,
+  }))
+
+  // Get all invites for this org
   const { data: invites } = await service
     .from('invites')
     .select('*')
     .eq('org_id', orgId)
     .order('created_at', { ascending: false })
 
-  return NextResponse.json({ members: members ?? [], invites: invites ?? [], myRole: myMembership.role })
+  return NextResponse.json({
+    members: enrichedMembers,
+    invites: invites ?? [],
+    myRole: myMembership.role
+  })
 }
 
 export async function DELETE(req: NextRequest) {
