@@ -52,29 +52,27 @@ export default function ClubsPage() {
 
       if (!fetchedClubs || fetchedClubs.length === 0) {
         try {
-          const { data: { user: u } } = await supabase.auth.getUser()
-          const fullName = (u?.user_metadata?.full_name ?? u?.email?.split('@')[0] ?? 'My').replace(/'/g, '')
-          const slug = `${fullName.toLowerCase().replace(/[^a-z0-9]/g, '-')}-workspace`
-
-          // Check if a workspace with this slug already exists for this user
-          const { data: existing } = await supabase
-            .from('organisations')
-            .select('id')
-            .eq('slug', slug)
+          // Double-check via org_members directly — /api/clubs GET might have failed
+          const { data: directCheck } = await supabase
+            .from('org_members')
+            .select('org_id, organisations(id, name, plan)')
+            .eq('user_id', user.id)
+            .limit(1)
             .single()
 
-          if (existing?.id) {
-            // Org exists but wasn't linked — just link it
-            await supabase.from('org_members').upsert({ org_id: existing.id, user_id: u!.id, role: 'admin' })
-            await supabase.from('profiles').update({ active_org_id: existing.id }).eq('id', u!.id)
+          if (directCheck?.org_id) {
+            // Org exists — just save it and go
+            await supabase.from('profiles').update({ active_org_id: directCheck.org_id }).eq('id', user.id)
             router.push('/dashboard')
             return
           }
 
+          // Truly no org — create one
+          const fullName = (user?.user_metadata?.full_name ?? user?.email?.split('@')[0] ?? 'My').replace(/[^a-zA-Z0-9 ]/g, '')
           const createRes = await fetch('/api/clubs', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: `${fullName}'s Workspace`, sport: 'rugby', plan: 'starter' }),
+            body: JSON.stringify({ name: `${fullName} Workspace`, sport: 'rugby', plan: 'starter' }),
           })
           const data = await createRes.json()
           if (data.error) throw new Error(data.error)
@@ -83,7 +81,7 @@ export default function ClubsPage() {
             router.push('/dashboard')
           }
         } catch (err: any) {
-          setError(err.message ?? 'Failed to create workspace. Please refresh.')
+          setError(err.message ?? 'Failed to set up your workspace. Please try signing out and back in.')
           setLoading(false)
         }
         return

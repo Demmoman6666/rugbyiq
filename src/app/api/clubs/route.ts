@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerComponentClient, createServiceClient } from '@/lib/supabase-server'
+import { createServerComponentClient } from '@/lib/supabase-server'
 
+// GET /api/clubs — get all clubs for the current user
 export async function GET(req: NextRequest) {
   const supabase = await createServerComponentClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -19,6 +20,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ clubs })
 }
 
+// POST /api/clubs — create a new club
 export async function POST(req: NextRequest) {
   const supabase = await createServerComponentClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -26,20 +28,20 @@ export async function POST(req: NextRequest) {
 
   const { name, sport, plan } = await req.json()
   if (!name || !plan) return NextResponse.json({ error: 'name and plan required' }, { status: 400 })
+  // Always create as starter — webhook upgrades after payment
+  const initialPlan = 'starter'
 
-  const service = createServiceClient()
-
-  const slug = name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-')
-
-  const { data: org, error: orgError } = await service
+  // Create the organisation
+  const { data: org, error: orgError } = await supabase
     .from('organisations')
-    .insert({ name, slug, sport: sport ?? 'rugby', plan: 'starter' })
+    .insert({ name, sport: sport ?? 'rugby', plan: initialPlan })
     .select()
     .single()
 
   if (orgError) return NextResponse.json({ error: orgError.message }, { status: 500 })
 
-  const { error: memberError } = await service
+  // Add the user as admin
+  const { error: memberError } = await supabase
     .from('org_members')
     .insert({ org_id: org.id, user_id: user.id, role: 'admin' })
 
