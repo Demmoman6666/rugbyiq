@@ -57,8 +57,44 @@ export default function OnboardingPage() {
         }
       })
 
-      // Go to plan selection
-      router.push('/plan')
+      // Route based on selected plan
+      const selectedPlan = localStorage.getItem('selectedPlan') ?? 'starter'
+
+      if (selectedPlan === 'starter') {
+        // Auto-create org and go to dashboard
+        router.push('/clubs')
+        return
+      }
+
+      if (selectedPlan === 'pro') {
+        // Go to Stripe checkout for Pro
+        const res = await fetch('/api/stripe/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ plan: 'pro', userId: user.id, email: user.email }),
+        })
+        const { url, error } = await res.json()
+        if (error) throw new Error(error)
+        localStorage.removeItem('selectedPlan')
+        window.location.href = url
+        return
+      }
+
+      if (selectedPlan === 'club') {
+        // Go to Stripe checkout for Club, then club creation
+        const res = await fetch('/api/stripe/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ plan: 'club', userId: user.id, email: user.email, successUrl: `${window.location.origin}/create-club` }),
+        })
+        const { url, error } = await res.json()
+        if (error) throw new Error(error)
+        localStorage.removeItem('selectedPlan')
+        window.location.href = url
+        return
+      }
+
+      router.push('/clubs')
     } catch (err: any) {
       setError(err.message)
       setLoading(false)

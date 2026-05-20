@@ -77,37 +77,25 @@ export default function PlanPage() {
   }, [])
 
   const selectPlan = async (planKey: string) => {
+    // Store plan choice for after personal details
+    localStorage.setItem('selectedPlan', planKey)
     setLoading(true)
 
     if (planKey === 'starter') {
-      // Starter — no club, go straight to dashboard
-      router.push('/dashboard')
+      // Starter — collect personal details then auto-create org
+      router.push('/onboarding')
       return
     }
 
     if (planKey === 'pro') {
-      // Pro — no club creation, go to Stripe checkout then dashboard
-      const res = await fetch('/api/stripe/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: planKey, orgId: orgId || undefined, userId, email }),
-      })
-      const { url, error } = await res.json()
-      if (error) { alert(error); setLoading(false); return }
-      window.location.href = url
+      // Pro — collect personal details, then Stripe checkout
+      router.push('/onboarding')
       return
     }
 
     if (planKey === 'club') {
-      // Club plan — go to Stripe checkout first, then create club after payment
-      const res = await fetch('/api/stripe/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: planKey, orgId: orgId || undefined, userId, email, successUrl: `${window.location.origin}/create-club` }),
-      })
-      const { url, error } = await res.json()
-      if (error) { alert(error); setLoading(false); return }
-      window.location.href = url
+      // Club — collect personal details, then club creation + Stripe
+      router.push('/onboarding')
       return
     }
   }

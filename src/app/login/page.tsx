@@ -38,7 +38,11 @@ export default function LoginPage() {
     const inviteToken = params.get('invite')
     if (inviteToken) {
       window.location.href = `/accept-invite?token=${inviteToken}`
+    } else if (mode === 'signup') {
+      // New signup — go to plan selection first
+      window.location.href = '/plan'
     } else {
+      // Existing login — go to club selector
       window.location.href = '/clubs'
     }
   }
