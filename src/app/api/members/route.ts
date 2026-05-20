@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
     profileMap[p.id] = p
   }
 
-  const enrichedMembers = (members ?? []).map(m => ({
+  const enrichedMembers = (members ?? []).map((m: any) => ({
     ...m,
     email: profileMap[m.user_id]?.email ?? null,
     full_name: profileMap[m.user_id]?.full_name ?? null,
