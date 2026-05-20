@@ -1,28 +1,22 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { createClient } from '@/lib/supabase'
+import { useOrg } from '@/lib/OrgContext'
 
 const FF    = "'Barlow Condensed', system-ui, sans-serif"
 const BD    = '#1e2d3d'
 const DIM   = '#94a3b8'
-const MUTED = '#4a5568'
 const TEXT  = '#e2e8f0'
 
-const MENU_ITEMS = [
-  { label: 'Club Profile',    href: '/settings?tab=club',     icon: '🏉' },
-  { label: 'Account',         href: '/settings?tab=account',  icon: '👤' },
-  { label: 'Plans & Billing', href: '/settings?tab=billing',  icon: '💳' },
-  { label: 'Analysts',        href: '/settings?tab=analysts', icon: '👥' },
-]
-
 interface Props {
-  matchId?: string // if provided, shows Delete Match option
+  matchId?: string
 }
 
 export default function SettingsDropdown({ matchId }: Props) {
-  const [open, setOpen]                     = useState(false)
+  const [open, setOpen]                           = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const [deleting, setDeleting]             = useState(false)
+  const [deleting, setDeleting]                   = useState(false)
+  const { isClub } = useOrg()
 
   const signOut = async () => {
     const supabase = createClient()
@@ -37,6 +31,13 @@ export default function SettingsDropdown({ matchId }: Props) {
     window.location.href = '/dashboard'
   }
 
+  const MENU_ITEMS = [
+    ...(isClub ? [{ label: 'Club Profile',    href: '/settings?tab=club',     icon: '🏉' }] : []),
+    { label: 'Account',         href: '/settings?tab=account',  icon: '👤' },
+    { label: 'Plans & Billing', href: '/settings?tab=billing',  icon: '💳' },
+    ...(isClub ? [{ label: 'Analysts',        href: '/settings?tab=analysts', icon: '👥' }] : []),
+  ]
+
   const itemStyle: React.CSSProperties = {
     display: 'flex', alignItems: 'center', gap: 10,
     padding: '10px 16px', color: DIM, textDecoration: 'none',
@@ -47,7 +48,6 @@ export default function SettingsDropdown({ matchId }: Props) {
 
   return (
     <>
-      {/* Delete confirmation modal */}
       {showDeleteConfirm && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ background: '#111827', border: `1px solid ${BD}`, borderRadius: 12, padding: 28, maxWidth: 380, width: '90%' }}>
@@ -78,12 +78,10 @@ export default function SettingsDropdown({ matchId }: Props) {
                 <span>{item.icon}</span>{item.label}
               </a>
             ))}
-
             {matchId && (
               <>
                 <div style={{ borderTop: `1px solid ${BD}` }}/>
-                <button
-                  onClick={() => { setOpen(false); setShowDeleteConfirm(true) }}
+                <button onClick={() => { setOpen(false); setShowDeleteConfirm(true) }}
                   style={{ ...itemStyle, color: '#ef4444' }}
                   onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#fef2f210' }}
                   onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}>
@@ -91,11 +89,8 @@ export default function SettingsDropdown({ matchId }: Props) {
                 </button>
               </>
             )}
-
             <div style={{ borderTop: `1px solid ${BD}` }}/>
-            <button
-              onClick={signOut}
-              style={{ ...itemStyle }}
+            <button onClick={signOut} style={{ ...itemStyle }}
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#1e2d3d'; (e.currentTarget as HTMLElement).style.color = '#fff' }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = DIM }}>
               <span>🚪</span>Log out

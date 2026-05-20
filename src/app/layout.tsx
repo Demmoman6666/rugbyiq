@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { OrgProvider } from '@/lib/OrgContext'
 
 export const metadata: Metadata = {
   title: 'ClubCode — AI-Powered Sports Analysis',
@@ -14,7 +15,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;700;900&family=DM+Mono&display=swap" rel="stylesheet"/>
       </head>
       <body style={{ margin: 0, padding: 0, background: '#08090e' }}>
-        {children}
+        <OrgProvider>
+          {children}
+        </OrgProvider>
       </body>
     </html>
   )
