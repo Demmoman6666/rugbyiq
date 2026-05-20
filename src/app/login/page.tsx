@@ -82,14 +82,7 @@ export default function LoginPage() {
         <Link href="/" style={{ fontSize: 22, fontWeight: 900, letterSpacing: 3, color: NAV, textDecoration: 'none' }}>
           CLUB<span style={{ color: '#e8a020' }}>CODE</span>
         </Link>
-        {!emailSent && mode !== 'forgot' && (
-          <div style={{ fontSize: 13, color: MUTED }}>
-            {mode === 'signup' ? 'Already have an account? ' : "Don't have an account? "}
-            <button onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError('') }} style={{ background: 'none', border: 'none', color: '#0ea5e9', fontFamily: FF, fontSize: 13, fontWeight: 700, cursor: 'pointer', padding: 0 }}>
-              {mode === 'signup' ? 'Sign in' : 'Sign up free'}
-            </button>
-          </div>
-        )}
+
       </nav>
 
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
@@ -107,8 +100,15 @@ export default function LoginPage() {
               <div style={{ fontSize: 13, color: MUTED, lineHeight: 1.7, marginBottom: 24 }}>
                 Click the link in your email to confirm your account and choose your plan.
               </div>
-              <div style={{ fontSize: 12, color: '#94a3b8' }}>Didn't get it? Check your spam folder.</div>
-              <button onClick={() => { setEmailSent(false); setMode('login') }} style={{ marginTop: 20, background: 'none', border: 'none', color: '#94a3b8', fontFamily: FF, fontSize: 12, cursor: 'pointer' }}>
+              <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 16 }}>Didn't get it? Check your spam folder.</div>
+              <button onClick={async () => {
+                await supabase.auth.resend({ type: 'signup', email, options: { emailRedirectTo: `${window.location.origin}/auth/callback` } })
+                alert('Confirmation email resent!')
+              }} style={{ padding: '8px 20px', background: '#f1f5f9', border: '1px solid #e2e8f0', color: '#475569', fontFamily: FF, fontSize: 12, fontWeight: 700, borderRadius: 6, cursor: 'pointer', marginBottom: 8 }}>
+                Resend confirmation email
+              </button>
+              <br/>
+              <button onClick={() => { setEmailSent(false); setMode('login') }} style={{ marginTop: 8, background: 'none', border: 'none', color: '#94a3b8', fontFamily: FF, fontSize: 12, cursor: 'pointer' }}>
                 ← Back to sign in
               </button>
             </div>
@@ -132,8 +132,14 @@ export default function LoginPage() {
               <div style={{ fontSize: 26, fontWeight: 900, marginBottom: 4, color: NAV }}>
                 {mode === 'login' ? 'Sign in' : mode === 'signup' ? 'Create account' : 'Reset password'}
               </div>
-              <div style={{ fontSize: 13, color: MUTED, marginBottom: 24, lineHeight: 1.5 }}>
+              <div style={{ fontSize: 13, color: MUTED, marginBottom: 12, lineHeight: 1.5 }}>
                 {mode === 'forgot' ? "Enter your email and we'll send a reset link." : mode === 'login' ? 'Welcome back to ClubCode.' : 'Start your free trial today.'}
+              </div>
+              <div style={{ fontSize: 13, color: MUTED, marginBottom: 20 }}>
+                {mode === 'signup' ? 'Already have an account? ' : "Don't have an account? "}
+                <button onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError('') }} style={{ background: 'none', border: 'none', color: '#0ea5e9', fontFamily: FF, fontSize: 13, fontWeight: 700, cursor: 'pointer', padding: 0 }}>
+                  {mode === 'signup' ? 'Sign in' : 'Sign up free'}
+                </button>
               </div>
 
               <div style={{ marginBottom: 14 }}>
