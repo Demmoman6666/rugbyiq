@@ -64,7 +64,7 @@ export default function LandingPage() {
 
       {/* NAV */}
       <nav style={{ position: 'sticky', top: 0, zIndex: 40, background: 'rgba(6,9,18,0.97)', backdropFilter: 'blur(8px)', borderBottom: '1px solid #1e2d3d', padding: '14px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ fontSize: 24, fontWeight: 900, letterSpacing: 3, color: '#e2e8f0' }}>CLUB<span style={{ color: '#0ea5e9' }}>CODE</span></div>
+        <div style={{ fontSize: 24, fontWeight: 900, letterSpacing: 3, color: '#ffffff' }}>CLUB<span style={{ color: '#e8a020' }}>CODE</span></div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <Link href="/login" style={{ padding: '7px 16px', fontSize: 13, fontWeight: 700, color: '#4a5568' }}>Sign in</Link>
           <Link href="/login?signup=true" style={{ padding: '8px 20px', background: '#e8a020', color: '#000', fontSize: 13, fontWeight: 900, borderRadius: 6 }}>Start free →</Link>
