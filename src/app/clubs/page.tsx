@@ -27,6 +27,7 @@ export default function ClubsPage() {
   const [newClub, setNewClub] = useState({ name: '', sport: 'rugby', plan: 'starter' })
 
   useEffect(() => {
+    if (typeof window === 'undefined') return
     const load = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/login'); return }
