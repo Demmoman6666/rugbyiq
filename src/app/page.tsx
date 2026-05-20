@@ -55,7 +55,7 @@ export default function LandingPage() {
   }, [])
 
   return (
-    <div style={{ fontFamily: FF, background: '#ffffff', color: '#0f172a', minHeight: '100vh' }}>
+    <div style={{ fontFamily: FF, background: '#060912', color: '#e2e8f0', minHeight: '100vh' }}>
       <style>{`
         * { box-sizing: border-box; margin: 0; padding: 0; }
         a { text-decoration: none; color: inherit; }
@@ -63,11 +63,11 @@ export default function LandingPage() {
       `}</style>
 
       {/* NAV */}
-      <nav style={{ position: 'sticky', top: 0, zIndex: 40, background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(8px)', borderBottom: '1px solid #f1f5f9', padding: '14px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ fontSize: 24, fontWeight: 900, letterSpacing: 3, color: '#0f172a' }}>CLUB<span style={{ color: '#0ea5e9' }}>CODE</span></div>
+      <nav style={{ position: 'sticky', top: 0, zIndex: 40, background: 'rgba(6,9,18,0.97)', backdropFilter: 'blur(8px)', borderBottom: '1px solid #1e2d3d', padding: '14px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ fontSize: 24, fontWeight: 900, letterSpacing: 3, color: '#e2e8f0' }}>CLUB<span style={{ color: '#0ea5e9' }}>CODE</span></div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <Link href="/login" style={{ padding: '7px 16px', fontSize: 13, fontWeight: 700, color: '#64748b' }}>Sign in</Link>
-          <Link href="/login?signup=true" style={{ padding: '8px 20px', background: '#0f172a', color: '#fff', fontSize: 13, fontWeight: 900, borderRadius: 6 }}>Start free →</Link>
+          <Link href="/login" style={{ padding: '7px 16px', fontSize: 13, fontWeight: 700, color: '#4a5568' }}>Sign in</Link>
+          <Link href="/login?signup=true" style={{ padding: '8px 20px', background: '#e8a020', color: '#000', fontSize: 13, fontWeight: 900, borderRadius: 6 }}>Start free →</Link>
         </div>
       </nav>
 
@@ -76,15 +76,15 @@ export default function LandingPage() {
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#f0f9ff', border: '1px solid #bae6fd', color: '#0284c7', fontSize: 11, fontWeight: 700, letterSpacing: 2, padding: '5px 14px', borderRadius: 20, marginBottom: 32 }}>
           🤖 POWERED BY GEMINI AI
         </div>
-        <h1 style={{ fontSize: 'clamp(44px, 8vw, 88px)', fontWeight: 900, lineHeight: 1.02, marginBottom: 24, letterSpacing: -1 }}>
+        <h1 style={{ fontSize: 'clamp(44px, 8vw, 88px)', fontWeight: 900, lineHeight: 1.02, marginBottom: 24, letterSpacing: -1, color: '#ffffff' }}>
           Rugby analysis<br/><span style={{ color: '#0ea5e9' }}>the way it should be.</span>
         </h1>
-        <p style={{ fontSize: 20, color: '#64748b', maxWidth: 560, margin: '0 auto 40px', lineHeight: 1.7, fontWeight: 400 }}>
+        <p style={{ fontSize: 20, color: '#4a5568', maxWidth: 560, margin: '0 auto 40px', lineHeight: 1.7, fontWeight: 400 }}>
           Upload any footage. Code events with hotkeys, or let AI detect scrums, lineouts, tackles, and tries automatically. Built for amateur clubs.
         </p>
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-          <Link href="/login?signup=true" style={{ padding: '14px 32px', background: '#0f172a', color: '#fff', fontSize: 17, fontWeight: 900, borderRadius: 8, letterSpacing: 1 }}>Start for free →</Link>
-          <Link href="#features" style={{ padding: '14px 28px', background: '#f8fafc', color: '#0f172a', fontSize: 17, fontWeight: 700, borderRadius: 8, border: '1px solid #e2e8f0' }}>See how it works</Link>
+          <Link href="/login?signup=true" style={{ padding: '14px 32px', background: '#e8a020', color: '#000', fontSize: 17, fontWeight: 900, borderRadius: 8, letterSpacing: 1 }}>Start for free →</Link>
+          <Link href="#features" style={{ padding: '14px 28px', background: '#0a0e1a', color: '#e2e8f0', fontSize: 17, fontWeight: 700, borderRadius: 8, border: '1px solid #e2e8f0' }}>See how it works</Link>
         </div>
         <div style={{ marginTop: 20, fontSize: 12, color: '#94a3b8' }}>No credit card required · Free tier available</div>
 
@@ -111,18 +111,18 @@ export default function LandingPage() {
       </section>
 
       {/* FEATURES */}
-      <section id="features" style={{ background: '#f8fafc', padding: '80px 32px' }}>
+      <section id="features" style={{ background: '#0a0e1a', padding: '80px 32px' }}>
         <div style={{ maxWidth: 960, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: 56 }}>
             <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 3, color: '#94a3b8', marginBottom: 12 }}>FEATURES</div>
-            <div style={{ fontSize: 40, fontWeight: 900, letterSpacing: -0.5 }}>Everything your analysis team needs</div>
+            <div style={{ fontSize: 40, fontWeight: 900, letterSpacing: -0.5, color: '#ffffff' }}>Everything your analysis team needs</div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20 }}>
             {FEATURES.map(f => (
-              <div key={f.title} style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 12, padding: 28, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+              <div key={f.title} style={{ background: '#060912', border: '1px solid #e2e8f0', borderRadius: 12, padding: 28, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
                 <div style={{ fontSize: 32, marginBottom: 14 }}>{f.icon}</div>
-                <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: '#0f172a' }}>{f.title}</div>
-                <div style={{ fontSize: 14, color: '#64748b', lineHeight: 1.7, fontWeight: 400 }}>{f.desc}</div>
+                <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: '#e2e8f0' }}>{f.title}</div>
+                <div style={{ fontSize: 14, color: '#4a5568', lineHeight: 1.7, fontWeight: 400 }}>{f.desc}</div>
               </div>
             ))}
           </div>
@@ -130,33 +130,33 @@ export default function LandingPage() {
       </section>
 
       {/* PRICING */}
-      <section style={{ padding: '80px 32px' }}>
+      <section style={{ padding: '80px 32px', background: '#060912', borderTop: '1px solid #1e2d3d' }}>
         <div style={{ maxWidth: 960, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: 56 }}>
             <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 3, color: '#94a3b8', marginBottom: 12 }}>PRICING</div>
-            <div style={{ fontSize: 40, fontWeight: 900, letterSpacing: -0.5, marginBottom: 12 }}>Simple, transparent pricing</div>
-            <div style={{ fontSize: 16, color: '#64748b' }}>Per club — not per user. One subscription, whole team.</div>
+            <div style={{ fontSize: 40, fontWeight: 900, letterSpacing: -0.5, marginBottom: 12, color: '#ffffff' }}>Simple, transparent pricing</div>
+            <div style={{ fontSize: 16, color: '#4a5568' }}>Per club — not per user. One subscription, whole team.</div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16 }}>
             {PLANS.map(plan => (
-              <div key={plan.name} style={{ background: plan.highlight ? '#0f172a' : '#ffffff', border: plan.highlight ? '2px solid #0ea5e9' : '1px solid #e2e8f0', borderRadius: 16, padding: '32px 28px', position: 'relative', boxShadow: plan.highlight ? '0 20px 40px rgba(14,165,233,0.15)' : '0 1px 3px rgba(0,0,0,0.04)' }}>
+              <div key={plan.name} style={{ background: plan.highlight ? '#0d1117' : '#111827', border: plan.highlight ? '2px solid #e8a020' : '1px solid #1e2d3d', borderRadius: 16, padding: '32px 28px', position: 'relative', boxShadow: plan.highlight ? '0 20px 40px rgba(232,160,32,0.15)' : 'none' }}>
                 {plan.highlight && (
-                  <div style={{ position: 'absolute', top: -13, left: '50%', transform: 'translateX(-50%)', background: '#0ea5e9', color: '#fff', fontSize: 10, fontWeight: 900, letterSpacing: 1, padding: '4px 14px', borderRadius: 20 }}>MOST POPULAR</div>
+                  <div style={{ position: 'absolute', top: -13, left: '50%', transform: 'translateX(-50%)', background: '#e8a020', color: '#000', fontSize: 10, fontWeight: 900, letterSpacing: 1, padding: '4px 14px', borderRadius: 20 }}>MOST POPULAR</div>
                 )}
                 <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 2, color: '#94a3b8', marginBottom: 10 }}>{plan.name.toUpperCase()}</div>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 24 }}>
-                  <div style={{ fontSize: 48, fontWeight: 900, color: plan.highlight ? '#ffffff' : '#0f172a' }}>{plan.price}</div>
+                  <div style={{ fontSize: 48, fontWeight: 900, color: '#ffffff' }}>{plan.price}</div>
                   <div style={{ fontSize: 14, color: '#94a3b8' }}>{plan.period}</div>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 28 }}>
                   {plan.features.map(f => (
                     <div key={f} style={{ display: 'flex', gap: 10, fontSize: 14, fontWeight: 400, alignItems: 'center' }}>
                       <span style={{ color: plan.highlight ? '#0ea5e9' : '#10b981', fontWeight: 900 }}>✓</span>
-                      <span style={{ color: plan.highlight ? '#cbd5e1' : '#475569' }}>{f}</span>
+                      <span style={{ color: '#94a3b8' }}>{f}</span>
                     </div>
                   ))}
                 </div>
-                <Link href="/login?signup=true" style={{ display: 'block', textAlign: 'center', padding: '12px 20px', background: plan.highlight ? '#0ea5e9' : '#0f172a', color: '#fff', fontSize: 14, fontWeight: 900, borderRadius: 8, letterSpacing: 1 }}>
+                <Link href="/login?signup=true" style={{ display: 'block', textAlign: 'center', padding: '12px 20px', background: plan.highlight ? '#e8a020' : '#1e2d3d', color: '#fff', fontSize: 14, fontWeight: 900, borderRadius: 8, letterSpacing: 1 }}>
                   {plan.cta}
                 </Link>
               </div>
@@ -179,9 +179,9 @@ export default function LandingPage() {
       </section>
 
       {/* FOOTER */}
-      <footer style={{ borderTop: '1px solid #1e293b', background: '#0f172a', padding: '28px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-        <div style={{ fontSize: 18, fontWeight: 900, letterSpacing: 3, color: '#fff' }}>CLUB<span style={{ color: '#0ea5e9' }}>CODE</span></div>
-        <div style={{ fontSize: 12, color: '#475569' }}>© {new Date().getFullYear()} ClubCode · Built for amateur sports clubs</div>
+      <footer style={{ borderTop: '1px solid #1e2d3d', background: '#060912', padding: '28px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+        <div style={{ fontSize: 18, fontWeight: 900, letterSpacing: 3, color: '#fff' }}>CLUB<span style={{ color: '#e8a020' }}>CODE</span></div>
+        <div style={{ fontSize: 12, color: '#4a5568' }}>© {new Date().getFullYear()} ClubCode · Built for amateur sports clubs</div>
       </footer>
     </div>
   )
