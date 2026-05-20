@@ -22,9 +22,6 @@ export default function ClubsPage() {
   const supabase = createClient()
   const [clubs, setClubs]       = useState<any[]>([])
   const [loading, setLoading]   = useState(true)
-  const [showCreate, setShowCreate] = useState(false)
-  const [creating, setCreating]     = useState(false)
-  const [newClub, setNewClub] = useState({ name: '', sport: 'rugby', plan: 'starter' })
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -165,57 +162,6 @@ export default function ClubsPage() {
           ))}
         </div>
 
-        {/* Create new club */}
-        {!showCreate ? (
-          <button onClick={() => setShowCreate(true)} style={{ width: '100%', padding: '14px', background: 'transparent', border: `2px dashed ${BD}`, borderRadius: 10, color: DIM, fontFamily: FF, fontSize: 14, fontWeight: 700, cursor: 'pointer', letterSpacing: 0.5 }}>
-            + Create a New Club
-          </button>
-        ) : (
-          <div style={{ background: CARD, border: `1px solid ${BD}`, borderRadius: 10, padding: '22px 24px' }}>
-            <div style={{ fontSize: 16, fontWeight: 900, color: TEXT, marginBottom: 18, fontFamily: FF }}>Create New Club</div>
-
-            <div style={{ marginBottom: 14 }}>
-              <label style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, color: MUTED, display: 'block', marginBottom: 6 }}>CLUB NAME</label>
-              <input value={newClub.name} onChange={e => setNewClub(c => ({ ...c, name: e.target.value }))} placeholder="e.g. Penallta RFC" style={{ width: '100%', padding: '9px 12px', background: BG, border: `1px solid ${BD}`, borderRadius: 6, color: TEXT, fontFamily: FF, fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
-            </div>
-
-            <div style={{ marginBottom: 14 }}>
-              <label style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, color: MUTED, display: 'block', marginBottom: 6 }}>SPORT</label>
-              <select value={newClub.sport} onChange={e => setNewClub(c => ({ ...c, sport: e.target.value }))} style={{ width: '100%', padding: '9px 12px', background: BG, border: `1px solid ${BD}`, borderRadius: 6, color: TEXT, fontFamily: FF, fontSize: 13, outline: 'none' }}>
-                <option value="rugby">Rugby Union</option>
-                <option value="rugby_league">Rugby League</option>
-                <option value="football">Football</option>
-                <option value="hockey">Hockey</option>
-                <option value="netball">Netball</option>
-              </select>
-            </div>
-
-            <div style={{ marginBottom: 20 }}>
-              <label style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, color: MUTED, display: 'block', marginBottom: 10 }}>SELECT PLAN</label>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-                {[
-                  { key: 'starter', label: 'Starter', price: 'Free',   desc: '1 match/month', color: '#64748b' },
-                  { key: 'pro',     label: 'Pro',     price: '£29/mo', desc: 'Unlimited matches', color: GOLD },
-                  { key: 'club',    label: 'Club',    price: '£79/mo', desc: 'Everything + GPS', color: '#8b5cf6' },
-                ].map(p => (
-                  <div key={p.key} onClick={() => setNewClub(c => ({ ...c, plan: p.key }))} style={{ border: `2px solid ${newClub.plan === p.key ? p.color : BD}`, borderRadius: 8, padding: '12px 10px', cursor: 'pointer', background: newClub.plan === p.key ? p.color + '11' : 'transparent', textAlign: 'center' }}>
-                    <div style={{ fontSize: 13, fontWeight: 900, color: p.color, marginBottom: 2 }}>{p.label}</div>
-                    <div style={{ fontSize: 14, fontWeight: 900, color: TEXT }}>{p.price}</div>
-                    <div style={{ fontSize: 10, color: MUTED, marginTop: 4 }}>{p.desc}</div>
-                  </div>
-                ))}
-              </div>
-              {newClub.plan !== 'starter' && <div style={{ fontSize: 11, color: DIM, marginTop: 8 }}>💳 You'll be redirected to Stripe to complete payment</div>}
-            </div>
-
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => setShowCreate(false)} style={{ padding: '9px 16px', background: 'transparent', border: `1px solid ${BD}`, color: MUTED, fontFamily: FF, fontSize: 12, borderRadius: 6, cursor: 'pointer' }}>Cancel</button>
-              <button onClick={createClub} disabled={creating || !newClub.name.trim()} style={{ flex: 1, padding: '10px', background: GOLD, color: '#000', border: 'none', borderRadius: 6, fontFamily: FF, fontSize: 13, fontWeight: 900, cursor: 'pointer', letterSpacing: 1 }}>
-                {creating ? 'CREATING...' : 'CREATE CLUB →'}
-              </button>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   )
