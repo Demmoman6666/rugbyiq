@@ -179,13 +179,13 @@ export default function DashboardPage() {
                   {/* Left — match info */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 16, flex: 1, minWidth: 0 }}>
                     {/* Status dot */}
-                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: sc.dot, flexShrink: 0 }}/>
+                    <div style={{ width: 10, height: 10, borderRadius: '50%', background: sc.dot, flexShrink: 0, boxShadow: `0 0 6px ${sc.dot}88` }}/>
 
                     {/* Teams */}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 17, fontWeight: 800, color: '#fff', letterSpacing: 0.3, marginBottom: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {m.home_team}
-                        <span style={{ color: '#1e2d3d', fontWeight: 300, fontSize: 13, margin: '0 10px' }}>vs</span>
+                        <span style={{ color: '#4a5568', fontWeight: 400, fontSize: 13, margin: '0 10px' }}>vs</span>
                         {m.away_team}
                       </div>
                       <div style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -193,10 +193,10 @@ export default function DashboardPage() {
                           <span style={{ fontSize: 11, fontWeight: 700, color: '#e8a020', letterSpacing: 0.5 }}>{m.competition}</span>
                         )}
                         {matchDate && (
-                          <span style={{ fontSize: 11, color: '#4a5568' }}>{matchDate}</span>
+                          <span style={{ fontSize: 11, color: '#64748b' }}>{matchDate}</span>
                         )}
                         {m.venue && (
-                          <span style={{ fontSize: 11, color: '#4a5568' }}>📍 {m.venue}</span>
+                          <span style={{ fontSize: 11, color: '#64748b' }}>📍 {m.venue}</span>
                         )}
                       </div>
                     </div>
@@ -212,7 +212,7 @@ export default function DashboardPage() {
                     <span style={{ fontSize: 10, fontWeight: 700, color: sc.color, background: sc.color + '18', border: `1px solid ${sc.color}33`, padding: '3px 10px', borderRadius: 4, letterSpacing: 1 }}>
                       {sc.label.toUpperCase()}
                     </span>
-                    <span style={{ color: '#4a5568', fontSize: 18 }}>›</span>
+                    <span style={{ color: '#64748b', fontSize: 20 }}>›</span>
                   </div>
                 </div>
               )
