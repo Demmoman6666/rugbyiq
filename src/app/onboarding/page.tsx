@@ -14,15 +14,22 @@ function OnboardingInner() {
   const searchParams = useSearchParams()
   const selectedPlan = searchParams.get('plan') ?? 'starter'
 
-  const [loading, setLoading] = useState(false)
-  const [error, setError]     = useState('')
-  const [checking, setChecking] = useState(true)
+  // ALL hooks must be at the top — before any conditional returns
+  const [checking, setChecking]   = useState(true)
+  const [loading, setLoading]     = useState(false)
+  const [error, setError]         = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName]   = useState('')
+  const [phone, setPhone]         = useState('')
+  const [address1, setAddress1]   = useState('')
+  const [address2, setAddress2]   = useState('')
+  const [city, setCity]           = useState('')
+  const [postcode, setPostcode]   = useState('')
 
   useEffect(() => {
     const check = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/login'); return }
-      // If user already has an org, skip onboarding entirely
       const { data: member } = await supabase
         .from('org_members')
         .select('org_id')
@@ -37,19 +44,6 @@ function OnboardingInner() {
     }
     check()
   }, [])
-
-  if (checking) return (
-    <div style={{ fontFamily: "'Barlow Condensed', system-ui, sans-serif", background: '#f8fafc', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
-      Loading...
-    </div>
-  )
-  const [firstName, setFirstName] = useState('')
-  const [lastName, setLastName]   = useState('')
-  const [phone, setPhone]         = useState('')
-  const [address1, setAddress1]   = useState('')
-  const [address2, setAddress2]   = useState('')
-  const [city, setCity]           = useState('')
-  const [postcode, setPostcode]   = useState('')
 
   const inputStyle: React.CSSProperties = {
     width: '100%', padding: '10px 12px', fontFamily: FF, fontSize: 14,
@@ -78,11 +72,6 @@ function OnboardingInner() {
         data: { full_name: `${firstName.trim()} ${lastName.trim()}`, phone, address1, address2, city, postcode }
       })
 
-      if (selectedPlan === 'starter') {
-        router.push('/clubs')
-        return
-      }
-
       if (selectedPlan === 'pro') {
         const res = await fetch('/api/stripe/checkout', {
           method: 'POST',
@@ -107,12 +96,19 @@ function OnboardingInner() {
         return
       }
 
+      // Starter
       router.push('/clubs')
     } catch (err: any) {
       setError(err.message)
       setLoading(false)
     }
   }
+
+  if (checking) return (
+    <div style={{ fontFamily: FF, background: '#f8fafc', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
+      Loading...
+    </div>
+  )
 
   return (
     <div style={{ fontFamily: FF, background: '#f8fafc', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
