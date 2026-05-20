@@ -1,5 +1,5 @@
 'use client'
-import { Suspense, useState } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 
@@ -16,6 +16,29 @@ function OnboardingInner() {
 
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState('')
+  const [checking, setChecking] = useState(true)
+
+  useEffect(() => {
+    const check = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { router.push('/login'); return }
+      // If user already has an org, skip onboarding entirely
+      const { data: member } = await supabase
+        .from('org_members')
+        .select('org_id')
+        .eq('user_id', user.id)
+        .limit(1)
+        .single()
+      if (member?.org_id) {
+        router.push('/dashboard')
+        return
+      }
+      setChecking(false)
+    }
+    check()
+  }, [])
+
+  if (checking) return null
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName]   = useState('')
   const [phone, setPhone]         = useState('')
