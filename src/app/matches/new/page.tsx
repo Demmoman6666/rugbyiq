@@ -22,31 +22,31 @@ export default function NewMatchPage() {
   const [error, setError] = useState('')
   const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }))
 
+  const today = new Date().toISOString().split('T')[0]
+
   const create = async () => {
     if (!form.home_team || !form.away_team) { setError('Both team names are required'); return }
-    setSaving(true)
+    if (!form.match_date) { setError('Please enter a match date'); return }
+    if (form.match_date > today) { setError('Match date cannot be in the future'); return }
+
+    setSaving(true); setError('')
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { router.push('/login'); return }
 
     let orgId: string
-
-    // Check for existing membership first
     const { data: member } = await supabase.from('org_members').select('org_id').eq('user_id', user.id).single()
 
     if (member) {
       orgId = member.org_id
     } else {
-      // Check if org already exists for this user by slug (in case previous attempt created it)
       const slug = user.id.slice(0, 8)
       const { data: existingOrg } = await supabase.from('organisations').select('id').eq('slug', slug).single()
-
       if (existingOrg) {
         orgId = existingOrg.id
       } else {
         orgId = crypto.randomUUID()
         await supabase.from('organisations').insert({ id: orgId, name: user.email!.split('@')[0], slug })
       }
-
       await supabase.from('org_members').insert({ org_id: orgId, user_id: user.id, role: 'admin' })
     }
 
@@ -62,7 +62,7 @@ export default function NewMatchPage() {
     <div style={{ fontFamily: FF, background: '#08090e', minHeight: '100vh', color: '#dde1f0' }}>
       <nav style={{ background: '#131428', borderBottom: `1px solid ${BD}`, padding: '12px 24px', display: 'flex', alignItems: 'center', gap: 16 }}>
         <Link href="/dashboard" style={{ color: '#6666aa', textDecoration: 'none', fontSize: 13 }}>← Dashboard</Link>
-        <div style={{ fontSize: 18, fontWeight: 900, letterSpacing: 2 }}>RUGBY<span style={{ color: '#00d4aa' }}>IQ</span></div>
+        <div style={{ fontSize: 18, fontWeight: 900, letterSpacing: 2, color: '#fff' }}>CLUB<span style={{ color: '#e8a020' }}>CODE</span></div>
       </nav>
       <div style={{ maxWidth: 540, margin: '0 auto', padding: '40px 20px' }}>
         <div style={{ fontSize: 28, fontWeight: 900, marginBottom: 4 }}>New Match</div>
@@ -89,10 +89,20 @@ export default function NewMatchPage() {
             <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, color: '#4a4a7a', marginBottom: 16 }}>MATCH DETAILS</div>
             <Input label="COMPETITION" value={form.competition} onChange={e => set('competition', e.target.value)} placeholder="e.g. WRU Division One East"/>
             <Input label="VENUE" value={form.venue} onChange={e => set('venue', e.target.value)} placeholder="e.g. Welfare Ground, Blackwood"/>
-            <Input label="DATE" type="date" value={form.match_date} onChange={e => set('match_date', e.target.value)}/>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, color: '#5a5a8a', display: 'block', marginBottom: 6 }}>DATE</label>
+              <input
+                type="date"
+                value={form.match_date}
+                max={today}
+                onChange={e => set('match_date', e.target.value)}
+                style={{ width: '100%', padding: '10px 12px', background: '#0a0b14', border: `1px solid ${BD}`, borderRadius: 5, color: form.match_date ? '#dde1f0' : '#5a5a8a', fontFamily: FF, fontSize: 14, outline: 'none', boxSizing: 'border-box' as const, colorScheme: 'dark' }}
+              />
+              <div style={{ fontSize: 11, color: '#5a5a8a', marginTop: 4 }}>Past dates only — future dates not allowed</div>
+            </div>
           </div>
           {error && <div style={{ background: '#ff444422', border: '1px solid #ff444444', color: '#ff8888', fontSize: 12, padding: '8px 12px', borderRadius: 5, marginBottom: 16 }}>{error}</div>}
-          <button onClick={create} disabled={saving} style={{ width: '100%', padding: 12, background: '#00d4aa', color: '#000', fontFamily: FF, fontSize: 15, fontWeight: 900, border: 'none', borderRadius: 5, cursor: 'pointer', opacity: saving ? 0.7 : 1 }}>
+          <button onClick={create} disabled={saving} style={{ width: '100%', padding: 12, background: '#e8a020', color: '#000', fontFamily: FF, fontSize: 15, fontWeight: 900, border: 'none', borderRadius: 5, cursor: 'pointer', opacity: saving ? 0.7 : 1 }}>
             {saving ? 'Creating...' : 'Create Match →'}
           </button>
         </div>
