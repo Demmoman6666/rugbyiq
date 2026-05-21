@@ -39,29 +39,21 @@ export default function ReviewPage() {
   useEffect(() => {
     const load = async () => {
       const res = await fetch(`/api/review?token=${token}`)
-      const { reviewSet: rs } = await res.json()
-      if (!rs) { setLoading(false); return }
+      const { reviewSet: rs, match: m, events: evs } = await res.json()
+      if (!rs || !m) { setLoading(false); return }
       setReviewSet(rs)
-      const [evRes, matchRes] = await Promise.all([
-        fetch(`/api/events?match_id=${rs.match_id}`),
-        fetch(`/api/matches/${rs.match_id}`)
-      ])
-      const evData = await evRes.json()
-      const matchData = await matchRes.json()
+      setMatch(m)
       const orderedEvents = rs.event_ids
-        .map((id: string) => evData.events?.find((e: any) => e.id === id))
+        .map((id: string) => evs?.find((e: any) => e.id === id))
         .filter(Boolean)
       setEvents(orderedEvents)
-      setMatch(matchData.match)
       setLoading(false)
     }
     load()
   }, [token])
 
-  // YouTube init
   useEffect(() => {
     if (!youtubeId) return
-
     const init = () => {
       try { ytPlayerRef.current?.destroy() } catch (_) {}
       ytReadyRef.current = false
@@ -74,7 +66,6 @@ export default function ReviewPage() {
         },
       })
     }
-
     if ((window as any).YT?.Player) { init() }
     else {
       ;(window as any).onYouTubeIframeAPIReady = init
@@ -84,7 +75,6 @@ export default function ReviewPage() {
         document.head.appendChild(s)
       }
     }
-
     return () => {
       if (ivRef.current) clearInterval(ivRef.current)
       try { ytPlayerRef.current?.destroy() } catch (_) {}
@@ -98,7 +88,6 @@ export default function ReviewPage() {
     const ev = events[idx]
     const startTime = Math.max(0, ev.timestamp_secs - (reviewSet.clip_before_secs ?? 10))
     const clipDuration = (reviewSet.clip_before_secs ?? 10) + (reviewSet.clip_after_secs ?? 20)
-
     if (isYoutube) {
       if (!ytReadyRef.current) return
       ytPlayerRef.current.seekTo(startTime, true)
@@ -108,15 +97,12 @@ export default function ReviewPage() {
       videoRef.current.currentTime = startTime
       videoRef.current.play()
     }
-
     setCurrentIdx(idx)
     setPlaying(true)
-
     if (clipTimer.current) clearTimeout(clipTimer.current)
     clipTimer.current = setTimeout(() => {
-      if (autoPlay && idx < events.length - 1) {
-        playClip(idx + 1)
-      } else {
+      if (autoPlay && idx < events.length - 1) { playClip(idx + 1) }
+      else {
         if (isYoutube) ytPlayerRef.current?.pauseVideo()
         else videoRef.current?.pause()
         setPlaying(false)
@@ -129,7 +115,6 @@ export default function ReviewPage() {
     if (isYoutube) ytPlayerRef.current?.pauseVideo()
     else videoRef.current?.pause()
   }
-
   const handlePrev = () => { if (clipTimer.current) clearTimeout(clipTimer.current); playClip(Math.max(0, currentIdx - 1)) }
   const handleNext = () => { if (clipTimer.current) clearTimeout(clipTimer.current); playClip(Math.min(events.length - 1, currentIdx + 1)) }
 
@@ -138,7 +123,6 @@ export default function ReviewPage() {
       Loading review…
     </div>
   )
-
   if (!reviewSet || !match) return (
     <div style={{ fontFamily: FF, background: NAV, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: DIM }}>
       Review not found.
@@ -149,8 +133,6 @@ export default function ReviewPage() {
 
   return (
     <div style={{ fontFamily: FF, background: '#0a0e1a', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-
-      {/* HEADER */}
       <div style={{ background: NAV, padding: '12px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${BD}` }}>
         <div>
           <div style={{ fontSize: 20, fontWeight: 900, letterSpacing: 3, color: '#fff' }}>CLUB<span style={{ color: GOLD }}>CODE</span></div>
@@ -167,23 +149,13 @@ export default function ReviewPage() {
       </div>
 
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-
-        {/* VIDEO PANEL */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
           <div style={{ position: 'relative', background: '#000' }}>
             {isYoutube ? (
               <div id="yt-review-embed" style={{ width: '100%', height: '72vh' }} />
             ) : (
-              <video
-                ref={videoRef}
-                src={match.video_public_url}
-                style={{ width: '100%', height: 'auto', maxHeight: '72vh', objectFit: 'contain', display: 'block' }}
-                playsInline
-                onPlay={() => setPlaying(true)}
-                onPause={() => setPlaying(false)}
-              />
+              <video ref={videoRef} src={match.video_public_url} style={{ width: '100%', height: 'auto', maxHeight: '72vh', objectFit: 'contain', display: 'block' }} playsInline onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} />
             )}
-
             {currentEvent && (
               <div style={{ position: 'absolute', bottom: 16, left: 16, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', border: `1px solid ${BD}`, borderRadius: 8, padding: '10px 16px', maxWidth: 320 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: currentEvent.notes ? 6 : 0 }}>
@@ -194,54 +166,32 @@ export default function ReviewPage() {
                 {currentEvent.notes && <div style={{ fontSize: 11, color: '#cbd5e1', lineHeight: 1.5 }}>📝 {currentEvent.notes}</div>}
               </div>
             )}
-
             <div style={{ position: 'absolute', top: 12, right: 12, background: 'rgba(0,0,0,0.7)', borderRadius: 4, padding: '4px 10px', fontFamily: MONO, fontSize: 12, color: GOLD, letterSpacing: 2 }}>
               {currentIdx + 1} / {events.length}
             </div>
           </div>
 
-          {/* CONTROLS */}
           <div style={{ background: NAV, borderTop: `1px solid ${BD}`, padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
-            <button onClick={handlePrev} disabled={currentIdx === 0}
-              style={{ padding: '8px 16px', fontFamily: FF, fontSize: 12, fontWeight: 700, background: '#ffffff0d', border: `1px solid ${BD}`, color: currentIdx === 0 ? MUTED : DIM, borderRadius: 4, cursor: currentIdx === 0 ? 'default' : 'pointer', letterSpacing: 1 }}>
-              ⏮ PREV
-            </button>
-
+            <button onClick={handlePrev} disabled={currentIdx === 0} style={{ padding: '8px 16px', fontFamily: FF, fontSize: 12, fontWeight: 700, background: '#ffffff0d', border: `1px solid ${BD}`, color: currentIdx === 0 ? MUTED : DIM, borderRadius: 4, cursor: currentIdx === 0 ? 'default' : 'pointer', letterSpacing: 1 }}>⏮ PREV</button>
             {!playing ? (
-              <button onClick={() => playClip(currentIdx)}
-                style={{ padding: '8px 24px', fontFamily: FF, fontSize: 13, fontWeight: 900, background: GOLD, border: 'none', color: '#000', borderRadius: 4, cursor: 'pointer', letterSpacing: 1 }}>
-                ▶ {currentIdx === 0 ? 'START REVIEW' : 'PLAY'}
-              </button>
+              <button onClick={() => playClip(currentIdx)} style={{ padding: '8px 24px', fontFamily: FF, fontSize: 13, fontWeight: 900, background: GOLD, border: 'none', color: '#000', borderRadius: 4, cursor: 'pointer', letterSpacing: 1 }}>▶ {currentIdx === 0 ? 'START REVIEW' : 'PLAY'}</button>
             ) : (
-              <button onClick={handlePause}
-                style={{ padding: '8px 24px', fontFamily: FF, fontSize: 13, fontWeight: 900, background: '#ffffff15', border: `1px solid ${BD}`, color: '#fff', borderRadius: 4, cursor: 'pointer', letterSpacing: 1 }}>
-                ⏸ PAUSE
-              </button>
+              <button onClick={handlePause} style={{ padding: '8px 24px', fontFamily: FF, fontSize: 13, fontWeight: 900, background: '#ffffff15', border: `1px solid ${BD}`, color: '#fff', borderRadius: 4, cursor: 'pointer', letterSpacing: 1 }}>⏸ PAUSE</button>
             )}
-
-            <button onClick={handleNext} disabled={currentIdx === events.length - 1}
-              style={{ padding: '8px 16px', fontFamily: FF, fontSize: 12, fontWeight: 700, background: '#ffffff0d', border: `1px solid ${BD}`, color: currentIdx === events.length - 1 ? MUTED : DIM, borderRadius: 4, cursor: currentIdx === events.length - 1 ? 'default' : 'pointer', letterSpacing: 1 }}>
-              NEXT ⏭
-            </button>
-
+            <button onClick={handleNext} disabled={currentIdx === events.length - 1} style={{ padding: '8px 16px', fontFamily: FF, fontSize: 12, fontWeight: 700, background: '#ffffff0d', border: `1px solid ${BD}`, color: currentIdx === events.length - 1 ? MUTED : DIM, borderRadius: 4, cursor: currentIdx === events.length - 1 ? 'default' : 'pointer', letterSpacing: 1 }}>NEXT ⏭</button>
             <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ fontSize: 11, color: MUTED, letterSpacing: 1 }}>AUTO-ADVANCE</span>
-              <div onClick={() => setAutoPlay(v => !v)}
-                style={{ width: 36, height: 20, borderRadius: 10, background: autoPlay ? GOLD : '#ffffff15', cursor: 'pointer', position: 'relative', transition: 'background 0.2s' }}>
+              <div onClick={() => setAutoPlay(v => !v)} style={{ width: 36, height: 20, borderRadius: 10, background: autoPlay ? GOLD : '#ffffff15', cursor: 'pointer', position: 'relative', transition: 'background 0.2s' }}>
                 <div style={{ position: 'absolute', top: 2, left: autoPlay ? 18 : 2, width: 16, height: 16, borderRadius: '50%', background: '#fff', transition: 'left 0.2s' }}/>
               </div>
             </div>
           </div>
         </div>
 
-        {/* CLIP LIST */}
         <div style={{ width: 280, background: '#0d1117', borderLeft: `1px solid ${BD}`, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ padding: '12px 16px', borderBottom: `1px solid ${BD}`, fontSize: 10, fontWeight: 700, letterSpacing: 2, color: MUTED }}>
-            CLIPS — {events.length} TOTAL
-          </div>
+          <div style={{ padding: '12px 16px', borderBottom: `1px solid ${BD}`, fontSize: 10, fontWeight: 700, letterSpacing: 2, color: MUTED }}>CLIPS — {events.length} TOTAL</div>
           {events.map((ev, idx) => (
-            <div key={ev.id}
-              onClick={() => { if (clipTimer.current) clearTimeout(clipTimer.current); playClip(idx) }}
+            <div key={ev.id} onClick={() => { if (clipTimer.current) clearTimeout(clipTimer.current); playClip(idx) }}
               style={{ padding: '12px 16px', borderBottom: `1px solid ${BD}`, cursor: 'pointer', background: idx === currentIdx ? '#ffffff08' : 'transparent', borderLeft: idx === currentIdx ? `3px solid ${GOLD}` : '3px solid transparent', transition: 'background 0.15s' }}
               onMouseEnter={e => { if (idx !== currentIdx) e.currentTarget.style.background = '#ffffff04' }}
               onMouseLeave={e => { if (idx !== currentIdx) e.currentTarget.style.background = 'transparent' }}>

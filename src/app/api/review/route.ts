@@ -9,7 +9,6 @@ const supabase = createClient(
 export async function POST(req: NextRequest) {
   try {
     const { matchId, orgId, name, description, eventIds, clipBeforeSecs, clipAfterSecs } = await req.json()
-
     const { data, error } = await supabase
       .from('review_sets')
       .insert({
@@ -23,7 +22,6 @@ export async function POST(req: NextRequest) {
       })
       .select()
       .single()
-
     if (error) throw error
     return NextResponse.json({ reviewSet: data })
   } catch (err: any) {
@@ -36,13 +34,20 @@ export async function GET(req: NextRequest) {
   const matchId = req.nextUrl.searchParams.get('matchId')
 
   if (token) {
-    const { data, error } = await supabase
+    const { data: rs, error } = await supabase
       .from('review_sets')
       .select('*')
       .eq('token', token)
       .single()
-    if (error) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-    return NextResponse.json({ reviewSet: data })
+    if (error || !rs) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+    // Fetch match and events server-side using service client
+    const [{ data: match }, { data: events }] = await Promise.all([
+      supabase.from('matches').select('*').eq('id', rs.match_id).single(),
+      supabase.from('events').select('*').eq('match_id', rs.match_id),
+    ])
+
+    return NextResponse.json({ reviewSet: rs, match, events: events ?? [] })
   }
 
   if (matchId) {
