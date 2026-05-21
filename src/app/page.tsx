@@ -181,7 +181,12 @@ export default function LandingPage() {
       {/* FOOTER */}
       <footer style={{ borderTop: '1px solid #1e2d3d', background: '#060912', padding: '28px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
         <div style={{ fontSize: 18, fontWeight: 900, letterSpacing: 3, color: '#fff' }}>CLUB<span style={{ color: '#e8a020' }}>CODE</span></div>
-        <div style={{ fontSize: 12, color: '#4a5568' }}>© {new Date().getFullYear()} ClubCode · Built for amateur sports clubs</div>
+        <div style={{ display: 'flex', gap: 20, alignItems: 'center', flexWrap: 'wrap' }}>
+          <a href="/terms" style={{ fontSize: 12, color: '#4a5568', textDecoration: 'none' }}>Terms & Conditions</a>
+          <a href="/privacy" style={{ fontSize: 12, color: '#4a5568', textDecoration: 'none' }}>Privacy Policy</a>
+          <a href="/cookies" style={{ fontSize: 12, color: '#4a5568', textDecoration: 'none' }}>Cookie Policy</a>
+          <span style={{ fontSize: 12, color: '#4a5568' }}>© {new Date().getFullYear()} ClubCode</span>
+        </div>
       </footer>
     </div>
   )
