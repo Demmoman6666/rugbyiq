@@ -13,6 +13,7 @@ export default function LoginPage() {
   const supabase = createClient()
   const [email, setEmail]         = useState('')
   const [password, setPassword]   = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError]         = useState('')
   const [loading, setLoading]     = useState(false)
   const [mode, setMode]           = useState<'login' | 'signup' | 'forgot'>('login')
@@ -49,6 +50,8 @@ export default function LoginPage() {
     }
 
     // Signup
+    if (password.length < 8) { setError('Password must be at least 8 characters'); setLoading(false); return }
+    if (password !== confirmPassword) { setError('Passwords do not match'); setLoading(false); return }
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -148,10 +151,31 @@ export default function LoginPage() {
               </div>
 
               {mode !== 'forgot' && (
-                <div style={{ marginBottom: 6 }}>
-                  <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: '#94a3b8', display: 'block', marginBottom: 6 }}>PASSWORD</label>
-                  <input type="password" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === 'Enter' && handle()} placeholder="••••••••" style={inputStyle} />
-                </div>
+                <>
+                  <div style={{ marginBottom: 6 }}>
+                    <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: '#94a3b8', display: 'block', marginBottom: 6 }}>PASSWORD</label>
+                    <input type="password" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === 'Enter' && handle()} placeholder="Min. 8 characters" style={{ ...inputStyle, borderColor: mode === 'signup' && password.length > 0 && password.length < 8 ? '#f87171' : undefined }} />
+                    {mode === 'signup' && password.length > 0 && password.length < 8 && (
+                      <div style={{ fontSize: 11, color: '#f87171', marginTop: 4 }}>Must be at least 8 characters</div>
+                    )}
+                  </div>
+                  {mode === 'signup' && (
+                    <div style={{ marginBottom: 6 }}>
+                      <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: '#94a3b8', display: 'block', marginBottom: 6 }}>CONFIRM PASSWORD</label>
+                      <div style={{ position: 'relative' }}>
+                        <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} onKeyDown={e => e.key === 'Enter' && handle()} placeholder="••••••••" style={{ ...inputStyle, borderColor: confirmPassword.length > 0 ? (password === confirmPassword ? '#10b981' : '#f87171') : undefined, paddingRight: 36 }} />
+                        {confirmPassword.length > 0 && (
+                          <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 16 }}>
+                            {password === confirmPassword ? '✅' : '❌'}
+                          </span>
+                        )}
+                      </div>
+                      {confirmPassword.length > 0 && password !== confirmPassword && (
+                        <div style={{ fontSize: 11, color: '#f87171', marginTop: 4 }}>Passwords do not match</div>
+                      )}
+                    </div>
+                  )}
+                </>
               )}
 
               {mode === 'login' && (
