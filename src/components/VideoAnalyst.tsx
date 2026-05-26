@@ -7,7 +7,7 @@ import { getSportConfig } from '@/lib/sports'
 import type { MatchEvent, AISuggestion, TeamInfo, Player, ParsedPlayer } from '@/lib/types'
 import { createClient } from '@/lib/supabase'
 import SettingsDropdown from '@/components/SettingsDropdown'
-import { scanVideoForEvents, estimateScanCost } from '@/lib/ai-detection'
+import { scanVideoForEvents } from '@/lib/ai-detection'
 
 const extractYouTubeId = (url: string) => {
   const m = url.match(/(?:v=|youtu\.be\/|embed\/)([a-zA-Z0-9_-]{11})/)
@@ -64,6 +64,7 @@ export default function VideoAnalyst({
   const [lastEv, setLastEv]                 = useState<MatchEvent | null>(null)
   const [scanState, setScanState]           = useState({ running: false, pct: 0 })
   const [showScanConfirm, setShowScanConfirm] = useState(false)
+  const [scanPct, setScanPct] = useState(100)
   const [editingNote, setEditingNote]       = useState<{ id: string; value: string } | null>(null)
   const [copying, setCopying]               = useState(false)
   const [speed, setSpeed]                   = useState(1)
@@ -437,9 +438,11 @@ export default function VideoAnalyst({
 
   const startAIScan = async () => {
     if (!videoRef.current || !videoUrl || isYoutube) return
+    const maxDuration = Math.floor(actualDuration() * (scanPct / 100))
     setShowScanConfirm(false); setScanState({ running: true, pct: 5 }); setSuggestions([])
     try {
       await scanVideoForEvents(videoRef.current, matchId, {
+        maxDuration,
         onProgress: (pct) => setScanState({ running: true, pct }),
         onSuggestion: (suggestion) => setSuggestions(prev => [...prev, suggestion]),
       })
@@ -472,8 +475,6 @@ export default function VideoAnalyst({
     finally { setBuildingReview(false) }
   }
 
-  const { estimatedMinutes: geminiMins, estimatedCostGBP: geminiCostNum } = estimateScanCost(actualDuration())
-  const geminiCost = geminiCostNum.toFixed(2)
 
   const Pill = ({ type }: { type: string }) => {
     const cfg = sportConfig.events[type]
@@ -706,9 +707,23 @@ export default function VideoAnalyst({
             <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }}>
               <div style={{ background: '#111827', border: `1px solid ${BD}`, borderRadius: 12, padding: 28, maxWidth: 400, width: '90%' }}>
                 <div style={{ fontSize: 18, fontWeight: 900, marginBottom: 8, color: TEXT, letterSpacing: 1 }}>🤖 RUN AI LINEOUT SCAN?</div>
-                <div style={{ fontSize: 13, color: DIM, lineHeight: 1.7, marginBottom: 20 }}>Your trained Roboflow model will scan the footage frame-by-frame and detect <strong style={{ color: TEXT }}>lineout events</strong> automatically.</div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 22 }}>
-                  {[[formatTime(duration), 'Duration'], ['~'+geminiMins+'m', 'Est. time'], ['~£'+geminiCost, 'Cost']].map(([v,l]) => (
+                <div style={{ fontSize: 13, color: DIM, lineHeight: 1.7, marginBottom: 16 }}>Your trained Roboflow model will scan the footage frame-by-frame and detect <strong style={{ color: TEXT }}>lineout events</strong> automatically.</div>
+
+                {/* Percentage selector */}
+                <div style={{ marginBottom: 20 }}>
+                  <div style={{ fontSize: 9, color: MUTED, letterSpacing: 1.5, marginBottom: 8 }}>HOW MUCH TO SCAN</div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    {[20, 40, 60, 80, 100].map(pct => (
+                      <button key={pct} onClick={() => setScanPct(pct)} style={{ flex: 1, padding: '8px 0', fontFamily: FF, fontSize: 12, fontWeight: 700, borderRadius: 4, border: `1px solid ${scanPct === pct ? GOLD : BD}`, background: scanPct === pct ? GOLD + '22' : 'transparent', color: scanPct === pct ? GOLD : MUTED, cursor: 'pointer' }}>{pct}%</button>
+                    ))}
+                  </div>
+                  <div style={{ fontSize: 11, color: DIM, marginTop: 8, textAlign: 'center' }}>
+                    Scanning first <strong style={{ color: TEXT }}>{formatTime(Math.floor(actualDuration() * (scanPct / 100)))}</strong> of {formatTime(duration)}
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 22 }}>
+                  {[[formatTime(Math.floor(actualDuration() * (scanPct / 100))), 'Scan length'], ['~'+Math.ceil(actualDuration() * (scanPct / 100) / 60 * 0.7)+'m', 'Est. time']].map(([v,l]) => (
                     <div key={l} style={{ background: BG, borderRadius: 8, padding: '12px 8px', textAlign: 'center', border: `1px solid ${BD}` }}>
                       <div style={{ fontSize: 20, fontWeight: 900, color: TEXT }}>{v}</div>
                       <div style={{ fontSize: 10, color: MUTED, letterSpacing: 1.5, marginTop: 4 }}>{l}</div>

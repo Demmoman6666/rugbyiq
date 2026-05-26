@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid'
 export interface ScanOptions {
   intervalSeconds?: number
   confidenceThreshold?: number
+  maxDuration?: number
   onProgress?: (pct: number, timestamp: number) => void
   onSuggestion?: (suggestion: AISuggestion) => void
 }
@@ -14,8 +15,11 @@ export async function scanVideoForEvents(
   options: ScanOptions = {}
 ): Promise<AISuggestion[]> {
   const { intervalSeconds = 2, confidenceThreshold = 0.75, onProgress, onSuggestion } = options
-  const duration = videoEl.duration
-  if (!duration || isNaN(duration)) throw new Error('Video duration not available')
+  const fullDuration = videoEl.duration
+  if (!fullDuration || isNaN(fullDuration)) throw new Error('Video duration not available')
+
+  // Respect maxDuration if set, otherwise scan the full video
+  const duration = options.maxDuration ? Math.min(options.maxDuration, fullDuration) : fullDuration
 
   const canvas = document.createElement('canvas')
   canvas.width = 640
@@ -38,7 +42,6 @@ export async function scanVideoForEvents(
     })
 
     ctx.drawImage(videoEl, 0, 0, 640, 640)
-    // Roboflow expects base64 without the data:image/jpeg;base64, prefix
     const frameBase64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1]
 
     try {
@@ -55,7 +58,7 @@ export async function scanVideoForEvents(
           result.event_detected &&
           result.event_type === 'LINEOUT' &&
           result.confidence >= confidenceThreshold &&
-          t - lastLineoutAt > 10  // minimum 10s between lineout detections
+          t - lastLineoutAt > 10
         ) {
           lastLineoutAt = t
           const suggestion: AISuggestion = {
@@ -79,12 +82,4 @@ export async function scanVideoForEvents(
   }
 
   return suggestions
-}
-
-export function estimateScanCost(durationSeconds: number, intervalSeconds = 2) {
-  // Roboflow serverless is much cheaper than Gemini/Claude
-  const frames = Math.ceil(durationSeconds / intervalSeconds)
-  const estimatedMinutes = Math.ceil((frames * 0.5) / 60)
-  const estimatedCostGBP = parseFloat(((frames * 0.0002) * 0.79).toFixed(2))
-  return { frames, estimatedMinutes, estimatedCostGBP }
 }
