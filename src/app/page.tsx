@@ -202,11 +202,11 @@ export default function LandingPage() {
                 className="sport-card"
                 onMouseEnter={() => setHoveredSport(s.name)}
                 onMouseLeave={() => setHoveredSport(null)}
-                style={{ background: '#060912', border: `1px solid ${hoveredSport === s.name ? s.color : '#1e2d3d'}`, borderRadius: 12, padding: '24px 16px', textAlign: 'center', cursor: 'default', position: 'relative', minHeight: 160 }}
+                style={{ background: '#060912', border: `1px solid ${hoveredSport === s.name ? s.color : '#1e2d3d'}`, borderRadius: 12, padding: '24px 16px', textAlign: 'center', cursor: 'default', minHeight: 280 }}
               >
                 {hoveredSport === s.name ? (
-                  <div style={{ position: 'absolute', inset: 0, background: '#060912', borderRadius: 12, padding: '16px 14px', display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    <div style={{ fontSize: 12, fontWeight: 900, color: s.color, letterSpacing: 1, marginBottom: 6 }}>{s.icon} {s.name.toUpperCase()}</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                    <div style={{ fontSize: 12, fontWeight: 900, color: s.color, letterSpacing: 1, marginBottom: 8 }}>{s.icon} {s.name.toUpperCase()}</div>
                     {s.events.map(e => (
                       <div key={e.label} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11 }}>
                         <span style={{ background: s.color + '22', color: s.color, fontWeight: 900, padding: '1px 6px', borderRadius: 3, fontSize: 9, letterSpacing: 1, minWidth: 20, textAlign: 'center', border: `1px solid ${s.color}44` }}>{e.key}</span>
