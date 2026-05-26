@@ -22,13 +22,13 @@ const PLANS = [
   },
   {
     key: 'pro',
-    name: 'Pro',
+    name: 'Player',
     price: '£29',
     period: '/mo',
     desc: 'For the committed analyst',
     features: ['4 matches per month', 'Manual event coding', 'Player stats', 'Stats dashboard', 'Share links'],
     color: '#0ea5e9',
-    cta: 'Get Pro',
+    cta: 'Get Player',
     highlight: true,
   },
   {
