@@ -291,11 +291,12 @@ export default function LandingPage() {
             <div style={{ fontSize: 40, fontWeight: 900, marginBottom: 12, color: '#ffffff' }}>Simple, transparent pricing</div>
             <div style={{ fontSize: 16, color: '#4a5568' }}>Per club — not per user. One subscription covers your whole squad.</div>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16 }}>
             {[
-              { name: 'Starter', price: 'Free', period: '', features: ['1 match per month', 'Manual event coding', 'All event types', 'Stats dashboard', 'Share links'], cta: 'Get started free', highlight: false },
-              { name: 'Pro', price: '£29', period: '/mo', features: ['4 matches per month', 'Manual event coding', 'Player stats', 'Stats dashboard', 'Share links'], cta: 'Start free trial', highlight: true },
-              { name: 'Club', price: '£99', period: '/mo', features: ['Unlimited matches', 'Up to 20 analyst seats', 'AI Review', 'Team sheets', 'Season statistics', 'Priority support'], cta: 'Get Club', highlight: false },
+              { name: 'Starter', price: 'Free', period: '', features: ['1 match per month', 'Manual event coding', 'All event types', 'Stats dashboard', 'Share links'], cta: 'Get started free', highlight: false, contact: false },
+              { name: 'Player', price: '£29', period: '/mo', features: ['4 matches per month', 'Manual event coding', 'Player stats', 'Stats dashboard', 'Share links'], cta: 'Start free trial', highlight: true, contact: false },
+              { name: 'Club', price: '£99', period: '/mo', features: ['Unlimited matches', 'Up to 20 analyst seats', 'AI Review', 'Team sheets', 'Season statistics', 'Priority support'], cta: 'Get Club', highlight: false, contact: false },
+              { name: 'Professional', price: 'Custom', period: '', features: ['Everything in Club', 'Dedicated account manager', 'Custom event types', 'API access & Veo integration', 'Bespoke onboarding & training', 'SLA support'], cta: 'Contact us to discuss', highlight: false, contact: true },
             ].map(plan => (
               <div key={plan.name} style={{ background: plan.highlight ? '#0d1117' : '#111827', border: plan.highlight ? '2px solid #e8a020' : '1px solid #1e2d3d', borderRadius: 16, padding: '32px 28px', position: 'relative', boxShadow: plan.highlight ? '0 20px 40px rgba(232,160,32,0.12)' : 'none' }}>
                 {plan.highlight && (
@@ -314,9 +315,15 @@ export default function LandingPage() {
                     </div>
                   ))}
                 </div>
-                <Link href="/login?signup=true" style={{ display: 'block', textAlign: 'center', padding: '13px 20px', background: plan.highlight ? '#e8a020' : '#1e2d3d', color: plan.highlight ? '#000' : '#fff', fontSize: 14, fontWeight: 900, borderRadius: 8, letterSpacing: 1 }}>
-                  {plan.cta}
-                </Link>
+                {plan.contact ? (
+                  <a href="#contact" style={{ display: 'block', textAlign: 'center', padding: '13px 20px', background: '#e8a020', color: '#000', fontSize: 14, fontWeight: 900, borderRadius: 8, letterSpacing: 1 }}>
+                    {plan.cta}
+                  </a>
+                ) : (
+                  <Link href="/login?signup=true" style={{ display: 'block', textAlign: 'center', padding: '13px 20px', background: plan.highlight ? '#e8a020' : '#1e2d3d', color: plan.highlight ? '#000' : '#fff', fontSize: 14, fontWeight: 900, borderRadius: 8, letterSpacing: 1 }}>
+                    {plan.cta}
+                  </Link>
+                )}
               </div>
             ))}
           </div>
