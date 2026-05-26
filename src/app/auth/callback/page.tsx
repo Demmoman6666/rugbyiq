@@ -10,48 +10,44 @@ export default function AuthCallbackPage() {
   const router   = useRouter()
 
   useEffect(() => {
-    const params     = new URLSearchParams(window.location.search)
-    const invite     = params.get('invite')
-    const errorParam = params.get('error')
+    const handle = async () => {
+      const params = new URLSearchParams(window.location.search)
+      const invite = params.get('invite')
 
-    // If Google returned an error in the URL, bail out immediately
-    if (errorParam) {
-      router.push('/login')
-      return
+      // First check if session is already established (Google sets it before we run)
+      let { data: { session } } = await supabase.auth.getSession()
+
+      // If not, try exchanging the code
+      if (!session) {
+        const { data, error } = await supabase.auth.exchangeCodeForSession(window.location.href)
+        if (error || !data.session) {
+          router.push('/login')
+          return
+        }
+        session = data.session
+      }
+
+      // Handle invite
+      if (invite) {
+        router.push(`/accept-invite?token=${invite}`)
+        return
+      }
+
+      // Route based on whether they have an org
+      const { data: memberships } = await supabase
+        .from('org_members')
+        .select('org_id')
+        .eq('user_id', session.user.id)
+        .limit(1)
+
+      if (memberships && memberships.length > 0) {
+        router.push('/dashboard')
+      } else {
+        router.push('/plan')
+      }
     }
 
-    // Listen for auth state — Supabase auto-exchanges the code
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'SIGNED_IN' && session) {
-          // Handle invite flow
-          if (invite) {
-            router.push(`/accept-invite?token=${invite}`)
-            return
-          }
-
-          // Check if user already has an org
-          const { data: memberships } = await supabase
-            .from('org_members')
-            .select('org_id')
-            .eq('user_id', session.user.id)
-            .limit(1)
-
-          if (memberships && memberships.length > 0) {
-            router.push('/dashboard')
-          } else {
-            router.push('/plan')
-          }
-        }
-
-        if (event === 'INITIAL_SESSION' && !session) {
-          // No session established, send back to login
-          router.push('/login')
-        }
-      }
-    )
-
-    return () => subscription.unsubscribe()
+    handle()
   }, [])
 
   return (
