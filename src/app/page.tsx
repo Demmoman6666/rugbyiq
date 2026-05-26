@@ -294,11 +294,11 @@ export default function LandingPage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16 }}>
             {[
               { name: 'Starter', price: 'Free', period: '', features: ['1 match per month', 'Manual event coding', 'All event types', 'Stats dashboard', 'Share links'], cta: 'Get started free', highlight: false, contact: false },
-              { name: 'Player', price: '£29', period: '/mo', features: ['4 matches per month', 'Manual event coding', 'Player stats', 'Stats dashboard', 'Share links'], cta: 'Start free trial', highlight: true, contact: false },
-              { name: 'Club', price: '£99', period: '/mo', features: ['Unlimited matches', 'Up to 20 analyst seats', 'AI Review', 'Team sheets', 'Season statistics', 'Priority support'], cta: 'Get Club', highlight: false, contact: false },
+              { name: 'Player', price: '£29', period: '/mo', features: ['4 matches per month', 'Manual event coding', 'Player stats', 'Stats dashboard', 'Share links'], cta: 'Start free trial', highlight: false, contact: false },
+              { name: 'Club', price: '£99', period: '/mo', features: ['Unlimited matches', 'Up to 20 analyst seats', 'AI Review', 'Team sheets', 'Season statistics', 'Priority support'], cta: 'Get Club', highlight: true, contact: false },
               { name: 'Professional', price: 'Custom', period: '', features: ['Everything in Club', 'Dedicated account manager', 'Custom event types', 'API access & Veo integration', 'Bespoke onboarding & training', 'SLA support'], cta: 'Contact us to discuss', highlight: false, contact: true },
             ].map(plan => (
-              <div key={plan.name} style={{ background: plan.highlight ? '#0d1117' : '#111827', border: plan.highlight ? '2px solid #e8a020' : '1px solid #1e2d3d', borderRadius: 16, padding: '32px 28px', position: 'relative', boxShadow: plan.highlight ? '0 20px 40px rgba(232,160,32,0.12)' : 'none' }}>
+              <div key={plan.name} style={{ background: plan.highlight ? '#0d1117' : '#111827', border: plan.highlight ? '2px solid #e8a020' : '1px solid #1e2d3d', borderRadius: 16, padding: '32px 28px', position: 'relative', boxShadow: plan.highlight ? '0 20px 40px rgba(232,160,32,0.12)' : 'none', display: 'flex', flexDirection: 'column' }}>
                 {plan.highlight && (
                   <div style={{ position: 'absolute', top: -13, left: '50%', transform: 'translateX(-50%)', background: '#e8a020', color: '#000', fontSize: 10, fontWeight: 900, letterSpacing: 1, padding: '4px 14px', borderRadius: 20 }}>MOST POPULAR</div>
                 )}
@@ -307,7 +307,7 @@ export default function LandingPage() {
                   <div style={{ fontSize: 48, fontWeight: 900, color: '#ffffff' }}>{plan.price}</div>
                   <div style={{ fontSize: 14, color: '#94a3b8' }}>{plan.period}</div>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 28 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 28, flex: 1 }}>
                   {plan.features.map(f => (
                     <div key={f} style={{ display: 'flex', gap: 10, fontSize: 14, alignItems: 'center' }}>
                       <span style={{ color: plan.highlight ? '#e8a020' : '#10b981', fontWeight: 900 }}>✓</span>
