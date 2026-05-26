@@ -7,6 +7,7 @@ import { getSportConfig } from '@/lib/sports'
 import type { MatchEvent, AISuggestion, TeamInfo, Player, ParsedPlayer } from '@/lib/types'
 import { createClient } from '@/lib/supabase'
 import SettingsDropdown from '@/components/SettingsDropdown'
+import { scanVideoForEvents, estimateScanCost } from '@/lib/ai-detection'
 
 const extractYouTubeId = (url: string) => {
   const m = url.match(/(?:v=|youtu\.be\/|embed\/)([a-zA-Z0-9_-]{11})/)
@@ -101,8 +102,6 @@ export default function VideoAnalyst({
   const homeSheetRef = useRef<HTMLInputElement>(null)
   const awaySheetRef = useRef<HTMLInputElement>(null)
 
-  // Settings dropdown + delete match
-
   // Two-key player hotkey
   const pendingEventType = useRef<string | null>(null)
   const playerBuffer     = useRef<string>('')
@@ -142,7 +141,6 @@ export default function VideoAnalyst({
     const loadSport = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
-      // Get active org from profile
       const { data: profile } = await supabase.from('profiles').select('active_org_id').eq('id', user.id).maybeSingle()
       const activeOrgId = profile?.active_org_id
 
@@ -430,7 +428,6 @@ export default function VideoAnalyst({
   }
 
   const toggleFullscreen = () => {
-    // Always fullscreen the container so our HUD/toast overlays remain visible
     if (!document.fullscreenElement) videoContainerRef.current?.requestFullscreen()
     else document.exitFullscreen()
   }
@@ -439,17 +436,17 @@ export default function VideoAnalyst({
   const skipToPrevEvent = () => { const prev = [...visible].reverse().find(e => e.timestamp_secs < time - 1); if (prev) seekTo(prev.timestamp_secs) }
 
   const startAIScan = async () => {
-    if (!videoUrl) return
+    if (!videoRef.current || !videoUrl || isYoutube) return
     setShowScanConfirm(false); setScanState({ running: true, pct: 5 }); setSuggestions([])
-    const iv = setInterval(() => setScanState(s => ({ running: true, pct: Math.min(s.pct + 1, 90) })), 3000)
     try {
-      const res = await fetch('/api/analyze-video', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ videoUrl, matchId, videoDuration: actualDuration() }) })
-      clearInterval(iv)
-      if (!res.ok) { const err = await res.json(); throw new Error(err.error ?? 'Analysis failed') }
-      const { events: detected } = await res.json()
-      setSuggestions((detected as any[]).filter(e => e.event_type && e.event_type !== 'NONE').map(e => ({ id: crypto.randomUUID(), timestamp_secs: Math.round(e.timestamp_seconds), event_type: e.event_type, confidence: e.confidence ?? 0.8, description: e.description, status: 'pending' as const })))
+      await scanVideoForEvents(videoRef.current, matchId, {
+        onProgress: (pct) => setScanState({ running: true, pct }),
+        onSuggestion: (suggestion) => setSuggestions(prev => [...prev, suggestion]),
+      })
       setScanState({ running: false, pct: 100 }); setTab('ai')
-    } catch (err: any) { clearInterval(iv); setScanState({ running: false, pct: 0 }); alert(`Scan failed: ${err.message}`) }
+    } catch (err: any) {
+      setScanState({ running: false, pct: 0 }); alert(`Scan failed: ${err.message}`)
+    }
   }
 
   const acceptSuggestion = async (s: AISuggestion, team: 'home' | 'away') => {
@@ -475,9 +472,8 @@ export default function VideoAnalyst({
     finally { setBuildingReview(false) }
   }
 
-
-  const geminiCost = (actualDuration() / 60 * 0.30 * 258 / 1000 * 0.79).toFixed(2)
-  const geminiMins = Math.ceil(actualDuration() / 60 * 0.5)
+  const { estimatedMinutes: geminiMins, estimatedCostGBP: geminiCostNum } = estimateScanCost(actualDuration())
+  const geminiCost = geminiCostNum.toFixed(2)
 
   const Pill = ({ type }: { type: string }) => {
     const cfg = sportConfig.events[type]
@@ -571,14 +567,12 @@ export default function VideoAnalyst({
     )
   }
 
-
   return (
     <div style={{ fontFamily: FF, background: BG, color: TEXT, height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
       {showSquadsModal && <SquadsModal />}
 
-
-            {/* HEADER */}
+      {/* HEADER */}
       <div style={{ background: NAV, padding: '10px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, borderBottom: `1px solid ${BD}` }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <a href="/dashboard" style={{ fontSize: 20, fontWeight: 900, letterSpacing: 3, color: '#fff', textDecoration: 'none' }}>CLUB<span style={{ color: GOLD }}>CODE</span></a>
@@ -703,7 +697,7 @@ export default function VideoAnalyst({
               </>
             )}
             {ctrlBtn(toggleFullscreen, '⛶', 'Fullscreen')}
-            <button onClick={() => { if (plan !== 'club') { alert('AI Scan is only available on the Club plan. Upgrade in Settings → Plans & Billing.'); return } setShowScanConfirm(true) }} disabled={scanState.running || !videoUrl} style={{ padding: '5px 14px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: scanState.running ? '#ffffff0d' : plan === 'club' ? GOLD + '22' : '#ffffff0d', border: `1px solid ${plan === 'club' ? GOLD + '44' : BD}`, color: plan === 'club' ? GOLD : MUTED, borderRadius: 4, cursor: 'pointer', whiteSpace: 'nowrap', letterSpacing: 1, opacity: videoUrl ? 1 : 0.3 }}>
+            <button onClick={() => { if (plan !== 'club') { alert('AI Scan is only available on the Club plan. Upgrade in Settings → Plans & Billing.'); return } if (isYoutube) { alert('AI Scan is not available for YouTube videos. Please upload the video file directly.'); return } setShowScanConfirm(true) }} disabled={scanState.running || !videoUrl} style={{ padding: '5px 14px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: scanState.running ? '#ffffff0d' : plan === 'club' ? GOLD + '22' : '#ffffff0d', border: `1px solid ${plan === 'club' ? GOLD + '44' : BD}`, color: plan === 'club' ? GOLD : MUTED, borderRadius: 4, cursor: 'pointer', whiteSpace: 'nowrap', letterSpacing: 1, opacity: videoUrl ? 1 : 0.3 }}>
               {scanState.running ? `🤖 ${scanState.pct}%` : plan === 'club' ? '🤖 AI SCAN' : '🔒 AI SCAN'}
             </button>
           </div>
@@ -711,8 +705,8 @@ export default function VideoAnalyst({
           {showScanConfirm && (
             <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }}>
               <div style={{ background: '#111827', border: `1px solid ${BD}`, borderRadius: 12, padding: 28, maxWidth: 400, width: '90%' }}>
-                <div style={{ fontSize: 18, fontWeight: 900, marginBottom: 8, color: TEXT, letterSpacing: 1 }}>🤖 RUN AI ANALYSIS?</div>
-                <div style={{ fontSize: 13, color: DIM, lineHeight: 1.7, marginBottom: 20 }}>Gemini will watch the <strong style={{ color: TEXT }}>entire video</strong> and return all events with timestamps.</div>
+                <div style={{ fontSize: 18, fontWeight: 900, marginBottom: 8, color: TEXT, letterSpacing: 1 }}>🤖 RUN AI LINEOUT SCAN?</div>
+                <div style={{ fontSize: 13, color: DIM, lineHeight: 1.7, marginBottom: 20 }}>Your trained Roboflow model will scan the footage frame-by-frame and detect <strong style={{ color: TEXT }}>lineout events</strong> automatically.</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 22 }}>
                   {[[formatTime(duration), 'Duration'], ['~'+geminiMins+'m', 'Est. time'], ['~£'+geminiCost, 'Cost']].map(([v,l]) => (
                     <div key={l} style={{ background: BG, borderRadius: 8, padding: '12px 8px', textAlign: 'center', border: `1px solid ${BD}` }}>
