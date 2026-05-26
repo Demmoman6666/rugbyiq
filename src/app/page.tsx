@@ -104,6 +104,8 @@ export default function LandingPage() {
   const supabase = createClient()
   const [hoveredSport, setHoveredSport] = useState<string | null>(null)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [contactForm, setContactForm] = useState({ name: '', email: '', club: '', message: '' })
+  const [contactState, setContactState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
 
   useEffect(() => {
     const check = async () => {
@@ -329,17 +331,64 @@ export default function LandingPage() {
           <p style={{ fontSize: 16, color: '#4a5568', lineHeight: 1.8, marginBottom: 40 }}>
             Got a question, a feature request, or want to bring ClubCode to your club? We'd love to hear from you.
           </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <input type="text" placeholder="Your name" style={{ width: '100%', padding: '14px 18px', background: '#060912', border: '1px solid #1e2d3d', borderRadius: 8, fontSize: 15, fontFamily: FF, color: '#e2e8f0', outline: 'none' }} />
-            <input type="email" placeholder="Email address" style={{ width: '100%', padding: '14px 18px', background: '#060912', border: '1px solid #1e2d3d', borderRadius: 8, fontSize: 15, fontFamily: FF, color: '#e2e8f0', outline: 'none' }} />
-            <input type="text" placeholder="Your club / organisation" style={{ width: '100%', padding: '14px 18px', background: '#060912', border: '1px solid #1e2d3d', borderRadius: 8, fontSize: 15, fontFamily: FF, color: '#e2e8f0', outline: 'none' }} />
-            <textarea placeholder="Your message" rows={4} style={{ width: '100%', padding: '14px 18px', background: '#060912', border: '1px solid #1e2d3d', borderRadius: 8, fontSize: 15, fontFamily: FF, color: '#e2e8f0', outline: 'none', resize: 'vertical' }} />
-            <button style={{ padding: '14px 0', background: '#e8a020', color: '#000', fontSize: 15, fontWeight: 900, borderRadius: 8, border: 'none', cursor: 'pointer', letterSpacing: 1, fontFamily: FF }}>
-              SEND MESSAGE →
-            </button>
-          </div>
+          {contactState === 'sent' ? (
+            <div style={{ background: '#16a34a22', border: '1px solid #16a34a44', borderRadius: 10, padding: '32px', textAlign: 'center' }}>
+              <div style={{ fontSize: 36, marginBottom: 12 }}>✅</div>
+              <div style={{ fontSize: 20, fontWeight: 900, color: '#4ade80', marginBottom: 8 }}>Message sent!</div>
+              <div style={{ fontSize: 14, color: '#4a5568' }}>We'll get back to you at {contactForm.email} shortly.</div>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <input
+                type="text" placeholder="Your name" value={contactForm.name}
+                onChange={e => setContactForm(f => ({ ...f, name: e.target.value }))}
+                style={{ width: '100%', padding: '14px 18px', background: '#060912', border: '1px solid #1e2d3d', borderRadius: 8, fontSize: 15, fontFamily: FF, color: '#e2e8f0', outline: 'none' }}
+              />
+              <input
+                type="email" placeholder="Email address" value={contactForm.email}
+                onChange={e => setContactForm(f => ({ ...f, email: e.target.value }))}
+                style={{ width: '100%', padding: '14px 18px', background: '#060912', border: '1px solid #1e2d3d', borderRadius: 8, fontSize: 15, fontFamily: FF, color: '#e2e8f0', outline: 'none' }}
+              />
+              <input
+                type="text" placeholder="Your club / organisation" value={contactForm.club}
+                onChange={e => setContactForm(f => ({ ...f, club: e.target.value }))}
+                style={{ width: '100%', padding: '14px 18px', background: '#060912', border: '1px solid #1e2d3d', borderRadius: 8, fontSize: 15, fontFamily: FF, color: '#e2e8f0', outline: 'none' }}
+              />
+              <textarea
+                placeholder="Your message" rows={4} value={contactForm.message}
+                onChange={e => setContactForm(f => ({ ...f, message: e.target.value }))}
+                style={{ width: '100%', padding: '14px 18px', background: '#060912', border: '1px solid #1e2d3d', borderRadius: 8, fontSize: 15, fontFamily: FF, color: '#e2e8f0', outline: 'none', resize: 'vertical' }}
+              />
+              {contactState === 'error' && (
+                <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', fontSize: 13, padding: '10px 14px', borderRadius: 6 }}>
+                  Something went wrong. Please try again or email us directly.
+                </div>
+              )}
+              <button
+                disabled={contactState === 'sending'}
+                onClick={async () => {
+                  if (!contactForm.name || !contactForm.email || !contactForm.message) return
+                  setContactState('sending')
+                  try {
+                    const res = await fetch('/api/contact', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify(contactForm),
+                    })
+                    if (!res.ok) throw new Error('Failed')
+                    setContactState('sent')
+                  } catch {
+                    setContactState('error')
+                  }
+                }}
+                style={{ padding: '14px 0', background: contactState === 'sending' ? '#94a3b8' : '#e8a020', color: '#000', fontSize: 15, fontWeight: 900, borderRadius: 8, border: 'none', cursor: contactState === 'sending' ? 'default' : 'pointer', letterSpacing: 1, fontFamily: FF, opacity: contactState === 'sending' ? 0.7 : 1 }}
+              >
+                {contactState === 'sending' ? 'SENDING...' : 'SEND MESSAGE →'}
+              </button>
+            </div>
+          )}
           <div style={{ marginTop: 32, fontSize: 13, color: '#4a5568' }}>
-            Or email us directly at <a href="mailto:hello@clubcode.co.uk" style={{ color: '#e8a020' }}>hello@clubcode.co.uk</a>
+            Or email us directly at <a href="mailto:info@clubcode.co.uk" style={{ color: '#e8a020' }}>info@clubcode.co.uk</a>
           </div>
         </div>
       </section>
