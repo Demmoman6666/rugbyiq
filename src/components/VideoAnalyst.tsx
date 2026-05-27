@@ -88,6 +88,8 @@ export default function VideoAnalyst({
   const [homePlayers, setHomePlayers]       = useState<Player[]>([])
   const [awayPlayers, setAwayPlayers]       = useState<Player[]>([])
   const [isMobile, setIsMobile]             = useState(false)
+  const lastTapRef                           = useRef<{ time: number; x: number } | null>(null)
+  const [tapFlash, setTapFlash]             = useState<'left' | 'right' | null>(null)
 
   // Player sort
   const [playerSortCol, setPlayerSortCol]   = useState<string>('total')
@@ -639,7 +641,28 @@ export default function VideoAnalyst({
       {/* CODE TAB */}
       {tab === 'code' && (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          <div ref={videoContainerRef} style={{ position: 'relative', width: '100%', flexShrink: 0, background: '#000', ...(isFullscreen ? { height: '100vh' } : {}) }}>
+          <div ref={videoContainerRef} style={{ position: 'relative', width: '100%', flexShrink: 0, background: '#000', ...(isFullscreen ? { height: '100vh' } : {}) }}
+            onTouchEnd={e => {
+              if (isYoutube) return
+              const now = Date.now()
+              const x = e.changedTouches[0].clientX
+              const width = e.currentTarget.getBoundingClientRect().width
+              const side = x < width / 2 ? 'left' : 'right'
+              const last = lastTapRef.current
+              if (last && now - last.time < 300 && ((last.x < width / 2) === (x < width / 2))) {
+                // Double tap detected
+                const secs = side === 'right' ? 5 : -5
+                if (videoRef.current) {
+                  videoRef.current.currentTime = Math.max(0, Math.min(videoRef.current.currentTime + secs, videoRef.current.duration || 0))
+                  setTime(Math.floor(videoRef.current.currentTime))
+                }
+                setTapFlash(side)
+                setTimeout(() => setTapFlash(null), 600)
+                lastTapRef.current = null
+              } else {
+                lastTapRef.current = { time: now, x }
+              }
+            }}>
             {videoUrl ? (
               isYoutube ? (
                 <div style={{ position: 'relative', width: '100%', height: isFullscreen ? '100vh' : '52vh' }}>
@@ -657,6 +680,23 @@ export default function VideoAnalyst({
               </div>
             )}
             <div style={{ position: 'absolute', top: 10, left: 12, background: 'rgba(0,0,0,0.8)', color: GOLD, fontFamily: MONO, fontSize: 16, padding: '3px 10px', borderRadius: 3, letterSpacing: 3, zIndex: 10 }}>{formatTime(time)}</div>
+            {/* Double-tap flash indicators */}
+            {tapFlash === 'left' && (
+              <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '40%', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 15, borderRadius: '0 50% 50% 0', pointerEvents: 'none' }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: 28 }}>⏪</div>
+                  <div style={{ fontSize: 12, color: '#fff', fontFamily: FF, fontWeight: 700 }}>-5s</div>
+                </div>
+              </div>
+            )}
+            {tapFlash === 'right' && (
+              <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '40%', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 15, borderRadius: '50% 0 0 50%', pointerEvents: 'none' }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: 28 }}>⏩</div>
+                  <div style={{ fontSize: 12, color: '#fff', fontFamily: FF, fontWeight: 700 }}>+5s</div>
+                </div>
+              </div>
+            )}
             <div style={{ position: 'absolute', top: 10, right: 12, background: 'rgba(0,0,0,0.8)', color: DIM, fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 3, letterSpacing: 2, zIndex: 10 }}>{time < duration / 2 ? '1ST HALF' : '2ND HALF'}</div>
             {hudDisplay && (
               <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', background: 'rgba(0,0,0,0.9)', border: `2px solid ${hudDisplay.color}`, borderRadius: 12, padding: '16px 32px', textAlign: 'center', zIndex: 999999, pointerEvents: 'none', minWidth: 180 }}>
