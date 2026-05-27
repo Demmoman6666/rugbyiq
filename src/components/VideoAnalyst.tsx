@@ -671,7 +671,7 @@ export default function VideoAnalyst({
           </div>
 
           {/* Controls bar */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', background: NAV, borderBottom: `1px solid ${BD}`, flexShrink: 0, overflowX: 'auto' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', background: NAV, borderBottom: `1px solid ${BD}`, flexShrink: 0, overflowX: 'visible', position: 'relative' }}>
             {ctrlBtn(skipToPrevEvent, '⏮', 'Previous event (↑)')}
             {ctrlBtn(() => skipSeconds(-5), '-5s', 'Rewind 5s (←)', true)}
             <button onClick={playPause} style={{ width: 32, height: 32, borderRadius: '50%', background: GOLD, border: 'none', color: '#000', fontSize: 12, cursor: 'pointer', flexShrink: 0, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{playing ? '⏸' : '▶'}</button>
