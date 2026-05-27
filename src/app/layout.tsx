@@ -2,8 +2,61 @@ import type { Metadata } from 'next'
 import { OrgProvider } from '@/lib/OrgContext'
 
 export const metadata: Metadata = {
-  title: 'ClubCode — AI-Powered Sports Analysis',
-  description: 'Code matches, analyse footage and share insights with your team — powered by AI.',
+  title: {
+    default: 'ClubCode — Match Analysis Software for Amateur Sports Clubs',
+    template: '%s | ClubCode',
+  },
+  description: 'Code match events in real-time, build shareable video review sets and track player stats. Built for rugby, football, netball, basketball, hockey and cricket clubs. Free to start.',
+  keywords: [
+    'match analysis software',
+    'sports analysis app',
+    'rugby match analysis',
+    'football analysis software',
+    'amateur sports video analysis',
+    'match coding software',
+    'player stats tracking',
+    'sports club software',
+    'video analysis for clubs',
+    'match review software',
+  ],
+  authors: [{ name: 'ClubCode', url: 'https://www.clubcode.co.uk' }],
+  creator: 'ClubCode',
+  metadataBase: new URL('https://www.clubcode.co.uk'),
+  alternates: {
+    canonical: 'https://www.clubcode.co.uk',
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'en_GB',
+    url: 'https://www.clubcode.co.uk',
+    siteName: 'ClubCode',
+    title: 'ClubCode — Match Analysis Software for Amateur Sports Clubs',
+    description: 'Code match events in real-time, build shareable video review sets and track player stats. Built for rugby, football, netball, basketball, hockey and cricket clubs. Free to start.',
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'ClubCode — Match Analysis Software for Amateur Sports Clubs',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'ClubCode — Match Analysis Software for Amateur Sports Clubs',
+    description: 'Code match events in real-time, build shareable video review sets and track player stats. Free to start.',
+    images: ['/og-image.png'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
