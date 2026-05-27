@@ -17,6 +17,7 @@ export default function DashboardPage() {
   const [plan, setPlan]         = useState('starter')
   const [orgName, setOrgName]   = useState('')
   const [orgId, setOrgId]       = useState('')
+  const [sport, setSport]       = useState('rugby')
   const [usage, setUsage]       = useState<{ used: number; limit: number; canCreate: boolean } | null>(null)
   const [upgraded, setUpgraded] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
@@ -48,11 +49,11 @@ export default function DashboardPage() {
 
       let member: any = null
       if (profile?.active_org_id) {
-        const { data } = await supabase.from('org_members').select('org_id, organisations(plan, name)').eq('user_id', user.id).eq('org_id', profile.active_org_id).maybeSingle()
+        const { data } = await supabase.from('org_members').select('org_id, organisations(plan, name, sport)').eq('user_id', user.id).eq('org_id', profile.active_org_id).maybeSingle()
         member = data
       }
       if (!member) {
-        const { data } = await supabase.from('org_members').select('org_id, organisations(plan, name)').eq('user_id', user.id).maybeSingle()
+        const { data } = await supabase.from('org_members').select('org_id, organisations(plan, name, sport)').eq('user_id', user.id).maybeSingle()
         member = data
       }
 
@@ -61,6 +62,7 @@ export default function DashboardPage() {
         setPlan(org?.plan ?? 'starter')
         setOrgName(org?.name ?? '')
         setOrgId(member.org_id)
+        setSport(org?.sport ?? 'rugby')
 
         const res = await fetch(`/api/usage?orgId=${member.org_id}`)
         const u = await res.json()
@@ -174,7 +176,7 @@ export default function DashboardPage() {
           <div style={{ textAlign: 'center', padding: 80, color: '#4a5568', fontSize: 14, letterSpacing: 2 }}>LOADING...</div>
         ) : matches.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px 20px', background: '#0d1117', border: '1px solid #1e2d3d', borderRadius: 16 }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>🏉</div>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>{({'rugby':'🏉','football':'⚽','netball':'🏐','basketball':'🏀','hockey':'🏑','cricket':'🏏'} as any)[sport] ?? '🏉'}</div>
             <div style={{ fontSize: 22, fontWeight: 900, color: '#fff', marginBottom: 8 }}>No matches yet</div>
             <div style={{ fontSize: 14, color: '#4a5568', marginBottom: 28 }}>Create your first match to start analysing footage</div>
             <button onClick={handleNewMatch} style={{ padding: '12px 28px', background: '#e8a020', color: '#000', fontFamily: FF, fontSize: 14, fontWeight: 900, borderRadius: 8, border: 'none', cursor: 'pointer', letterSpacing: 1 }}>
