@@ -429,8 +429,18 @@ export default function VideoAnalyst({
   }
 
   const toggleFullscreen = () => {
-    if (!document.fullscreenElement) videoContainerRef.current?.requestFullscreen()
-    else document.exitFullscreen()
+    const video = videoRef.current
+    const container = videoContainerRef.current
+    if (!document.fullscreenElement) {
+      if (container?.requestFullscreen) {
+        container.requestFullscreen()
+      } else if ((video as any)?.webkitEnterFullscreen) {
+        // iOS Safari — must fullscreen the video element directly
+        ;(video as any).webkitEnterFullscreen()
+      }
+    } else {
+      document.exitFullscreen()
+    }
   }
 
   const skipToNextEvent = () => { const next = visible.find(e => e.timestamp_secs > time + 1); if (next) seekTo(next.timestamp_secs) }
@@ -661,7 +671,7 @@ export default function VideoAnalyst({
           </div>
 
           {/* Controls bar */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', background: NAV, borderBottom: `1px solid ${BD}`, flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', background: NAV, borderBottom: `1px solid ${BD}`, flexShrink: 0, overflowX: 'auto' }}>
             {ctrlBtn(skipToPrevEvent, '⏮', 'Previous event (↑)')}
             {ctrlBtn(() => skipSeconds(-5), '-5s', 'Rewind 5s (←)', true)}
             <button onClick={playPause} style={{ width: 32, height: 32, borderRadius: '50%', background: GOLD, border: 'none', color: '#000', fontSize: 12, cursor: 'pointer', flexShrink: 0, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{playing ? '⏸' : '▶'}</button>
@@ -669,7 +679,7 @@ export default function VideoAnalyst({
             {ctrlBtn(skipToNextEvent, '⏭', 'Next event (↓)')}
             {!isYoutube ? (
               <div
-                style={{ flex: 1, height: 3, background: '#ffffff10', borderRadius: 2, cursor: 'pointer', position: 'relative', margin: '0 6px' }}
+                style={{ flex: 1, height: 6, background: '#ffffff10', borderRadius: 2, cursor: 'pointer', position: 'relative', margin: '0 6px', touchAction: 'none' }}
                 onClick={seekFromProgressBar}
                 onMouseDown={e => {
                   e.preventDefault()
@@ -682,13 +692,25 @@ export default function VideoAnalyst({
                   const up = () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up) }
                   window.addEventListener('mousemove', move)
                   window.addEventListener('mouseup', up)
+                }}
+                onTouchStart={e => {
+                  e.preventDefault()
+                  const bar = e.currentTarget
+                  const move = (ev: TouchEvent) => {
+                    const r = bar.getBoundingClientRect()
+                    const t = Math.max(0, Math.min(Math.round(((ev.touches[0].clientX - r.left) / r.width) * actualDuration()), actualDuration()))
+                    if (videoRef.current) { videoRef.current.currentTime = t; setTime(t) }
+                  }
+                  const up = () => { window.removeEventListener('touchmove', move); window.removeEventListener('touchend', up) }
+                  window.addEventListener('touchmove', move, { passive: false })
+                  window.addEventListener('touchend', up)
                 }}>
                 <div style={{ height: '100%', width: `${(time / actualDuration()) * 100}%`, background: GOLD, borderRadius: 2 }}/>
                 <div style={{ position: 'absolute', top: '50%', left: `${(time / actualDuration()) * 100}%`, transform: 'translate(-50%,-50%)', width: 10, height: 10, borderRadius: '50%', background: GOLD, boxShadow: `0 0 6px ${GOLD}` }}/>
               </div>
             ) : <div style={{ flex: 1 }}/>}
             <span style={{ fontFamily: MONO, fontSize: 10, color: MUTED, whiteSpace: 'nowrap' }}>{formatTime(time)} / {formatTime(duration)}</span>
-            {!isYoutube && (
+            {!isYoutube && typeof navigator !== 'undefined' && !/iPhone|iPad|iPod/i.test(navigator.userAgent) && (
               <>
                 <div style={{ position: 'relative' }}>
                   {ctrlBtn(() => { setShowVolume(v => !v); setShowSpeedMenu(false) }, volume === 0 ? '🔇' : volume < 0.5 ? '🔉' : '🔊')}
