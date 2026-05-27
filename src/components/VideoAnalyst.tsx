@@ -87,6 +87,9 @@ export default function VideoAnalyst({
   const [isFullscreen, setIsFullscreen]     = useState(false)
   const [homePlayers, setHomePlayers]       = useState<Player[]>([])
   const [awayPlayers, setAwayPlayers]       = useState<Player[]>([])
+  const [showMobileControls, setShowMobileControls] = useState(false)
+  const mobileControlsTimer                 = useRef<NodeJS.Timeout | null>(null)
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
 
   // Player sort
   const [playerSortCol, setPlayerSortCol]   = useState<string>('total')
@@ -109,7 +112,11 @@ export default function VideoAnalyst({
   const playerTimer      = useRef<NodeJS.Timeout | null>(null)
   const [hudDisplay, setHudDisplay] = useState<{ eventLabel: string; digits: string; color: string } | null>(null)
 
-  const showToast = (label: string, color: string, team: string, player?: string) => {
+  const showMobileControlsFor = (ms = 3000) => {
+    setShowMobileControls(true)
+    if (mobileControlsTimer.current) clearTimeout(mobileControlsTimer.current)
+    mobileControlsTimer.current = setTimeout(() => setShowMobileControls(false), ms)
+  }
     if (toastTimer.current) clearTimeout(toastTimer.current)
     setToast({ label, color, team, player })
     toastTimer.current = setTimeout(() => setToast(null), 1500)
@@ -633,7 +640,8 @@ export default function VideoAnalyst({
       {/* CODE TAB */}
       {tab === 'code' && (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          <div ref={videoContainerRef} style={{ position: 'relative', width: '100%', flexShrink: 0, background: '#000', ...(isFullscreen ? { height: '100vh' } : {}) }}>
+          <div ref={videoContainerRef} style={{ position: 'relative', width: '100%', flexShrink: 0, background: '#000', ...(isFullscreen ? { height: '100vh' } : {}) }}
+            onClick={() => { if (window.innerWidth < 768) showMobileControlsFor() }}>
             {videoUrl ? (
               isYoutube ? (
                 <div style={{ position: 'relative', width: '100%', height: isFullscreen ? '100vh' : '52vh' }}>
@@ -670,6 +678,35 @@ export default function VideoAnalyst({
             )}
           </div>
 
+            {/* Mobile progress bar overlay — YouTube style */}
+            {showMobileControls && !isYoutube && (
+              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20, background: 'linear-gradient(transparent, rgba(0,0,0,0.7))', padding: '24px 12px 10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                  <span style={{ fontFamily: "'DM Mono','Courier New',monospace", fontSize: 11, color: GOLD, whiteSpace: 'nowrap' }}>{formatTime(time)}</span>
+                  <div
+                    style={{ flex: 1, height: 4, background: '#ffffff30', borderRadius: 2, position: 'relative', touchAction: 'none' }}
+                    onTouchStart={e => {
+                      e.stopPropagation()
+                      showMobileControlsFor(5000)
+                      const bar = e.currentTarget
+                      const move = (ev: TouchEvent) => {
+                        ev.preventDefault()
+                        const r = bar.getBoundingClientRect()
+                        const t = Math.max(0, Math.min(Math.round(((ev.touches[0].clientX - r.left) / r.width) * actualDuration()), actualDuration()))
+                        if (videoRef.current) { videoRef.current.currentTime = t; setTime(t) }
+                      }
+                      const up = () => { window.removeEventListener('touchmove', move); window.removeEventListener('touchend', up) }
+                      window.addEventListener('touchmove', move, { passive: false })
+                      window.addEventListener('touchend', up)
+                    }}>
+                    <div style={{ height: '100%', width: `${(time / actualDuration()) * 100}%`, background: GOLD, borderRadius: 2 }} />
+                    <div style={{ position: 'absolute', top: '50%', left: `${(time / actualDuration()) * 100}%`, transform: 'translate(-50%,-50%)', width: 14, height: 14, borderRadius: '50%', background: GOLD, boxShadow: `0 0 6px ${GOLD}` }} />
+                  </div>
+                  <span style={{ fontFamily: "'DM Mono','Courier New',monospace", fontSize: 11, color: DIM, whiteSpace: 'nowrap' }}>{formatTime(actualDuration())}</span>
+                </div>
+              </div>
+            )}
+
           {/* Controls bar */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', background: NAV, borderBottom: `1px solid ${BD}`, flexShrink: 0, overflowX: 'visible', position: 'relative' }}>
             {ctrlBtn(skipToPrevEvent, '⏮', 'Previous event (↑)')}
@@ -677,7 +714,7 @@ export default function VideoAnalyst({
             <button onClick={playPause} style={{ width: 32, height: 32, borderRadius: '50%', background: GOLD, border: 'none', color: '#000', fontSize: 12, cursor: 'pointer', flexShrink: 0, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{playing ? '⏸' : '▶'}</button>
             {ctrlBtn(() => skipSeconds(5), '+5s', 'Forward 5s (→)', true)}
             {ctrlBtn(skipToNextEvent, '⏭', 'Next event (↓)')}
-            {!isYoutube ? (
+            {!isYoutube && window.innerWidth >= 768 ? (
               <div
                 style={{ flex: 1, height: 6, background: '#ffffff10', borderRadius: 2, cursor: 'pointer', position: 'relative', margin: '0 6px', touchAction: 'none' }}
                 onClick={seekFromProgressBar}
@@ -709,7 +746,7 @@ export default function VideoAnalyst({
                 <div style={{ position: 'absolute', top: '50%', left: `${(time / actualDuration()) * 100}%`, transform: 'translate(-50%,-50%)', width: 10, height: 10, borderRadius: '50%', background: GOLD, boxShadow: `0 0 6px ${GOLD}` }}/>
               </div>
             ) : <div style={{ flex: 1 }}/>}
-            <span style={{ fontFamily: MONO, fontSize: 10, color: MUTED, whiteSpace: 'nowrap' }}>{formatTime(time)} / {formatTime(duration)}</span>
+            <span style={{ fontFamily: MONO, fontSize: 10, color: MUTED, whiteSpace: 'nowrap', display: window.innerWidth < 768 ? 'none' : 'block' }}>{formatTime(time)} / {formatTime(duration)}</span>
             {!isYoutube && typeof navigator !== 'undefined' && !/iPhone|iPad|iPod/i.test(navigator.userAgent) && (
               <>
                 <div style={{ position: 'relative' }}>
@@ -734,8 +771,8 @@ export default function VideoAnalyst({
               </>
             )}
             {ctrlBtn(toggleFullscreen, '⛶', 'Fullscreen')}
-            <button onClick={() => { if (plan !== 'club') { alert('AI Scan is only available on the Club plan. Upgrade in Settings → Plans & Billing.'); return } if (isYoutube) { alert('AI Scan is not available for YouTube videos. Please upload the video file directly.'); return } setShowScanConfirm(true) }} disabled={scanState.running || !videoUrl} style={{ padding: '5px 14px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: scanState.running ? '#ffffff0d' : plan === 'club' ? GOLD + '22' : '#ffffff0d', border: `1px solid ${plan === 'club' ? GOLD + '44' : BD}`, color: plan === 'club' ? GOLD : MUTED, borderRadius: 4, cursor: 'pointer', whiteSpace: 'nowrap', letterSpacing: 1, opacity: videoUrl ? 1 : 0.3 }}>
-              {scanState.running ? `🤖 ${scanState.pct}%` : plan === 'club' ? '🤖 AI SCAN' : '🔒 AI SCAN'}
+            <button onClick={() => { if (plan !== 'club') { alert('AI Scan is only available on the Club plan. Upgrade in Settings → Plans & Billing.'); return } if (isYoutube) { alert('AI Scan is not available for YouTube videos. Please upload the video file directly.'); return } setShowScanConfirm(true) }} disabled={scanState.running || !videoUrl} style={{ padding: '5px 10px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: scanState.running ? '#ffffff0d' : plan === 'club' ? GOLD + '22' : '#ffffff0d', border: `1px solid ${plan === 'club' ? GOLD + '44' : BD}`, color: plan === 'club' ? GOLD : MUTED, borderRadius: 4, cursor: 'pointer', whiteSpace: 'nowrap', letterSpacing: 1, opacity: videoUrl ? 1 : 0.3, flexShrink: 0 }}>
+              {scanState.running ? `🤖 ${scanState.pct}%` : plan === 'club' ? '🤖 AI' : '🔒 AI'}
             </button>
           </div>
 
