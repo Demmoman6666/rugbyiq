@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase'
 
 const FF    = "'Barlow Condensed', system-ui, sans-serif"
@@ -17,7 +18,7 @@ const PLAN_COLOR: Record<string, string> = { starter: '#64748b', pro: '#0ea5e9',
 const ROLE_COLOR: Record<string, string> = { admin: GOLD, analyst: '#10b981' }
 const SPORT_EMOJI: Record<string, string> = { rugby: '🏉', rugby_league: '🏉', football: '⚽', hockey: '🏑', netball: '🏐' }
 
-export default function ClubsPage() {
+function ClubsInner() {
   const router   = useRouter()
   const supabase = createClient()
   const searchParams = useSearchParams()
@@ -168,5 +169,13 @@ export default function ClubsPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function ClubsPage() {
+  return (
+    <Suspense fallback={<div style={{ fontFamily: "'Barlow Condensed', system-ui, sans-serif", background: '#0a0e1a', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#e8a020', fontSize: 16, letterSpacing: 2 }}>LOADING...</div>}>
+      <ClubsInner />
+    </Suspense>
   )
 }
