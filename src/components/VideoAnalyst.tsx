@@ -87,6 +87,7 @@ export default function VideoAnalyst({
   const [isFullscreen, setIsFullscreen]     = useState(false)
   const [homePlayers, setHomePlayers]       = useState<Player[]>([])
   const [awayPlayers, setAwayPlayers]       = useState<Player[]>([])
+  const [isMobile, setIsMobile]             = useState(false)
 
   // Player sort
   const [playerSortCol, setPlayerSortCol]   = useState<string>('total')
@@ -125,6 +126,13 @@ export default function VideoAnalyst({
       setModalAwayPlayers(players.filter((p: Player) => p.team === 'away').map((p: Player) => ({ shirt_number: p.shirt_number, name: p.name })))
     }
   }, [matchId])
+
+  useEffect(() => {
+    setIsMobile(window.innerWidth < 768)
+    const onResize = () => setIsMobile(window.innerWidth < 768)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
 
   useEffect(() => {
     const load = async () => {
@@ -435,7 +443,6 @@ export default function VideoAnalyst({
       if (container?.requestFullscreen) {
         container.requestFullscreen()
       } else if ((video as any)?.webkitEnterFullscreen) {
-        // iOS Safari — must fullscreen the video element directly
         ;(video as any).webkitEnterFullscreen()
       }
     } else {
@@ -484,7 +491,6 @@ export default function VideoAnalyst({
     } catch { alert('Failed to create review') }
     finally { setBuildingReview(false) }
   }
-
 
   const Pill = ({ type }: { type: string }) => {
     const cfg = sportConfig.events[type]
@@ -671,15 +677,15 @@ export default function VideoAnalyst({
           </div>
 
           {/* Controls bar */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', background: NAV, borderBottom: `1px solid ${BD}`, flexShrink: 0, overflowX: 'visible', position: 'relative' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', background: NAV, borderBottom: `1px solid ${BD}`, flexShrink: 0, position: 'relative' }}>
             {ctrlBtn(skipToPrevEvent, '⏮', 'Previous event (↑)')}
-            {ctrlBtn(() => skipSeconds(-5), '-5s', 'Rewind 5s (←)', true)}
+            {!isMobile && ctrlBtn(() => skipSeconds(-5), '-5s', 'Rewind 5s (←)', true)}
             <button onClick={playPause} style={{ width: 32, height: 32, borderRadius: '50%', background: GOLD, border: 'none', color: '#000', fontSize: 12, cursor: 'pointer', flexShrink: 0, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{playing ? '⏸' : '▶'}</button>
-            {ctrlBtn(() => skipSeconds(5), '+5s', 'Forward 5s (→)', true)}
+            {!isMobile && ctrlBtn(() => skipSeconds(5), '+5s', 'Forward 5s (→)', true)}
             {ctrlBtn(skipToNextEvent, '⏭', 'Next event (↓)')}
             {!isYoutube ? (
               <div
-                style={{ flex: 1, height: 6, background: '#ffffff10', borderRadius: 2, cursor: 'pointer', position: 'relative', margin: '0 6px', touchAction: 'none' }}
+                style={{ flex: 1, height: isMobile ? 10 : 6, background: '#ffffff10', borderRadius: 2, cursor: 'pointer', position: 'relative', margin: '0 6px', touchAction: 'none' }}
                 onClick={seekFromProgressBar}
                 onMouseDown={e => {
                   e.preventDefault()
@@ -706,10 +712,10 @@ export default function VideoAnalyst({
                   window.addEventListener('touchend', up)
                 }}>
                 <div style={{ height: '100%', width: `${(time / actualDuration()) * 100}%`, background: GOLD, borderRadius: 2 }}/>
-                <div style={{ position: 'absolute', top: '50%', left: `${(time / actualDuration()) * 100}%`, transform: 'translate(-50%,-50%)', width: 10, height: 10, borderRadius: '50%', background: GOLD, boxShadow: `0 0 6px ${GOLD}` }}/>
+                <div style={{ position: 'absolute', top: '50%', left: `${(time / actualDuration()) * 100}%`, transform: 'translate(-50%,-50%)', width: isMobile ? 16 : 10, height: isMobile ? 16 : 10, borderRadius: '50%', background: GOLD, boxShadow: `0 0 6px ${GOLD}` }}/>
               </div>
             ) : <div style={{ flex: 1 }}/>}
-            <span style={{ fontFamily: MONO, fontSize: 10, color: MUTED, whiteSpace: 'nowrap' }}>{formatTime(time)} / {formatTime(duration)}</span>
+            {!isMobile && <span style={{ fontFamily: MONO, fontSize: 10, color: MUTED, whiteSpace: 'nowrap' }}>{formatTime(time)} / {formatTime(duration)}</span>}
             {!isYoutube && typeof navigator !== 'undefined' && !/iPhone|iPad|iPod/i.test(navigator.userAgent) && (
               <>
                 <div style={{ position: 'relative' }}>
@@ -734,8 +740,8 @@ export default function VideoAnalyst({
               </>
             )}
             {ctrlBtn(toggleFullscreen, '⛶', 'Fullscreen')}
-            <button onClick={() => { if (plan !== 'club') { alert('AI Scan is only available on the Club plan. Upgrade in Settings → Plans & Billing.'); return } if (isYoutube) { alert('AI Scan is not available for YouTube videos. Please upload the video file directly.'); return } setShowScanConfirm(true) }} disabled={scanState.running || !videoUrl} style={{ padding: '5px 14px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: scanState.running ? '#ffffff0d' : plan === 'club' ? GOLD + '22' : '#ffffff0d', border: `1px solid ${plan === 'club' ? GOLD + '44' : BD}`, color: plan === 'club' ? GOLD : MUTED, borderRadius: 4, cursor: 'pointer', whiteSpace: 'nowrap', letterSpacing: 1, opacity: videoUrl ? 1 : 0.3 }}>
-              {scanState.running ? `🤖 ${scanState.pct}%` : plan === 'club' ? '🤖 AI SCAN' : '🔒 AI SCAN'}
+            <button onClick={() => { if (plan !== 'club') { alert('AI Scan is only available on the Club plan. Upgrade in Settings → Plans & Billing.'); return } if (isYoutube) { alert('AI Scan is not available for YouTube videos. Please upload the video file directly.'); return } setShowScanConfirm(true) }} disabled={scanState.running || !videoUrl} style={{ padding: isMobile ? '5px 8px' : '5px 14px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: scanState.running ? '#ffffff0d' : plan === 'club' ? GOLD + '22' : '#ffffff0d', border: `1px solid ${plan === 'club' ? GOLD + '44' : BD}`, color: plan === 'club' ? GOLD : MUTED, borderRadius: 4, cursor: 'pointer', whiteSpace: 'nowrap', letterSpacing: 1, opacity: videoUrl ? 1 : 0.3, flexShrink: 0 }}>
+              {scanState.running ? `🤖 ${scanState.pct}%` : plan === 'club' ? (isMobile ? '🤖' : '🤖 AI SCAN') : (isMobile ? '🔒' : '🔒 AI SCAN')}
             </button>
           </div>
 
