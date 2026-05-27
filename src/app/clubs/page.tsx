@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 
 const FF    = "'Barlow Condensed', system-ui, sans-serif"
@@ -20,6 +20,7 @@ const SPORT_EMOJI: Record<string, string> = { rugby: '🏉', rugby_league: '🏉
 export default function ClubsPage() {
   const router   = useRouter()
   const supabase = createClient()
+  const searchParams = useSearchParams()
   const [clubs, setClubs]     = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -69,10 +70,11 @@ export default function ClubsPage() {
 
           // Truly no org — create one
           const fullName = (user?.user_metadata?.full_name ?? user?.email?.split('@')[0] ?? 'My').replace(/[^a-zA-Z0-9 ]/g, '')
+          const sportParam = searchParams.get('sport') ?? 'rugby'
           const createRes = await fetch('/api/clubs', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: `${fullName} Workspace`, sport: 'rugby', plan: 'starter' }),
+            body: JSON.stringify({ name: `${fullName} Workspace`, sport: sportParam, plan: 'starter' }),
           })
           const data = await createRes.json()
           if (data.error) throw new Error(data.error)

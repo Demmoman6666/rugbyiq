@@ -25,6 +25,7 @@ function OnboardingInner() {
   const [address2, setAddress2]   = useState('')
   const [city, setCity]           = useState('')
   const [postcode, setPostcode]   = useState('')
+  const [sport, setSport]         = useState('rugby')
 
   useEffect(() => {
     const check = async () => {
@@ -69,7 +70,7 @@ function OnboardingInner() {
       })
 
       await supabase.auth.updateUser({
-        data: { full_name: `${firstName.trim()} ${lastName.trim()}`, phone, address1, address2, city, postcode }
+        data: { full_name: `${firstName.trim()} ${lastName.trim()}`, phone, address1, address2, city, postcode, sport }
       })
 
       if (selectedPlan === 'pro') {
@@ -97,7 +98,7 @@ function OnboardingInner() {
       }
 
       // Starter
-      router.push('/clubs')
+      router.push(`/clubs?sport=${sport}`)
     } catch (err: any) {
       setError(err.message)
       setLoading(false)
@@ -151,6 +152,26 @@ function OnboardingInner() {
             <div>
               <label style={labelStyle}>POSTCODE</label>
               <input value={postcode} onChange={e => setPostcode(e.target.value)} placeholder="NP12 1AA" style={{ ...inputStyle, textTransform: 'uppercase' }} />
+            </div>
+          </div>
+
+          <div style={{ marginBottom: 20 }}>
+            <label style={labelStyle}>YOUR SPORT *</label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+              {[
+                { id: 'rugby', name: 'Rugby Union', icon: '🏉' },
+                { id: 'football', name: 'Football', icon: '⚽' },
+                { id: 'netball', name: 'Netball', icon: '🏐' },
+                { id: 'basketball', name: 'Basketball', icon: '🏀' },
+                { id: 'hockey', name: 'Hockey', icon: '🏑' },
+                { id: 'cricket', name: 'Cricket', icon: '🏏' },
+              ].map(s => (
+                <div key={s.id} onClick={() => setSport(s.id)}
+                  style={{ padding: '10px 8px', border: `2px solid ${sport === s.id ? '#e8a020' : BD}`, borderRadius: 8, cursor: 'pointer', textAlign: 'center', background: sport === s.id ? '#e8a02011' : '#f8fafc', transition: 'all 0.15s' }}>
+                  <div style={{ fontSize: 22, marginBottom: 4 }}>{s.icon}</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: sport === s.id ? '#e8a020' : '#64748b', letterSpacing: 0.5 }}>{s.name}</div>
+                </div>
+              ))}
             </div>
           </div>
 
