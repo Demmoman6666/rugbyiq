@@ -396,7 +396,7 @@ export default function VideoAnalyst({
     const r = e.currentTarget.getBoundingClientRect()
     const t = Math.round(((e.clientX - r.left) / r.width) * actualDuration())
     if (isYoutube) { if (ytReadyRef.current) ytPlayerRef.current.seekTo(t, true); setTime(t) }
-    else { if (videoRef.current) videoRef.current.currentTime = t }
+    else { if (videoRef.current) { videoRef.current.currentTime = t; setTime(t) } }
   }
 
   const codeEvent = async (type: string) => {
@@ -668,7 +668,21 @@ export default function VideoAnalyst({
             {ctrlBtn(() => skipSeconds(5), '+5s', 'Forward 5s (→)', true)}
             {ctrlBtn(skipToNextEvent, '⏭', 'Next event (↓)')}
             {!isYoutube ? (
-              <div style={{ flex: 1, height: 3, background: '#ffffff10', borderRadius: 2, cursor: 'pointer', position: 'relative', margin: '0 6px' }} onClick={seekFromProgressBar}>
+              <div
+                style={{ flex: 1, height: 3, background: '#ffffff10', borderRadius: 2, cursor: 'pointer', position: 'relative', margin: '0 6px' }}
+                onClick={seekFromProgressBar}
+                onMouseDown={e => {
+                  e.preventDefault()
+                  const bar = e.currentTarget
+                  const move = (ev: MouseEvent) => {
+                    const r = bar.getBoundingClientRect()
+                    const t = Math.max(0, Math.min(Math.round(((ev.clientX - r.left) / r.width) * actualDuration()), actualDuration()))
+                    if (videoRef.current) { videoRef.current.currentTime = t; setTime(t) }
+                  }
+                  const up = () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up) }
+                  window.addEventListener('mousemove', move)
+                  window.addEventListener('mouseup', up)
+                }}>
                 <div style={{ height: '100%', width: `${(time / actualDuration()) * 100}%`, background: GOLD, borderRadius: 2 }}/>
                 <div style={{ position: 'absolute', top: '50%', left: `${(time / actualDuration()) * 100}%`, transform: 'translate(-50%,-50%)', width: 10, height: 10, borderRadius: '50%', background: GOLD, boxShadow: `0 0 6px ${GOLD}` }}/>
               </div>
