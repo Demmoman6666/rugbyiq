@@ -22,7 +22,7 @@ export async function scanVideoForEvents(
 
   const canvas = document.createElement('canvas')
   canvas.width = 640
-  canvas.height = 640
+  canvas.height = 360  // 16:9 to match Veo footage — prevents distortion
   const ctx = canvas.getContext('2d')!
   const suggestions: AISuggestion[] = []
 
@@ -43,7 +43,7 @@ export async function scanVideoForEvents(
       setTimeout(resolve, 800)
     })
 
-    ctx.drawImage(videoEl, 0, 0, 640, 640)
+    ctx.drawImage(videoEl, 0, 0, 640, 360)
     const frameBase64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1]
 
     try {
