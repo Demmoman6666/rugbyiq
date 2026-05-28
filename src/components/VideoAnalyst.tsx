@@ -640,7 +640,10 @@ export default function VideoAnalyst({
 
       {/* CODE TAB */}
       {tab === 'code' && (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: isMobile ? 'column' : 'row', overflow: 'hidden' }}>
+
+          {/* LEFT COLUMN — video + controls + event buttons */}
+          <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: isMobile ? 'unset' : '1' }}>
           <div ref={videoContainerRef} style={{ position: 'relative', width: '100%', flexShrink: 0, background: '#000', ...(isFullscreen ? { height: '100vh' } : {}) }}
             onTouchEnd={e => {
               if (isYoutube) return
@@ -672,7 +675,7 @@ export default function VideoAnalyst({
                   />
                 </div>
               ) : (
-                <video ref={videoRef} src={videoUrl} crossOrigin="anonymous" style={{ width: '100%', height: isFullscreen ? '100vh' : 'auto', maxHeight: isFullscreen ? '100vh' : '52vh', objectFit: 'contain', display: 'block' }} playsInline preload="metadata"/>
+                <video ref={videoRef} src={videoUrl} crossOrigin="anonymous" style={{ width: '100%', height: isFullscreen ? '100vh' : 'auto', maxHeight: isFullscreen ? '100vh' : isMobile ? '52vh' : '65vh', objectFit: 'contain', display: 'block' }} playsInline preload="metadata"/>
               )
             ) : (
               <div style={{ width: '100%', height: '36vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#050810' }}>
@@ -859,6 +862,11 @@ export default function VideoAnalyst({
             )}
           </div>
 
+          </div>{/* end LEFT COLUMN */}
+
+          {/* RIGHT COLUMN — timeline + event log (desktop only, else normal flow) */}
+          <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', width: isMobile ? '100%' : 340, flexShrink: 0, borderLeft: isMobile ? 'none' : `1px solid ${BD}` }}>
+
           {/* Timeline + event log */}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '10px 12px', gap: 8, background: PANEL }}>
             <div style={{ position: 'relative', height: 20, background: '#ffffff06', borderRadius: 3, flexShrink: 0, cursor: 'pointer', border: `1px solid ${BD}` }}
@@ -903,6 +911,7 @@ export default function VideoAnalyst({
               {visible.length === 0 && <div style={{ textAlign: 'center', padding: '40px 20px', color: MUTED, fontSize: 12, letterSpacing: 1 }}>NO EVENTS YET — USE HOTKEYS OR BUTTONS ABOVE TO START CODING</div>}
             </div>
           </div>
+          </div>{/* end RIGHT COLUMN */}
         </div>
       )}
 
