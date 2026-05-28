@@ -675,7 +675,7 @@ export default function VideoAnalyst({
                   />
                 </div>
               ) : (
-                <video ref={videoRef} src={videoUrl} crossOrigin="anonymous" style={{ width: '100%', height: isFullscreen ? '100vh' : 'auto', maxHeight: isFullscreen ? '100vh' : isMobile ? '52vh' : '65vh', objectFit: 'contain', display: 'block' }} playsInline preload="metadata"/>
+                <video ref={videoRef} src={videoUrl} crossOrigin="anonymous" style={{ width: '100%', height: isFullscreen ? '100vh' : 'auto', maxHeight: isFullscreen ? '100vh' : isMobile ? '52vh' : '72vh', objectFit: 'contain', display: 'block' }} playsInline preload="metadata"/>
               )
             ) : (
               <div style={{ width: '100%', height: '36vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#050810' }}>
@@ -846,10 +846,6 @@ export default function VideoAnalyst({
               )}
             </div>
             <div style={{ marginTop: 4, fontSize: 10, color: MUTED }}>
-              {(activeTeam === 'home' ? homePlayers : awayPlayers).length > 0
-                ? <span>💡 Hotkey + shirt (e.g. <span style={{ fontFamily: MONO, color: DIM }}>T15</span> = Tackle #15) · </span>
-                : null}
-              <span style={{ color: DIM }}>← → skip 5s · ↑ ↓ jump events{filters.length > 0 ? ` (${filters.join(', ')})` : ''}</span>
             </div>
             {lastEv && sportConfig.events[lastEv.event_type]?.outcomes && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, paddingTop: 8, borderTop: `1px solid ${BD}`, flexWrap: 'wrap' }}>
@@ -867,6 +863,22 @@ export default function VideoAnalyst({
           {/* RIGHT COLUMN — timeline + event log (desktop only, else normal flow) */}
           <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', width: isMobile ? '100%' : 340, flexShrink: 0, borderLeft: isMobile ? 'none' : `1px solid ${BD}` }}>
 
+            {/* Filter pills + hotkey hint header */}
+            <div style={{ background: NAV, borderBottom: `1px solid ${BD}`, padding: '8px 10px', flexShrink: 0 }}>
+              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 6 }}>
+                {Object.keys(sportConfig.events).map(type => (
+                  <button key={type} onClick={() => toggleFilter(type)} style={{ padding: '4px 10px', borderRadius: 20, fontFamily: FF, fontSize: 11, fontWeight: 700, letterSpacing: 0.5, border: `1px solid ${filters.includes(type) ? sportConfig.events[type].color : sportConfig.events[type].color + '44'}`, cursor: 'pointer', color: filters.includes(type) ? '#000' : sportConfig.events[type].color, background: filters.includes(type) ? sportConfig.events[type].color : 'transparent', transition: 'all 0.1s' }}>{sportConfig.events[type].label}</button>
+                ))}
+                {filters.length > 0 && <button onClick={() => setFilters([])} style={{ padding: '4px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, border: `1px solid ${BD}`, background: 'transparent', color: MUTED, cursor: 'pointer', fontFamily: FF }}>✕ Clear</button>}
+              </div>
+              <div style={{ fontSize: 10, color: MUTED }}>
+                {(activeTeam === 'home' ? homePlayers : awayPlayers).length > 0
+                  ? <span>💡 Hotkey + shirt e.g. <span style={{ fontFamily: MONO, color: DIM }}>T15</span> · </span>
+                  : null}
+                <span style={{ color: DIM }}>← → skip 5s · ↑ ↓ jump events</span>
+              </div>
+            </div>
+
           {/* Timeline + event log */}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '10px 12px', gap: 8, background: PANEL }}>
             <div style={{ position: 'relative', height: 20, background: '#ffffff06', borderRadius: 3, flexShrink: 0, cursor: 'pointer', border: `1px solid ${BD}` }}
@@ -874,12 +886,6 @@ export default function VideoAnalyst({
               <div style={{ position: 'absolute', top: 0, bottom: 0, left: '50%', width: 1, background: '#ffffff08' }}/>
               {events.map(e => { const cfg = sportConfig.events[e.event_type]; return <div key={e.id} onClick={ev => { ev.stopPropagation(); seekTo(e.timestamp_secs) }} style={{ position: 'absolute', top: '50%', left: `${(e.timestamp_secs / actualDuration()) * 100}%`, transform: 'translate(-50%,-50%)', width: 6, height: 6, borderRadius: '50%', background: cfg?.color ?? MUTED, cursor: 'pointer', zIndex: 2 }} title={`${cfg?.label ?? e.event_type} ${formatTime(e.timestamp_secs)}`}/> })}
               <div style={{ position: 'absolute', top: 0, bottom: 0, left: `${(time / actualDuration()) * 100}%`, width: 2, background: GOLD, zIndex: 4, borderRadius: 1, boxShadow: `0 0 4px ${GOLD}` }}/>
-            </div>
-            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', flexShrink: 0 }}>
-              {Object.keys(sportConfig.events).map(type => (
-                <button key={type} onClick={() => toggleFilter(type)} style={{ padding: '2px 10px', borderRadius: 3, fontFamily: FF, fontSize: 9, fontWeight: 700, letterSpacing: 1, border: `1px solid ${filters.includes(type) ? sportConfig.events[type].color : sportConfig.events[type].color + '33'}`, cursor: 'pointer', color: filters.includes(type) ? '#000' : sportConfig.events[type].color, background: filters.includes(type) ? sportConfig.events[type].color : 'transparent' }}>{sportConfig.events[type].label}</button>
-              ))}
-              {filters.length > 0 && <button onClick={() => setFilters([])} style={{ padding: '2px 10px', borderRadius: 3, fontSize: 9, fontWeight: 700, letterSpacing: 1, border: `1px solid ${BD}`, background: 'transparent', color: MUTED, cursor: 'pointer' }}>✕ CLEAR</button>}
             </div>
             <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 1 }}>
               {visible.map(e => (
@@ -911,6 +917,7 @@ export default function VideoAnalyst({
               {visible.length === 0 && <div style={{ textAlign: 'center', padding: '40px 20px', color: MUTED, fontSize: 12, letterSpacing: 1 }}>NO EVENTS YET — USE HOTKEYS OR BUTTONS ABOVE TO START CODING</div>}
             </div>
           </div>
+          </div>{/* end timeline+event log */}
           </div>{/* end RIGHT COLUMN */}
         </div>
       )}
