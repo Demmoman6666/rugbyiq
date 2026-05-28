@@ -122,6 +122,8 @@ export default function VideoAnalyst({
       currentEventRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
     }
   }, [time])
+
+  const showToast = (label: string, color: string, team: string, player?: string) => {
     if (toastTimer.current) clearTimeout(toastTimer.current)
     setToast({ label, color, team, player })
     toastTimer.current = setTimeout(() => setToast(null), 1500)
