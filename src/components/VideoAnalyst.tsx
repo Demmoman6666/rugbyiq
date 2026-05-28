@@ -86,6 +86,7 @@ export default function VideoAnalyst({
   const [customAfter, setCustomAfter]       = useState('')
   const [reviewFilters, setReviewFilters]   = useState<string[]>([])
   const [showReviewFilters, setShowReviewFilters] = useState(false)
+  const [reviewPlayerFilter, setReviewPlayerFilter] = useState<number | null>(null)
   const [reviewSets, setReviewSets]         = useState<any[]>([])
   const [buildingReview, setBuildingReview] = useState(false)
   const [reviewLink, setReviewLink]         = useState('')
@@ -1258,8 +1259,8 @@ export default function VideoAnalyst({
               </div>
               <button
                 onClick={e => { e.stopPropagation(); setShowReviewFilters(v => !v) }}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', background: reviewFilters.length > 0 ? GOLD + '22' : '#ffffff0d', border: `1px solid ${reviewFilters.length > 0 ? GOLD + '66' : BD}`, color: reviewFilters.length > 0 ? GOLD : DIM, borderRadius: 6, fontFamily: FF, fontSize: 12, fontWeight: 700, cursor: 'pointer', letterSpacing: 1 }}>
-                ▼ FILTERS {reviewFilters.length > 0 && <span style={{ background: GOLD, color: '#000', borderRadius: 10, padding: '1px 6px', fontSize: 10 }}>{reviewFilters.length}</span>}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', background: (reviewFilters.length > 0 || reviewPlayerFilter !== null) ? GOLD + '22' : '#ffffff0d', border: `1px solid ${(reviewFilters.length > 0 || reviewPlayerFilter !== null) ? GOLD + '66' : BD}`, color: (reviewFilters.length > 0 || reviewPlayerFilter !== null) ? GOLD : DIM, borderRadius: 6, fontFamily: FF, fontSize: 12, fontWeight: 700, cursor: 'pointer', letterSpacing: 1 }}>
+                ▼ FILTERS {(reviewFilters.length > 0 || reviewPlayerFilter !== null) && <span style={{ background: GOLD, color: '#000', borderRadius: 10, padding: '1px 6px', fontSize: 10 }}>{reviewFilters.length + (reviewPlayerFilter !== null ? 1 : 0)}</span>}
               </button>
 
               {showReviewFilters && (
@@ -1279,8 +1280,37 @@ export default function VideoAnalyst({
                       )
                     })}
                   </div>
+                  {(() => {
+                    const allPlayers = [...homePlayers, ...awayPlayers]
+                    const playersWithEvents = allPlayers.filter(p => events.some(e => e.shirt_number === p.shirt_number))
+                    if (playersWithEvents.length === 0) return null
+                    return <div style={{ marginBottom: 14 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: MUTED, letterSpacing: 1.5, marginBottom: 8 }}>PLAYER</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 3, maxHeight: 140, overflowY: 'auto' }}>
+                        <div onClick={() => setReviewPlayerFilter(null)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 8px', borderRadius: 4, cursor: 'pointer', background: reviewPlayerFilter === null ? GOLD + '18' : 'transparent' }}>
+                          <div style={{ width: 14, height: 14, borderRadius: 3, border: `2px solid ${reviewPlayerFilter === null ? GOLD : MUTED}`, background: reviewPlayerFilter === null ? GOLD : 'transparent', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {reviewPlayerFilter === null && <span style={{ color: '#000', fontSize: 9, fontWeight: 900 }}>✓</span>}
+                          </div>
+                          <span style={{ fontSize: 13, fontFamily: FF, color: reviewPlayerFilter === null ? GOLD : TEXT }}>All players</span>
+                        </div>
+                        {playersWithEvents.map(p => {
+                          const active = reviewPlayerFilter === p.shirt_number
+                          const teamColor = homePlayers.some(hp => hp.shirt_number === p.shirt_number) ? homeTeam.color : awayTeam.color
+                          return (
+                            <div key={p.shirt_number} onClick={() => setReviewPlayerFilter(active ? null : p.shirt_number)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 8px', borderRadius: 4, cursor: 'pointer', background: active ? teamColor + '18' : 'transparent' }}>
+                              <div style={{ width: 14, height: 14, borderRadius: 3, border: `2px solid ${active ? teamColor : MUTED}`, background: active ? teamColor : 'transparent', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                {active && <span style={{ color: '#000', fontSize: 9, fontWeight: 900 }}>✓</span>}
+                              </div>
+                              <span style={{ fontFamily: MONO, fontSize: 11, color: teamColor }}>#{p.shirt_number}</span>
+                              <span style={{ fontSize: 13, fontFamily: FF, color: active ? TEXT : MUTED }}>{p.name || 'Unknown'}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  })()}
                   <div style={{ display: 'flex', gap: 8 }}>
-                    <button onClick={() => { setReviewFilters([]) }} style={{ flex: 1, padding: '7px 0', fontFamily: FF, fontSize: 12, fontWeight: 700, background: 'transparent', border: `1px solid ${BD}`, color: MUTED, borderRadius: 4, cursor: 'pointer' }}>Clear all</button>
+                    <button onClick={() => { setReviewFilters([]); setReviewPlayerFilter(null) }} style={{ flex: 1, padding: '7px 0', fontFamily: FF, fontSize: 12, fontWeight: 700, background: 'transparent', border: `1px solid ${BD}`, color: MUTED, borderRadius: 4, cursor: 'pointer' }}>Clear all</button>
                     <button onClick={() => setShowReviewFilters(false)} style={{ flex: 1, padding: '7px 0', fontFamily: FF, fontSize: 12, fontWeight: 900, background: GOLD, color: '#000', border: 'none', borderRadius: 4, cursor: 'pointer', letterSpacing: 1 }}>APPLY</button>
                   </div>
                 </div>
@@ -1290,7 +1320,7 @@ export default function VideoAnalyst({
             {/* Event list */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 0, maxHeight: 400, overflowY: 'auto', marginBottom: 14 }}>
               {visible.length === 0 && <div style={{ fontSize: 12, color: MUTED, padding: '12px 0' }}>No events coded yet — go to Code Match first</div>}
-              {visible.filter(e => reviewFilters.length === 0 || reviewFilters.includes(e.event_type)).map(e => {
+              {visible.filter(e => (reviewFilters.length === 0 || reviewFilters.includes(e.event_type)) && (reviewPlayerFilter === null || e.shirt_number === reviewPlayerFilter)).map(e => {
                 const cfg = sportConfig.events[e.event_type]
                 const selected = reviewSelected.includes(e.id)
                 const players = e.team === 'home' ? homePlayers : awayPlayers
@@ -1316,7 +1346,7 @@ export default function VideoAnalyst({
             </div>
 
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <button onClick={() => setReviewSelected(visible.filter(e => reviewFilters.length === 0 || reviewFilters.includes(e.event_type)).map(e => e.id))} style={{ padding: '7px 14px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: 'transparent', border: `1px solid ${BD}`, color: MUTED, borderRadius: 4, cursor: 'pointer', letterSpacing: 1 }}>SELECT ALL</button>
+              <button onClick={() => setReviewSelected(visible.filter(e => (reviewFilters.length === 0 || reviewFilters.includes(e.event_type)) && (reviewPlayerFilter === null || e.shirt_number === reviewPlayerFilter)).map(e => e.id))} style={{ padding: '7px 14px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: 'transparent', border: `1px solid ${BD}`, color: MUTED, borderRadius: 4, cursor: 'pointer', letterSpacing: 1 }}>SELECT ALL</button>
               <button onClick={() => setReviewSelected([])} style={{ padding: '7px 14px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: 'transparent', border: `1px solid ${BD}`, color: MUTED, borderRadius: 4, cursor: 'pointer', letterSpacing: 1 }}>CLEAR</button>
               <button onClick={createReview} disabled={buildingReview || !reviewName.trim() || reviewSelected.length === 0} style={{ flex: 1, padding: '10px 0', fontFamily: FF, fontSize: 13, fontWeight: 900, background: reviewName.trim() && reviewSelected.length > 0 ? GOLD : '#ffffff0d', border: 'none', color: reviewName.trim() && reviewSelected.length > 0 ? '#000' : MUTED, borderRadius: 4, cursor: reviewName.trim() && reviewSelected.length > 0 ? 'pointer' : 'default', letterSpacing: 1 }}>
                 {buildingReview ? 'CREATING…' : `🎬 CREATE REVIEW (${reviewSelected.length} clips)`}
