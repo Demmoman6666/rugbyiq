@@ -18,7 +18,6 @@ export async function scanVideoForEvents(
   const fullDuration = videoEl.duration
   if (!fullDuration || isNaN(fullDuration)) throw new Error('Video duration not available')
 
-  // Respect maxDuration if set, otherwise scan the full video
   const duration = options.maxDuration ? Math.min(options.maxDuration, fullDuration) : fullDuration
 
   const canvas = document.createElement('canvas')
@@ -27,8 +26,11 @@ export async function scanVideoForEvents(
   const ctx = canvas.getContext('2d')!
   const suggestions: AISuggestion[] = []
 
-  // Cooldown tracker — don't fire same event twice within 10 seconds
-  let lastLineoutAt = -10
+  // Cooldown tracker per event type — don't fire same event twice within 10 seconds
+  const lastDetectedAt: Record<string, number> = {
+    LINEOUT: -10,
+    SCRUM: -10,
+  }
 
   const totalSteps = Math.floor(duration / intervalSeconds)
   let step = 0
@@ -53,18 +55,19 @@ export async function scanVideoForEvents(
 
       if (res.ok) {
         const result = await res.json()
+        const eventType = result.event_type as string
 
         if (
           result.event_detected &&
-          result.event_type === 'LINEOUT' &&
           result.confidence >= confidenceThreshold &&
-          t - lastLineoutAt > 10
+          lastDetectedAt[eventType] !== undefined &&
+          t - lastDetectedAt[eventType] > 10
         ) {
-          lastLineoutAt = t
+          lastDetectedAt[eventType] = t
           const suggestion: AISuggestion = {
             id: uuidv4(),
             timestamp_secs: t,
-            event_type: 'LINEOUT' as EventType,
+            event_type: eventType as EventType,
             confidence: result.confidence,
             description: result.description,
             status: 'pending',
