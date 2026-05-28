@@ -989,7 +989,7 @@ export default function VideoAnalyst({
                         {e.shirt_number && <span style={{ fontFamily: MONO, fontSize: 10, color: GOLD, background: GOLD + '18', padding: '1px 6px', borderRadius: 3, border: `1px solid ${GOLD}33` }}>#{e.shirt_number}{e.player_name ? ` ${e.player_name.split(' ').pop()}` : ''}</span>}
                         {e.outcome && <span style={{ color: MUTED, fontStyle: 'italic', fontSize: 10 }}>{e.outcome}</span>}
                       </div>
-                      {e.notes && editingNote?.id !== e.id && <div style={{ marginTop: 5, fontSize: 11, color: DIM, fontStyle: 'italic', lineHeight: 1.4, paddingLeft: 2, borderLeft: `2px solid ${GOLD}44` }}>📝 {e.notes}</div>}
+                      {e.notes && editingNote?.id !== e.id && <div style={{ marginTop: 6, fontSize: 12, color: '#c8d4e0', lineHeight: 1.5, paddingLeft: 8, paddingRight: 4, paddingTop: 5, paddingBottom: 5, borderLeft: `3px solid ${GOLD}66`, background: GOLD + '08', borderRadius: '0 4px 4px 0' }}>📝 {e.notes}</div>}
                     </div>
                     <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexShrink: 0 }}>
                       <button onClick={ev => { ev.stopPropagation(); setEditingNote(editingNote?.id === e.id ? null : { id: e.id, value: e.notes ?? '' }) }} style={{ background: 'none', border: 'none', color: e.notes ? GOLD : MUTED, cursor: 'pointer', fontSize: 12, padding: '2px 4px' }}>✎</button>
