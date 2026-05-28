@@ -20,11 +20,12 @@ export async function POST(req: NextRequest) {
     }
     const result = await response.json()
     const predictions = result.predictions ?? []
+    console.log(`[AI Scan] t=${timestamp}s predictions:`, predictions.map((p: any) => `${p.class}:${Math.round(p.confidence*100)}%`).join(', ') || 'none')
 
     // Detect lineouts and scrums only
     const eventClasses = ['lineout', 'scrum']
     const detected = predictions
-      .filter((p: any) => eventClasses.includes(p.class?.toLowerCase()) && p.confidence >= 0.75)
+      .filter((p: any) => eventClasses.includes(p.class?.toLowerCase()) && p.confidence >= 0.5)
       .sort((a: any, b: any) => b.confidence - a.confidence)
 
     if (detected.length === 0) {
