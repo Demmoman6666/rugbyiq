@@ -1271,7 +1271,7 @@ export default function VideoAnalyst({
             </div>
 
             {/* Event list */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 3, maxHeight: 320, overflowY: 'auto', marginBottom: 14 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 0, maxHeight: 400, overflowY: 'auto', marginBottom: 14 }}>
               {visible.length === 0 && <div style={{ fontSize: 12, color: MUTED, padding: '12px 0' }}>No events coded yet — go to Code Match first</div>}
               {visible.filter(e => reviewFilters.length === 0 || reviewFilters.includes(e.event_type)).map(e => {
                 const cfg = sportConfig.events[e.event_type]
@@ -1279,8 +1279,8 @@ export default function VideoAnalyst({
                 const players = e.team === 'home' ? homePlayers : awayPlayers
                 const player = e.shirt_number ? players.find(p => p.shirt_number === e.shirt_number) : null
                 return (
-                  <div key={e.id} onClick={() => toggleReviewEvent(e.id)} style={{ borderRadius: 6, border: `1px solid ${selected ? (cfg?.color ?? GOLD) + '55' : BD}`, background: selected ? (cfg?.color ?? GOLD) + '0d' : 'transparent', cursor: 'pointer', overflow: 'hidden' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 10px' }}>
+                  <div key={e.id} onClick={() => toggleReviewEvent(e.id)} style={{ borderRadius: 6, border: `1px solid ${selected ? (cfg?.color ?? GOLD) + '55' : BD}`, background: selected ? (cfg?.color ?? GOLD) + '0d' : 'transparent', cursor: 'pointer', overflow: 'hidden', marginBottom: 2 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 10px 8px' }}>
                       <div style={{ width: 16, height: 16, borderRadius: 3, border: `2px solid ${selected ? cfg?.color ?? GOLD : BD}`, background: selected ? cfg?.color ?? GOLD : 'transparent', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         {selected && <span style={{ color: '#000', fontSize: 10, fontWeight: 900 }}>✓</span>}
                       </div>
@@ -1291,7 +1291,7 @@ export default function VideoAnalyst({
                       {e.outcome && <span style={{ fontSize: 10, color: MUTED, fontStyle: 'italic', marginLeft: 'auto' }}>{e.outcome}</span>}
                     </div>
                     {e.notes && (
-                      <div style={{ margin: '0 10px 8px', fontSize: 12, color: '#c8d4e0', lineHeight: 1.5, paddingLeft: 8, paddingRight: 4, paddingTop: 5, paddingBottom: 5, borderLeft: `3px solid ${GOLD}66`, background: GOLD + '08', borderRadius: '0 4px 4px 0' }}>📝 {e.notes}</div>
+                      <div style={{ margin: '0 10px 10px', fontSize: 12, color: '#c8d4e0', lineHeight: 1.5, paddingLeft: 8, paddingRight: 4, paddingTop: 5, paddingBottom: 5, borderLeft: `3px solid ${GOLD}66`, background: GOLD + '08', borderRadius: '0 4px 4px 0' }}>📝 {e.notes}</div>
                     )}
                   </div>
                 )
