@@ -14,7 +14,7 @@ export async function scanVideoForEvents(
   matchId: string,
   options: ScanOptions = {}
 ): Promise<AISuggestion[]> {
-  const { intervalSeconds = 2, confidenceThreshold = 0.35, onProgress, onSuggestion } = options
+  const { intervalSeconds = 1, confidenceThreshold = 0.35, onProgress, onSuggestion } = options
   const fullDuration = videoEl.duration
   if (!fullDuration || isNaN(fullDuration)) throw new Error('Video duration not available')
 
