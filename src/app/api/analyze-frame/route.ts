@@ -21,11 +21,16 @@ export async function POST(req: NextRequest) {
     const result = await response.json()
     const predictions = result.predictions ?? []
     console.log(`[AI Scan] t=${timestamp}s predictions:`, predictions.map((p: any) => `${p.class}:${Math.round(p.confidence*100)}%`).join(', ') || 'none')
+    // Extra log for any lineout detection regardless of confidence
+    const anyLineout = predictions.filter((p: any) => p.class?.toLowerCase() === 'lineout')
+    if (anyLineout.length > 0) {
+      console.log(`[LINEOUT DEBUG] t=${timestamp}s raw lineout confidences:`, anyLineout.map((p: any) => `${Math.round(p.confidence*100)}%`).join(', '))
+    }
 
     // Detect lineouts and scrums only
     const eventClasses = ['lineout', 'scrum']
     const detected = predictions
-      .filter((p: any) => eventClasses.includes(p.class?.toLowerCase()) && p.confidence >= 0.5)
+      .filter((p: any) => eventClasses.includes(p.class?.toLowerCase()) && p.confidence >= 0.35)
       .sort((a: any, b: any) => b.confidence - a.confidence)
 
     if (detected.length === 0) {

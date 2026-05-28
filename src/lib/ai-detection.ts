@@ -28,8 +28,8 @@ export async function scanVideoForEvents(
 
   // Cooldown tracker per event type — don't fire same event twice within 10 seconds
   const lastDetectedAt: Record<string, number> = {
-    LINEOUT: -10,
-    SCRUM: -10,
+    LINEOUT: -25,
+    SCRUM: -25,
   }
 
   const totalSteps = Math.floor(duration / intervalSeconds)
@@ -61,7 +61,7 @@ export async function scanVideoForEvents(
           result.event_detected &&
           result.confidence >= confidenceThreshold &&
           lastDetectedAt[eventType] !== undefined &&
-          t - lastDetectedAt[eventType] > 10
+          t - lastDetectedAt[eventType] > 25
         ) {
           lastDetectedAt[eventType] = t
           const suggestion: AISuggestion = {
