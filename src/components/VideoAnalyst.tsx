@@ -82,6 +82,9 @@ export default function VideoAnalyst({
   const [reviewSelected, setReviewSelected] = useState<string[]>([])
   const [clipBefore, setClipBefore]         = useState(10)
   const [clipAfter, setClipAfter]           = useState(20)
+  const [customBefore, setCustomBefore]     = useState('')
+  const [customAfter, setCustomAfter]       = useState('')
+  const [reviewFilters, setReviewFilters]   = useState<string[]>([])
   const [reviewSets, setReviewSets]         = useState<any[]>([])
   const [buildingReview, setBuildingReview] = useState(false)
   const [reviewLink, setReviewLink]         = useState('')
@@ -1221,47 +1224,84 @@ export default function VideoAnalyst({
       {tab === 'review' && (
         <div style={{ padding: 14, flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12, background: PANEL }}>
           <div style={{ background: CARD, border: `1px solid ${BD}`, borderRadius: 8, padding: '16px 18px' }}>
-            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, color: MUTED, marginBottom: 14 }}>BUILD REVIEW SET</div>
+            <div style={{ fontSize: 13, fontWeight: 900, letterSpacing: 1, color: TEXT, marginBottom: 14 }}>🎬 BUILD REVIEW SET</div>
             <input value={reviewName} onChange={e => setReviewName(e.target.value)} placeholder="Review name e.g. Defensive Errors v Mountain Ash" style={{ width: '100%', padding: '8px 12px', fontFamily: FF, fontSize: 13, background: BG, border: `1px solid ${BD}`, borderRadius: 4, color: TEXT, outline: 'none', marginBottom: 8, boxSizing: 'border-box' }}/>
-            <input value={reviewDesc} onChange={e => setReviewDesc(e.target.value)} placeholder="Description (optional)" style={{ width: '100%', padding: '8px 12px', fontFamily: FF, fontSize: 13, background: BG, border: `1px solid ${BD}`, borderRadius: 4, color: TEXT, outline: 'none', marginBottom: 12, boxSizing: 'border-box' }}/>
-            <div style={{ display: 'flex', gap: 16, marginBottom: 14 }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 9, color: MUTED, letterSpacing: 1.5, marginBottom: 6 }}>SECONDS BEFORE EVENT</div>
-                <div style={{ display: 'flex', gap: 4 }}>
-                  {[5, 10, 15, 20].map(s => <button key={s} onClick={() => setClipBefore(s)} style={{ flex: 1, padding: '5px 0', fontFamily: FF, fontSize: 11, fontWeight: 700, borderRadius: 4, border: `1px solid ${clipBefore === s ? GOLD : BD}`, background: clipBefore === s ? GOLD + '22' : 'transparent', color: clipBefore === s ? GOLD : MUTED, cursor: 'pointer' }}>{s}s</button>)}
+            <input value={reviewDesc} onChange={e => setReviewDesc(e.target.value)} placeholder="Description (optional)" style={{ width: '100%', padding: '8px 12px', fontFamily: FF, fontSize: 13, background: BG, border: `1px solid ${BD}`, borderRadius: 4, color: TEXT, outline: 'none', marginBottom: 16, boxSizing: 'border-box' }}/>
+
+            {/* Clip timing */}
+            <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
+              <div style={{ flex: 1, background: BG, border: `1px solid ${BD}`, borderRadius: 6, padding: '10px 12px' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: GOLD, letterSpacing: 1, marginBottom: 8 }}>⏪ SECONDS BEFORE</div>
+                <div style={{ display: 'flex', gap: 4, marginBottom: 6 }}>
+                  {[5, 10, 15, 20].map(s => (
+                    <button key={s} onClick={() => { setClipBefore(s); setCustomBefore('') }} style={{ flex: 1, padding: '6px 0', fontFamily: FF, fontSize: 12, fontWeight: 700, borderRadius: 4, border: `1px solid ${clipBefore === s && !customBefore ? GOLD : BD}`, background: clipBefore === s && !customBefore ? GOLD + '22' : 'transparent', color: clipBefore === s && !customBefore ? GOLD : MUTED, cursor: 'pointer' }}>{s}s</button>
+                  ))}
                 </div>
+                <input type="number" value={customBefore} onChange={e => { setCustomBefore(e.target.value); if (e.target.value) setClipBefore(parseInt(e.target.value) || 10) }} placeholder="Custom…" style={{ width: '100%', padding: '5px 8px', fontFamily: FF, fontSize: 12, background: '#ffffff0a', border: `1px solid ${customBefore ? GOLD + '66' : BD}`, borderRadius: 4, color: TEXT, outline: 'none', boxSizing: 'border-box' }}/>
               </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 9, color: MUTED, letterSpacing: 1.5, marginBottom: 6 }}>SECONDS AFTER EVENT</div>
-                <div style={{ display: 'flex', gap: 4 }}>
-                  {[10, 20, 30, 45].map(s => <button key={s} onClick={() => setClipAfter(s)} style={{ flex: 1, padding: '5px 0', fontFamily: FF, fontSize: 11, fontWeight: 700, borderRadius: 4, border: `1px solid ${clipAfter === s ? GOLD : BD}`, background: clipAfter === s ? GOLD + '22' : 'transparent', color: clipAfter === s ? GOLD : MUTED, cursor: 'pointer' }}>{s}s</button>)}
+              <div style={{ flex: 1, background: BG, border: `1px solid ${BD}`, borderRadius: 6, padding: '10px 12px' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: GOLD, letterSpacing: 1, marginBottom: 8 }}>⏩ SECONDS AFTER</div>
+                <div style={{ display: 'flex', gap: 4, marginBottom: 6 }}>
+                  {[10, 20, 30, 45].map(s => (
+                    <button key={s} onClick={() => { setClipAfter(s); setCustomAfter('') }} style={{ flex: 1, padding: '6px 0', fontFamily: FF, fontSize: 12, fontWeight: 700, borderRadius: 4, border: `1px solid ${clipAfter === s && !customAfter ? GOLD : BD}`, background: clipAfter === s && !customAfter ? GOLD + '22' : 'transparent', color: clipAfter === s && !customAfter ? GOLD : MUTED, cursor: 'pointer' }}>{s}s</button>
+                  ))}
                 </div>
+                <input type="number" value={customAfter} onChange={e => { setCustomAfter(e.target.value); if (e.target.value) setClipAfter(parseInt(e.target.value) || 20) }} placeholder="Custom…" style={{ width: '100%', padding: '5px 8px', fontFamily: FF, fontSize: 12, background: '#ffffff0a', border: `1px solid ${customAfter ? GOLD + '66' : BD}`, borderRadius: 4, color: TEXT, outline: 'none', boxSizing: 'border-box' }}/>
               </div>
             </div>
-            <div style={{ fontSize: 9, color: MUTED, letterSpacing: 1.5, marginBottom: 8 }}>SELECT EVENTS — {reviewSelected.length} SELECTED</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: 240, overflowY: 'auto', marginBottom: 12 }}>
+
+            {/* Select events header with filter */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <div style={{ fontSize: 13, fontWeight: 900, color: TEXT, letterSpacing: 0.5 }}>
+                SELECT EVENTS <span style={{ color: GOLD, fontFamily: MONO }}>{reviewSelected.length}</span><span style={{ color: MUTED, fontSize: 11, fontWeight: 400 }}> selected</span>
+              </div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                {Object.keys(sportConfig.events).map(type => {
+                  const cfg = sportConfig.events[type]
+                  const active = reviewFilters.includes(type)
+                  return (
+                    <button key={type} onClick={() => setReviewFilters(f => f.includes(type) ? f.filter(x => x !== type) : [...f, type])}
+                      style={{ padding: '3px 8px', fontFamily: FF, fontSize: 10, fontWeight: 700, borderRadius: 3, border: `1px solid ${active ? cfg.color : cfg.color + '44'}`, background: active ? cfg.color : 'transparent', color: active ? '#000' : cfg.color, cursor: 'pointer' }}>
+                      {cfg.label}
+                    </button>
+                  )
+                })}
+                {reviewFilters.length > 0 && <button onClick={() => setReviewFilters([])} style={{ padding: '3px 8px', fontFamily: FF, fontSize: 10, fontWeight: 700, borderRadius: 3, border: `1px solid ${BD}`, background: 'transparent', color: MUTED, cursor: 'pointer' }}>✕</button>}
+              </div>
+            </div>
+
+            {/* Event list */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3, maxHeight: 320, overflowY: 'auto', marginBottom: 14 }}>
               {visible.length === 0 && <div style={{ fontSize: 12, color: MUTED, padding: '12px 0' }}>No events coded yet — go to Code Match first</div>}
-              {visible.map(e => {
-                const cfg = sportConfig.events[e.event_type]; const selected = reviewSelected.includes(e.id)
+              {visible.filter(e => reviewFilters.length === 0 || reviewFilters.includes(e.event_type)).map(e => {
+                const cfg = sportConfig.events[e.event_type]
+                const selected = reviewSelected.includes(e.id)
+                const players = e.team === 'home' ? homePlayers : awayPlayers
+                const player = e.shirt_number ? players.find(p => p.shirt_number === e.shirt_number) : null
                 return (
-                  <div key={e.id} onClick={() => toggleReviewEvent(e.id)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 10px', borderRadius: 4, border: `1px solid ${selected ? (cfg?.color ?? GOLD) + '55' : BD}`, background: selected ? (cfg?.color ?? GOLD) + '11' : 'transparent', cursor: 'pointer' }}>
-                    <div style={{ width: 16, height: 16, borderRadius: 3, border: `2px solid ${selected ? cfg?.color ?? GOLD : BD}`, background: selected ? cfg?.color ?? GOLD : 'transparent', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {selected && <span style={{ color: '#000', fontSize: 10, fontWeight: 900 }}>✓</span>}
+                  <div key={e.id} onClick={() => toggleReviewEvent(e.id)} style={{ borderRadius: 6, border: `1px solid ${selected ? (cfg?.color ?? GOLD) + '55' : BD}`, background: selected ? (cfg?.color ?? GOLD) + '0d' : 'transparent', cursor: 'pointer', overflow: 'hidden' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 10px' }}>
+                      <div style={{ width: 16, height: 16, borderRadius: 3, border: `2px solid ${selected ? cfg?.color ?? GOLD : BD}`, background: selected ? cfg?.color ?? GOLD : 'transparent', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {selected && <span style={{ color: '#000', fontSize: 10, fontWeight: 900 }}>✓</span>}
+                      </div>
+                      <span style={{ padding: '2px 8px', borderRadius: 3, background: (cfg?.color ?? MUTED) + '22', color: cfg?.color ?? MUTED, fontSize: 11, fontWeight: 700, border: `1px solid ${(cfg?.color ?? MUTED) + '44'}`, whiteSpace: 'nowrap' }}>{cfg?.label ?? e.event_type}</span>
+                      <span style={{ fontFamily: MONO, fontSize: 11, color: GOLD, fontWeight: 700 }}>{formatTime(e.timestamp_secs)}</span>
+                      <span style={{ fontSize: 12, color: e.team === 'home' ? homeTeam.color : awayTeam.color, fontWeight: 700 }}>{e.team === 'home' ? homeTeam.name : awayTeam.name}</span>
+                      {e.shirt_number && <span style={{ fontFamily: MONO, fontSize: 11, color: GOLD, background: GOLD + '18', padding: '1px 6px', borderRadius: 3, border: `1px solid ${GOLD}33` }}>#{e.shirt_number}{player?.name ? ` ${player.name.split(' ').pop()}` : ''}</span>}
+                      {e.outcome && <span style={{ fontSize: 10, color: MUTED, fontStyle: 'italic', marginLeft: 'auto' }}>{e.outcome}</span>}
                     </div>
-                    <span style={{ padding: '1px 8px', borderRadius: 3, background: (cfg?.color ?? MUTED) + '22', color: cfg?.color ?? MUTED, fontSize: 10, fontWeight: 700, border: `1px solid ${(cfg?.color ?? MUTED) + '44'}` }}>{e.event_type}</span>
-                    <span style={{ fontFamily: MONO, fontSize: 10, color: MUTED }}>{formatTime(e.timestamp_secs)}</span>
-                    <span style={{ fontSize: 11, color: e.team === 'home' ? homeTeam.color : awayTeam.color, fontWeight: 700 }}>{e.team === 'home' ? homeTeam.abbr : awayTeam.abbr}</span>
-                    {e.shirt_number && <span style={{ fontFamily: MONO, fontSize: 10, color: GOLD }}>#{e.shirt_number}</span>}
-                    {e.outcome && <span style={{ fontSize: 10, color: MUTED, fontStyle: 'italic' }}>{e.outcome}</span>}
-                    {e.notes && <span style={{ fontSize: 10, color: MUTED, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 120 }}>📝 {e.notes}</span>}
+                    {e.notes && (
+                      <div style={{ margin: '0 10px 8px', fontSize: 12, color: '#c8d4e0', lineHeight: 1.5, paddingLeft: 8, paddingRight: 4, paddingTop: 5, paddingBottom: 5, borderLeft: `3px solid ${GOLD}66`, background: GOLD + '08', borderRadius: '0 4px 4px 0' }}>📝 {e.notes}</div>
+                    )}
                   </div>
                 )
               })}
             </div>
+
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <button onClick={() => setReviewSelected(visible.map(e => e.id))} style={{ padding: '7px 14px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: 'transparent', border: `1px solid ${BD}`, color: MUTED, borderRadius: 4, cursor: 'pointer', letterSpacing: 1 }}>SELECT ALL</button>
+              <button onClick={() => setReviewSelected(visible.filter(e => reviewFilters.length === 0 || reviewFilters.includes(e.event_type)).map(e => e.id))} style={{ padding: '7px 14px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: 'transparent', border: `1px solid ${BD}`, color: MUTED, borderRadius: 4, cursor: 'pointer', letterSpacing: 1 }}>SELECT ALL</button>
               <button onClick={() => setReviewSelected([])} style={{ padding: '7px 14px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: 'transparent', border: `1px solid ${BD}`, color: MUTED, borderRadius: 4, cursor: 'pointer', letterSpacing: 1 }}>CLEAR</button>
-              <button onClick={createReview} disabled={buildingReview || !reviewName.trim() || reviewSelected.length === 0} style={{ flex: 1, padding: '9px 0', fontFamily: FF, fontSize: 13, fontWeight: 900, background: reviewName.trim() && reviewSelected.length > 0 ? GOLD : '#ffffff0d', border: 'none', color: reviewName.trim() && reviewSelected.length > 0 ? '#000' : MUTED, borderRadius: 4, cursor: reviewName.trim() && reviewSelected.length > 0 ? 'pointer' : 'default', letterSpacing: 1 }}>
+              <button onClick={createReview} disabled={buildingReview || !reviewName.trim() || reviewSelected.length === 0} style={{ flex: 1, padding: '10px 0', fontFamily: FF, fontSize: 13, fontWeight: 900, background: reviewName.trim() && reviewSelected.length > 0 ? GOLD : '#ffffff0d', border: 'none', color: reviewName.trim() && reviewSelected.length > 0 ? '#000' : MUTED, borderRadius: 4, cursor: reviewName.trim() && reviewSelected.length > 0 ? 'pointer' : 'default', letterSpacing: 1 }}>
                 {buildingReview ? 'CREATING…' : `🎬 CREATE REVIEW (${reviewSelected.length} clips)`}
               </button>
             </div>
