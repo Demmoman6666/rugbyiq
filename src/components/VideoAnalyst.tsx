@@ -115,7 +115,13 @@ export default function VideoAnalyst({
   const playerTimer      = useRef<NodeJS.Timeout | null>(null)
   const [hudDisplay, setHudDisplay] = useState<{ eventLabel: string; digits: string; color: string } | null>(null)
 
-  const showToast = (label: string, color: string, team: string, player?: string) => {
+  const currentEventRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (currentEventRef.current) {
+      currentEventRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    }
+  }, [time])
     if (toastTimer.current) clearTimeout(toastTimer.current)
     setToast({ label, color, team, player })
     toastTimer.current = setTimeout(() => setToast(null), 1500)
@@ -961,32 +967,43 @@ export default function VideoAnalyst({
               <div style={{ position: 'absolute', top: 0, bottom: 0, left: `${(time / actualDuration()) * 100}%`, width: 2, background: GOLD, zIndex: 4, borderRadius: 1, boxShadow: `0 0 4px ${GOLD}` }}/>
             </div>
             <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 1 }}>
-              {visible.map(e => (
-                <div key={e.id} style={{ borderRadius: 4, background: CARD, border: `1px solid ${BD}` }}>
-                  <div onClick={() => seekTo(e.timestamp_secs)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', cursor: 'pointer' }}
+              {visible.map(e => {
+                const cfg = sportConfig.events[e.event_type]
+                const isCurrent = visible.filter(ev => ev.timestamp_secs <= time).slice(-1)[0]?.id === e.id
+                return (
+                <div key={e.id} ref={isCurrent ? currentEventRef : null} style={{ borderRadius: 6, background: isCurrent ? GOLD + '12' : CARD, border: `1px solid ${isCurrent ? GOLD + '66' : BD}`, transition: 'all 0.2s', boxShadow: isCurrent ? `0 0 8px ${GOLD}22` : 'none' }}>
+                  <div onClick={() => seekTo(e.timestamp_secs)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 10px 6px', cursor: 'pointer' }}
                     onMouseEnter={ev => { ev.currentTarget.style.background = '#ffffff06' }}
                     onMouseLeave={ev => { ev.currentTarget.style.background = 'transparent' }}>
-                    <Pill type={e.event_type}/>
-                    {e.ai_detected && <span style={{ fontSize: 9, background: GOLD+'18', color: GOLD, padding: '1px 6px', borderRadius: 3, fontWeight: 700, border: `1px solid ${GOLD}33`, letterSpacing: 0.5 }}>AI {Math.round((e.ai_confidence ?? 0) * 100)}%</span>}
-                    <span style={{ fontFamily: MONO, color: MUTED, fontSize: 11, whiteSpace: 'nowrap' }}>{formatTime(e.timestamp_secs)}</span>
-                    <span style={{ fontWeight: 700, color: e.team === 'home' ? homeTeam.color : awayTeam.color, fontSize: 11 }}>{e.team === 'home' ? homeTeam.name : awayTeam.name}</span>
-                    {e.shirt_number && <span style={{ fontFamily: MONO, fontSize: 10, color: GOLD, background: GOLD + '18', padding: '1px 6px', borderRadius: 3, border: `1px solid ${GOLD}33` }}>#{e.shirt_number}{e.player_name ? ` ${e.player_name.split(' ').pop()}` : ''}</span>}
-                    {e.outcome && <span style={{ color: MUTED, fontStyle: 'italic', fontSize: 10 }}>{e.outcome}</span>}
-                    {e.notes && editingNote?.id !== e.id && <span style={{ color: MUTED, fontSize: 10, fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 100 }}>📝 {e.notes}</span>}
-                    <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
-                      <button onClick={ev => { ev.stopPropagation(); setEditingNote(editingNote?.id === e.id ? null : { id: e.id, value: e.notes ?? '' }) }} style={{ background: 'none', border: 'none', color: e.notes ? GOLD : MUTED, cursor: 'pointer', fontSize: 12, padding: '0 2px' }}>✎</button>
-                      <button onClick={ev => { ev.stopPropagation(); deleteEvent(e.id) }} style={{ background: 'none', border: 'none', color: MUTED, cursor: 'pointer', fontSize: 11, padding: '0 2px' }}>✕</button>
+                    {isCurrent && <div style={{ width: 3, height: 32, background: GOLD, borderRadius: 2, flexShrink: 0, boxShadow: `0 0 6px ${GOLD}` }}/>}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 4 }}>
+                        <Pill type={e.event_type}/>
+                        {e.ai_detected && <span style={{ fontSize: 9, background: GOLD+'18', color: GOLD, padding: '1px 6px', borderRadius: 3, fontWeight: 700, border: `1px solid ${GOLD}33`, letterSpacing: 0.5 }}>AI {Math.round((e.ai_confidence ?? 0) * 100)}%</span>}
+                        <span style={{ fontFamily: MONO, color: isCurrent ? GOLD : MUTED, fontSize: 11, whiteSpace: 'nowrap', fontWeight: isCurrent ? 700 : 400 }}>{formatTime(e.timestamp_secs)}</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <span style={{ fontWeight: 700, color: e.team === 'home' ? homeTeam.color : awayTeam.color, fontSize: 12 }}>{e.team === 'home' ? homeTeam.name : awayTeam.name}</span>
+                        {e.shirt_number && <span style={{ fontFamily: MONO, fontSize: 10, color: GOLD, background: GOLD + '18', padding: '1px 6px', borderRadius: 3, border: `1px solid ${GOLD}33` }}>#{e.shirt_number}{e.player_name ? ` ${e.player_name.split(' ').pop()}` : ''}</span>}
+                        {e.outcome && <span style={{ color: MUTED, fontStyle: 'italic', fontSize: 10 }}>{e.outcome}</span>}
+                      </div>
+                      {e.notes && editingNote?.id !== e.id && <div style={{ marginTop: 5, fontSize: 11, color: DIM, fontStyle: 'italic', lineHeight: 1.4, paddingLeft: 2, borderLeft: `2px solid ${GOLD}44` }}>📝 {e.notes}</div>}
+                    </div>
+                    <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexShrink: 0 }}>
+                      <button onClick={ev => { ev.stopPropagation(); setEditingNote(editingNote?.id === e.id ? null : { id: e.id, value: e.notes ?? '' }) }} style={{ background: 'none', border: 'none', color: e.notes ? GOLD : MUTED, cursor: 'pointer', fontSize: 12, padding: '2px 4px' }}>✎</button>
+                      <button onClick={ev => { ev.stopPropagation(); deleteEvent(e.id) }} style={{ background: 'none', border: 'none', color: MUTED, cursor: 'pointer', fontSize: 11, padding: '2px 4px' }}>✕</button>
                     </div>
                   </div>
                   {editingNote?.id === e.id && (
-                    <div style={{ padding: '0 10px 8px', display: 'flex', gap: 6 }} onClick={ev => ev.stopPropagation()}>
+                    <div style={{ padding: '0 10px 10px', display: 'flex', gap: 6 }} onClick={ev => ev.stopPropagation()}>
                       <input autoFocus value={editingNote.value} onChange={ev => setEditingNote({ id: e.id, value: ev.target.value })} onKeyDown={ev => { if (ev.key === 'Enter') saveNote(e.id, editingNote.value); if (ev.key === 'Escape') setEditingNote(null) }} placeholder="Add a note… (Enter to save)" style={{ flex: 1, padding: '5px 8px', fontSize: 12, fontFamily: FF, border: `1px solid ${BD}`, borderRadius: 4, outline: 'none', color: TEXT, background: BG }}/>
                       <button onClick={() => saveNote(e.id, editingNote.value)} style={{ padding: '5px 10px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: GOLD, color: '#000', border: 'none', borderRadius: 4, cursor: 'pointer' }}>Save</button>
                       <button onClick={() => setEditingNote(null)} style={{ padding: '5px 10px', fontFamily: FF, fontSize: 11, background: 'transparent', color: MUTED, border: `1px solid ${BD}`, borderRadius: 4, cursor: 'pointer' }}>Cancel</button>
                     </div>
                   )}
                 </div>
-              ))}
+                )
+              })}
               {visible.length === 0 && <div style={{ textAlign: 'center', padding: '40px 20px', color: MUTED, fontSize: 12, letterSpacing: 1 }}>NO EVENTS YET — USE HOTKEYS OR BUTTONS ABOVE TO START CODING</div>}
             </div>
           </div>
