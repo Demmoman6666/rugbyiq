@@ -912,37 +912,35 @@ export default function VideoAnalyst({
                     })}
                   </div>
 
-                  {/* Player filter — only show if squad is loaded */}
-                  {(homePlayers.length > 0 || awayPlayers.length > 0) && (() => {
-                    const players = teamFilter === 'away' ? awayPlayers : teamFilter === 'home' ? homePlayers : [...homePlayers, ...awayPlayers]
-                    const playersWithEvents = players.filter(p => events.some(e => e.shirt_number === p.shirt_number))
+                  {/* Player filter — only show if squad is loaded and has events */}
+                  {(() => {
+                    const squadPlayers = teamFilter === 'away' ? awayPlayers : teamFilter === 'home' ? homePlayers : [...homePlayers, ...awayPlayers]
+                    const playersWithEvents = squadPlayers.filter(p => events.some(e => e.shirt_number === p.shirt_number))
                     if (playersWithEvents.length === 0) return null
-                    return (
-                      <div style={{ marginBottom: 14 }}>
-                        <div style={{ fontSize: 10, fontWeight: 700, color: MUTED, letterSpacing: 1.5, marginBottom: 8 }}>PLAYER</div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 3, maxHeight: 140, overflowY: 'auto' }}>
-                          <div onClick={() => setPlayerFilter(null)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 8px', borderRadius: 4, cursor: 'pointer', background: playerFilter === null ? GOLD + '18' : 'transparent' }}>
-                            <div style={{ width: 14, height: 14, borderRadius: 3, border: `2px solid ${playerFilter === null ? GOLD : MUTED}`, background: playerFilter === null ? GOLD : 'transparent', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              {playerFilter === null && <span style={{ color: '#000', fontSize: 9, fontWeight: 900 }}>✓</span>}
-                            </div>
-                            <span style={{ fontSize: 13, fontFamily: FF, color: playerFilter === null ? GOLD : TEXT }}>All players</span>
+                    return <div style={{ marginBottom: 14 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: MUTED, letterSpacing: 1.5, marginBottom: 8 }}>PLAYER</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 3, maxHeight: 140, overflowY: 'auto' }}>
+                        <div onClick={() => setPlayerFilter(null)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 8px', borderRadius: 4, cursor: 'pointer', background: playerFilter === null ? GOLD + '18' : 'transparent' }}>
+                          <div style={{ width: 14, height: 14, borderRadius: 3, border: `2px solid ${playerFilter === null ? GOLD : MUTED}`, background: playerFilter === null ? GOLD : 'transparent', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {playerFilter === null && <span style={{ color: '#000', fontSize: 9, fontWeight: 900 }}>✓</span>}
                           </div>
-                          {playersWithEvents.map(p => {
-                            const active = playerFilter === p.shirt_number
-                            const teamColor = homePlayers.includes(p) ? homeTeam.color : awayTeam.color
-                            return (
-                              <div key={p.shirt_number} onClick={() => setPlayerFilter(active ? null : p.shirt_number)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 8px', borderRadius: 4, cursor: 'pointer', background: active ? teamColor + '18' : 'transparent' }}>
-                                <div style={{ width: 14, height: 14, borderRadius: 3, border: `2px solid ${active ? teamColor : MUTED}`, background: active ? teamColor : 'transparent', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                  {active && <span style={{ color: '#000', fontSize: 9, fontWeight: 900 }}>✓</span>}
-                                </div>
-                                <span style={{ fontFamily: MONO, fontSize: 11, color: teamColor }}>#{p.shirt_number}</span>
-                                <span style={{ fontSize: 13, fontFamily: FF, color: active ? TEXT : MUTED }}>{p.name || 'Unknown'}</span>
-                              </div>
-                            )
-                          })}
+                          <span style={{ fontSize: 13, fontFamily: FF, color: playerFilter === null ? GOLD : TEXT }}>All players</span>
                         </div>
+                        {playersWithEvents.map(p => {
+                          const active = playerFilter === p.shirt_number
+                          const teamColor = homePlayers.some(hp => hp.shirt_number === p.shirt_number) ? homeTeam.color : awayTeam.color
+                          return (
+                            <div key={p.shirt_number} onClick={() => setPlayerFilter(active ? null : p.shirt_number)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 8px', borderRadius: 4, cursor: 'pointer', background: active ? teamColor + '18' : 'transparent' }}>
+                              <div style={{ width: 14, height: 14, borderRadius: 3, border: `2px solid ${active ? teamColor : MUTED}`, background: active ? teamColor : 'transparent', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                {active && <span style={{ color: '#000', fontSize: 9, fontWeight: 900 }}>✓</span>}
+                              </div>
+                              <span style={{ fontFamily: MONO, fontSize: 11, color: teamColor }}>#{p.shirt_number}</span>
+                              <span style={{ fontSize: 13, fontFamily: FF, color: active ? TEXT : MUTED }}>{p.name || 'Unknown'}</span>
+                            </div>
+                          )
+                        })}
                       </div>
-                    )
+                    </div>
                   })()}
 
                   {/* Clear + Close */}
