@@ -85,6 +85,7 @@ export default function VideoAnalyst({
   const [customBefore, setCustomBefore]     = useState('')
   const [customAfter, setCustomAfter]       = useState('')
   const [reviewFilters, setReviewFilters]   = useState<string[]>([])
+  const [showReviewFilters, setShowReviewFilters] = useState(false)
   const [reviewSets, setReviewSets]         = useState<any[]>([])
   const [buildingReview, setBuildingReview] = useState(false)
   const [reviewLink, setReviewLink]         = useState('')
@@ -605,7 +606,7 @@ export default function VideoAnalyst({
   }
 
   return (
-    <div onClick={() => setShowFiltersMenu(false)} style={{ fontFamily: FF, background: BG, color: TEXT, height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div onClick={() => { setShowFiltersMenu(false); setShowReviewFilters(false) }} style={{ fontFamily: FF, background: BG, color: TEXT, height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
       {showSquadsModal && <SquadsModal />}
 
@@ -1250,24 +1251,40 @@ export default function VideoAnalyst({
               </div>
             </div>
 
-            {/* Select events header with filter */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            {/* Select events header with filter dropdown */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, position: 'relative' }}>
               <div style={{ fontSize: 13, fontWeight: 900, color: TEXT, letterSpacing: 0.5 }}>
                 SELECT EVENTS <span style={{ color: GOLD, fontFamily: MONO }}>{reviewSelected.length}</span><span style={{ color: MUTED, fontSize: 11, fontWeight: 400 }}> selected</span>
               </div>
-              <div style={{ display: 'flex', gap: 6 }}>
-                {Object.keys(sportConfig.events).map(type => {
-                  const cfg = sportConfig.events[type]
-                  const active = reviewFilters.includes(type)
-                  return (
-                    <button key={type} onClick={() => setReviewFilters(f => f.includes(type) ? f.filter(x => x !== type) : [...f, type])}
-                      style={{ padding: '3px 8px', fontFamily: FF, fontSize: 10, fontWeight: 700, borderRadius: 3, border: `1px solid ${active ? cfg.color : cfg.color + '44'}`, background: active ? cfg.color : 'transparent', color: active ? '#000' : cfg.color, cursor: 'pointer' }}>
-                      {cfg.label}
-                    </button>
-                  )
-                })}
-                {reviewFilters.length > 0 && <button onClick={() => setReviewFilters([])} style={{ padding: '3px 8px', fontFamily: FF, fontSize: 10, fontWeight: 700, borderRadius: 3, border: `1px solid ${BD}`, background: 'transparent', color: MUTED, cursor: 'pointer' }}>✕</button>}
-              </div>
+              <button
+                onClick={e => { e.stopPropagation(); setShowReviewFilters(v => !v) }}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', background: reviewFilters.length > 0 ? GOLD + '22' : '#ffffff0d', border: `1px solid ${reviewFilters.length > 0 ? GOLD + '66' : BD}`, color: reviewFilters.length > 0 ? GOLD : DIM, borderRadius: 6, fontFamily: FF, fontSize: 12, fontWeight: 700, cursor: 'pointer', letterSpacing: 1 }}>
+                ▼ FILTERS {reviewFilters.length > 0 && <span style={{ background: GOLD, color: '#000', borderRadius: 10, padding: '1px 6px', fontSize: 10 }}>{reviewFilters.length}</span>}
+              </button>
+
+              {showReviewFilters && (
+                <div onClick={e => e.stopPropagation()} style={{ position: 'absolute', top: '100%', right: 0, zIndex: 100, background: '#1a2332', border: `1px solid ${BD}`, borderRadius: 8, padding: 14, minWidth: 220, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', marginTop: 4 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: MUTED, letterSpacing: 1.5, marginBottom: 8 }}>EVENT TYPE</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 14 }}>
+                    {Object.keys(sportConfig.events).map(type => {
+                      const cfg = sportConfig.events[type]
+                      const active = reviewFilters.includes(type)
+                      return (
+                        <div key={type} onClick={() => setReviewFilters(f => f.includes(type) ? f.filter(x => x !== type) : [...f, type])} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 8px', borderRadius: 4, cursor: 'pointer', background: active ? cfg.color + '18' : 'transparent', border: `1px solid ${active ? cfg.color + '44' : 'transparent'}` }}>
+                          <div style={{ width: 14, height: 14, borderRadius: 3, border: `2px solid ${active ? cfg.color : MUTED}`, background: active ? cfg.color : 'transparent', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {active && <span style={{ color: '#000', fontSize: 9, fontWeight: 900 }}>✓</span>}
+                          </div>
+                          <span style={{ fontSize: 13, fontFamily: FF, color: active ? cfg.color : TEXT, fontWeight: active ? 700 : 400 }}>{cfg.label}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button onClick={() => { setReviewFilters([]) }} style={{ flex: 1, padding: '7px 0', fontFamily: FF, fontSize: 12, fontWeight: 700, background: 'transparent', border: `1px solid ${BD}`, color: MUTED, borderRadius: 4, cursor: 'pointer' }}>Clear all</button>
+                    <button onClick={() => setShowReviewFilters(false)} style={{ flex: 1, padding: '7px 0', fontFamily: FF, fontSize: 12, fontWeight: 900, background: GOLD, color: '#000', border: 'none', borderRadius: 4, cursor: 'pointer', letterSpacing: 1 }}>APPLY</button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Event list */}
