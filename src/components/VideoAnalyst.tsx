@@ -879,7 +879,7 @@ export default function VideoAnalyst({
                 <span style={{ color: DIM }}>← → skip · ↑ ↓ jump</span>
               </div>
               <button
-                onClick={() => setShowFiltersMenu(v => !v)}
+                onClick={(e) => { e.stopPropagation(); setShowFiltersMenu(v => !v) }}
                 style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', background: (filters.length > 0 || teamFilter !== 'all' || playerFilter !== null) ? GOLD + '22' : '#ffffff0d', border: `1px solid ${(filters.length > 0 || teamFilter !== 'all' || playerFilter !== null) ? GOLD + '66' : BD}`, color: (filters.length > 0 || teamFilter !== 'all' || playerFilter !== null) ? GOLD : DIM, borderRadius: 6, fontFamily: FF, fontSize: 12, fontWeight: 700, cursor: 'pointer', letterSpacing: 1, flexShrink: 0 }}>
                 ▼ FILTERS {(filters.length > 0 || teamFilter !== 'all' || playerFilter !== null) && <span style={{ background: GOLD, color: '#000', borderRadius: 10, padding: '1px 6px', fontSize: 10 }}>{filters.length + (teamFilter !== 'all' ? 1 : 0) + (playerFilter !== null ? 1 : 0)}</span>}
               </button>
