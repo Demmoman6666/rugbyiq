@@ -71,6 +71,9 @@ export default function VideoAnalyst({
   const [volume, setVolume]                 = useState(1)
   const [showSpeedMenu, setShowSpeedMenu]   = useState(false)
   const [showVolume, setShowVolume]         = useState(false)
+  const [showFiltersMenu, setShowFiltersMenu] = useState(false)
+  const [teamFilter, setTeamFilter]         = useState<'all' | 'home' | 'away'>('all')
+  const [playerFilter, setPlayerFilter]     = useState<number | null>(null)
   const [sportConfig, setSportConfig]       = useState(getSportConfig('rugby'))
   const [toast, setToast]                   = useState<{ label: string; color: string; team: string; player?: string } | null>(null)
   const toastTimer                          = useRef<NodeJS.Timeout | null>(null)
@@ -236,8 +239,12 @@ export default function VideoAnalyst({
   const actualDuration = useCallback(() => (isYoutube ? duration : videoRef.current?.duration) || duration, [isYoutube, duration])
 
   const visible = useMemo(() =>
-    events.filter(e => !filters.length || filters.includes(e.event_type)).sort((a,b) => a.timestamp_secs - b.timestamp_secs)
-  , [events, filters])
+    events
+      .filter(e => !filters.length || filters.includes(e.event_type))
+      .filter(e => teamFilter === 'all' || e.team === teamFilter)
+      .filter(e => playerFilter === null || e.shirt_number === playerFilter)
+      .sort((a,b) => a.timestamp_secs - b.timestamp_secs)
+  , [events, filters, teamFilter, playerFilter])
 
   const seekTo = useCallback((secs: number) => {
     const t = Math.max(0, secs - 1)
@@ -587,7 +594,7 @@ export default function VideoAnalyst({
   }
 
   return (
-    <div style={{ fontFamily: FF, background: BG, color: TEXT, height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div onClick={() => setShowFiltersMenu(false)} style={{ fontFamily: FF, background: BG, color: TEXT, height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
       {showSquadsModal && <SquadsModal />}
 
@@ -863,20 +870,88 @@ export default function VideoAnalyst({
           {/* RIGHT COLUMN — timeline + event log (desktop only, else normal flow) */}
           <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', width: isMobile ? '100%' : 340, flexShrink: 0, borderLeft: isMobile ? 'none' : `1px solid ${BD}` }}>
 
-            {/* Filter pills + hotkey hint header */}
-            <div style={{ background: NAV, borderBottom: `1px solid ${BD}`, padding: '8px 10px', flexShrink: 0 }}>
-              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 6 }}>
-                {Object.keys(sportConfig.events).map(type => (
-                  <button key={type} onClick={() => toggleFilter(type)} style={{ padding: '4px 10px', borderRadius: 20, fontFamily: FF, fontSize: 11, fontWeight: 700, letterSpacing: 0.5, border: `1px solid ${filters.includes(type) ? sportConfig.events[type].color : sportConfig.events[type].color + '44'}`, cursor: 'pointer', color: filters.includes(type) ? '#000' : sportConfig.events[type].color, background: filters.includes(type) ? sportConfig.events[type].color : 'transparent', transition: 'all 0.1s' }}>{sportConfig.events[type].label}</button>
-                ))}
-                {filters.length > 0 && <button onClick={() => setFilters([])} style={{ padding: '4px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, border: `1px solid ${BD}`, background: 'transparent', color: MUTED, cursor: 'pointer', fontFamily: FF }}>✕ Clear</button>}
-              </div>
+            {/* Filters button + dropdown */}
+            <div style={{ background: NAV, borderBottom: `1px solid ${BD}`, padding: '8px 10px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative' }}>
               <div style={{ fontSize: 10, color: MUTED }}>
                 {(activeTeam === 'home' ? homePlayers : awayPlayers).length > 0
-                  ? <span>💡 Hotkey + shirt e.g. <span style={{ fontFamily: MONO, color: DIM }}>T15</span> · </span>
+                  ? <span>💡 <span style={{ fontFamily: MONO, color: DIM }}>T15</span> = Tackle #15 · </span>
                   : null}
-                <span style={{ color: DIM }}>← → skip 5s · ↑ ↓ jump events</span>
+                <span style={{ color: DIM }}>← → skip · ↑ ↓ jump</span>
               </div>
+              <button
+                onClick={() => setShowFiltersMenu(v => !v)}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', background: (filters.length > 0 || teamFilter !== 'all' || playerFilter !== null) ? GOLD + '22' : '#ffffff0d', border: `1px solid ${(filters.length > 0 || teamFilter !== 'all' || playerFilter !== null) ? GOLD + '66' : BD}`, color: (filters.length > 0 || teamFilter !== 'all' || playerFilter !== null) ? GOLD : DIM, borderRadius: 6, fontFamily: FF, fontSize: 12, fontWeight: 700, cursor: 'pointer', letterSpacing: 1, flexShrink: 0 }}>
+                ▼ FILTERS {(filters.length > 0 || teamFilter !== 'all' || playerFilter !== null) && <span style={{ background: GOLD, color: '#000', borderRadius: 10, padding: '1px 6px', fontSize: 10 }}>{filters.length + (teamFilter !== 'all' ? 1 : 0) + (playerFilter !== null ? 1 : 0)}</span>}
+              </button>
+
+              {/* Dropdown */}
+              {showFiltersMenu && (
+                <div onClick={e => e.stopPropagation()} style={{ position: 'absolute', top: '100%', right: 0, zIndex: 100, background: '#1a2332', border: `1px solid ${BD}`, borderRadius: 8, padding: 14, minWidth: 220, boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>
+                  {/* Team filter */}
+                  <div style={{ fontSize: 10, fontWeight: 700, color: MUTED, letterSpacing: 1.5, marginBottom: 8 }}>TEAM</div>
+                  <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
+                    {[['all', 'All'], ['home', homeTeam.abbr], ['away', awayTeam.abbr]].map(([val, label]) => (
+                      <button key={val} onClick={() => setTeamFilter(val as any)} style={{ flex: 1, padding: '5px 0', fontFamily: FF, fontSize: 12, fontWeight: 700, borderRadius: 4, border: `1px solid ${teamFilter === val ? GOLD : BD}`, background: teamFilter === val ? GOLD + '22' : 'transparent', color: teamFilter === val ? GOLD : MUTED, cursor: 'pointer' }}>{label}</button>
+                    ))}
+                  </div>
+
+                  {/* Event type filter */}
+                  <div style={{ fontSize: 10, fontWeight: 700, color: MUTED, letterSpacing: 1.5, marginBottom: 8 }}>EVENT TYPE</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 14 }}>
+                    {Object.keys(sportConfig.events).map(type => {
+                      const cfg = sportConfig.events[type]
+                      const active = filters.includes(type)
+                      return (
+                        <div key={type} onClick={() => toggleFilter(type)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 8px', borderRadius: 4, cursor: 'pointer', background: active ? cfg.color + '18' : 'transparent', border: `1px solid ${active ? cfg.color + '44' : 'transparent'}` }}>
+                          <div style={{ width: 14, height: 14, borderRadius: 3, border: `2px solid ${active ? cfg.color : MUTED}`, background: active ? cfg.color : 'transparent', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {active && <span style={{ color: '#000', fontSize: 9, fontWeight: 900 }}>✓</span>}
+                          </div>
+                          <span style={{ fontSize: 13, fontFamily: FF, color: active ? cfg.color : TEXT, fontWeight: active ? 700 : 400 }}>{cfg.label}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  {/* Player filter — only show if squad is loaded */}
+                  {(homePlayers.length > 0 || awayPlayers.length > 0) && (() => {
+                    const players = teamFilter === 'away' ? awayPlayers : teamFilter === 'home' ? homePlayers : [...homePlayers, ...awayPlayers]
+                    const playersWithEvents = players.filter(p => events.some(e => e.shirt_number === p.shirt_number))
+                    if (playersWithEvents.length === 0) return null
+                    return (
+                      <div style={{ marginBottom: 14 }}>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: MUTED, letterSpacing: 1.5, marginBottom: 8 }}>PLAYER</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 3, maxHeight: 140, overflowY: 'auto' }}>
+                          <div onClick={() => setPlayerFilter(null)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 8px', borderRadius: 4, cursor: 'pointer', background: playerFilter === null ? GOLD + '18' : 'transparent' }}>
+                            <div style={{ width: 14, height: 14, borderRadius: 3, border: `2px solid ${playerFilter === null ? GOLD : MUTED}`, background: playerFilter === null ? GOLD : 'transparent', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              {playerFilter === null && <span style={{ color: '#000', fontSize: 9, fontWeight: 900 }}>✓</span>}
+                            </div>
+                            <span style={{ fontSize: 13, fontFamily: FF, color: playerFilter === null ? GOLD : TEXT }}>All players</span>
+                          </div>
+                          {playersWithEvents.map(p => {
+                            const active = playerFilter === p.shirt_number
+                            const teamColor = homePlayers.includes(p) ? homeTeam.color : awayTeam.color
+                            return (
+                              <div key={p.shirt_number} onClick={() => setPlayerFilter(active ? null : p.shirt_number)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 8px', borderRadius: 4, cursor: 'pointer', background: active ? teamColor + '18' : 'transparent' }}>
+                                <div style={{ width: 14, height: 14, borderRadius: 3, border: `2px solid ${active ? teamColor : MUTED}`, background: active ? teamColor : 'transparent', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  {active && <span style={{ color: '#000', fontSize: 9, fontWeight: 900 }}>✓</span>}
+                                </div>
+                                <span style={{ fontFamily: MONO, fontSize: 11, color: teamColor }}>#{p.shirt_number}</span>
+                                <span style={{ fontSize: 13, fontFamily: FF, color: active ? TEXT : MUTED }}>{p.name || 'Unknown'}</span>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )
+                  })()}
+
+                  {/* Clear + Close */}
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button onClick={() => { setFilters([]); setTeamFilter('all'); setPlayerFilter(null) }} style={{ flex: 1, padding: '7px 0', fontFamily: FF, fontSize: 12, fontWeight: 700, background: 'transparent', border: `1px solid ${BD}`, color: MUTED, borderRadius: 4, cursor: 'pointer' }}>Clear all</button>
+                    <button onClick={() => setShowFiltersMenu(false)} style={{ flex: 1, padding: '7px 0', fontFamily: FF, fontSize: 12, fontWeight: 900, background: GOLD, color: '#000', border: 'none', borderRadius: 4, cursor: 'pointer', letterSpacing: 1 }}>APPLY</button>
+                  </div>
+                </div>
+              )}
             </div>
 
           {/* Timeline + event log */}
