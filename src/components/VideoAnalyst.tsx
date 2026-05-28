@@ -990,7 +990,6 @@ export default function VideoAnalyst({
               {visible.length === 0 && <div style={{ textAlign: 'center', padding: '40px 20px', color: MUTED, fontSize: 12, letterSpacing: 1 }}>NO EVENTS YET — USE HOTKEYS OR BUTTONS ABOVE TO START CODING</div>}
             </div>
           </div>
-          </div>{/* end timeline+event log */}
           </div>{/* end RIGHT COLUMN */}
         </div>
       )}
