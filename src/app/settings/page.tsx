@@ -1,4 +1,5 @@
 'use client'
+import React from 'react'
 import { Suspense, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
@@ -9,7 +10,115 @@ const BD   = '#e2e8f0'
 const GOLD = '#e8a020'
 const NAV  = '#0f172a'
 
-type SettingsTab = 'club' | 'account' | 'billing' | 'analysts'
+type SettingsTab = 'club' | 'account' | 'billing' | 'analysts' | 'players'
+
+
+function PlayersPanel({ orgId, orgName, isMobile, card }: { orgId: string, orgName: string, isMobile: boolean, card: any }) {
+  const FF   = "'Barlow Condensed', system-ui, sans-serif"
+  const BD   = '#e2e8f0'
+  const GOLD = '#e8a020'
+  const NAV  = '#0f172a'
+  const [inviteEmail, setInviteEmail] = React.useState('')
+  const [search, setSearch]           = React.useState('')
+  const [sending, setSending]         = React.useState(false)
+  const [sent, setSent]               = React.useState(false)
+  const [error, setError]             = React.useState('')
+  const [invites, setInvites]         = React.useState<any[]>([])
+  const [players, setPlayers]         = React.useState<any[]>([])
+  const [loadingData, setLoadingData] = React.useState(true)
+
+  React.useEffect(() => {
+    if (!orgId) return
+    fetch(`/api/player-invites?orgId=${orgId}`)
+      .then(r => r.json())
+      .then(d => { setInvites(d.invites ?? []); setPlayers(d.players ?? []); setLoadingData(false) })
+  }, [orgId])
+
+  const sendInvite = async () => {
+    if (!inviteEmail.trim()) { setError('Enter an email address'); return }
+    setSending(true); setError(''); setSent(false)
+    const res = await fetch('/api/player-invites', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: inviteEmail.trim(), orgId, orgName })
+    })
+    const data = await res.json()
+    if (data.error) { setError(data.error); setSending(false); return }
+    setSent(true); setInviteEmail('')
+    setInvites(prev => [{ email: inviteEmail.trim(), status: 'pending', created_at: new Date().toISOString() }, ...prev])
+    setSending(false)
+  }
+
+  const removeItem = async (type: string, id: string) => {
+    if (!confirm(type === 'player' ? 'Remove this player? They will lose access immediately.' : 'Revoke this invite?')) return
+    await fetch('/api/player-invites', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type, id }) })
+    if (type === 'player') setPlayers(prev => prev.filter(p => p.id !== id))
+    else setInvites(prev => prev.filter(i => i.id !== id))
+  }
+
+  const filteredPlayers = players.filter(p => !search || p.name?.toLowerCase().includes(search.toLowerCase()) || p.email?.toLowerCase().includes(search.toLowerCase()))
+  const filteredInvites = invites.filter(i => i.status === 'pending' && (!search || i.email?.toLowerCase().includes(search.toLowerCase())))
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div style={card}>
+        <div style={{ fontSize: 18, fontWeight: 900, color: NAV, marginBottom: 4 }}>Player Portal</div>
+        <div style={{ fontSize: 13, color: '#64748b', marginBottom: 16 }}>
+          {players.length} active player{players.length !== 1 ? 's' : ''} · {filteredInvites.length} pending invite{filteredInvites.length !== 1 ? 's' : ''}
+        </div>
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search players or emails..." style={{ width: '100%', padding: '9px 12px', fontFamily: FF, fontSize: 13, border: `1px solid ${BD}`, borderRadius: 6, outline: 'none', marginBottom: 12, boxSizing: 'border-box' as const }} />
+        {loadingData ? (
+          <div style={{ fontSize: 13, color: '#94a3b8', padding: '12px 0' }}>Loading...</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {filteredPlayers.length === 0 && filteredInvites.length === 0 && (
+              <div style={{ fontSize: 13, color: '#94a3b8', padding: '12px 0' }}>No players yet. Invite your first player below.</div>
+            )}
+            {filteredPlayers.map(p => (
+              <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8 }}>
+                <div style={{ width: 34, height: 34, borderRadius: '50%', background: GOLD, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 900, color: '#000', flexShrink: 0 }}>
+                  {p.name?.[0]?.toUpperCase() ?? '?'}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: NAV }}>{p.name}</div>
+                  <div style={{ fontSize: 11, color: '#94a3b8' }}>
+                    {p.shirt_number ? `#${p.shirt_number} · ` : ''}<span style={{ color: '#16a34a', fontWeight: 700 }}>● ACTIVE</span>
+                  </div>
+                </div>
+                <button onClick={() => removeItem('player', p.id)} style={{ padding: '4px 10px', background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', fontFamily: FF, fontSize: 11, fontWeight: 700, borderRadius: 4, cursor: 'pointer' }}>Remove</button>
+              </div>
+            ))}
+            {filteredInvites.map((inv, i) => (
+              <div key={inv.id ?? i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8 }}>
+                <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#fde68a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 900, color: '#92400e', flexShrink: 0 }}>
+                  {inv.email?.[0]?.toUpperCase() ?? '?'}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: NAV, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{inv.email}</div>
+                  <div style={{ fontSize: 11, color: '#92400e', fontWeight: 700 }}>⏳ PENDING INVITE</div>
+                </div>
+                {inv.id && <button onClick={() => removeItem('invite', inv.id)} style={{ padding: '4px 10px', background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', fontFamily: FF, fontSize: 11, fontWeight: 700, borderRadius: 4, cursor: 'pointer' }}>Revoke</button>}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div style={card}>
+        <div style={{ fontSize: 16, fontWeight: 900, color: NAV, marginBottom: 4 }}>Invite a Player</div>
+        <div style={{ fontSize: 13, color: '#64748b', marginBottom: 16 }}>They'll get an email with a link to join the player portal.</div>
+        <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 8, marginBottom: 12 }}>
+          <input type="email" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} onKeyDown={e => e.key === 'Enter' && sendInvite()} placeholder="player@example.com" style={{ flex: 1, padding: '9px 12px', fontFamily: FF, fontSize: 13, border: `1px solid ${BD}`, borderRadius: 6, outline: 'none' }} />
+          <button onClick={sendInvite} disabled={sending} style={{ padding: '9px 20px', background: NAV, color: '#fff', border: 'none', borderRadius: 6, fontFamily: FF, fontSize: 13, fontWeight: 900, cursor: 'pointer', whiteSpace: 'nowrap', width: isMobile ? '100%' : 'auto' }}>
+            {sending ? 'SENDING...' : 'INVITE'}
+          </button>
+        </div>
+        {error && <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', fontSize: 12, padding: '8px 12px', borderRadius: 6 }}>{error}</div>}
+        {sent && <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#16a34a', fontSize: 12, padding: '8px 12px', borderRadius: 6 }}>✓ Invite sent to {inviteEmail || 'player'}</div>}
+      </div>
+    </div>
+  )
+}
 
 function SettingsPageInner() {
   const router       = useRouter()
@@ -213,6 +322,7 @@ function SettingsPageInner() {
     { key: 'account',  label: 'Account',        icon: '👤' },
     { key: 'billing',  label: 'Plans & Billing', icon: '💳' },
     ...(isClubPlan ? [{ key: 'analysts' as SettingsTab, label: 'Analysts', icon: '👥' }] : []),
+    ...(isClubPlan ? [{ key: 'players' as SettingsTab, label: 'Players', icon: '⚡' }] : []),
   ]
 
   const planName = (p: string) => p === 'pro' ? 'Player' : p.charAt(0).toUpperCase() + p.slice(1)
@@ -449,6 +559,12 @@ function SettingsPageInner() {
                 </div>
                 <div style={{ fontSize: 11, color: '#94a3b8', textAlign: 'center' }}>Secure payment via Stripe · Cancel anytime · VAT may apply</div>
               </div>
+            )}
+
+
+            {/* PLAYERS */}
+            {tab === 'players' && (
+              <PlayersPanel orgId={orgId} orgName={org?.name ?? ''} isMobile={isMobile} card={card} />
             )}
 
             {/* ANALYSTS */}
