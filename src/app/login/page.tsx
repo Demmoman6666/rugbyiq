@@ -53,8 +53,10 @@ export default function LoginPage() {
     }
 
     if (mode === 'login') {
-      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) { setError(error.message); setLoading(false); return }
+      const { data: _om } = await supabase.from('org_members').select('id').eq('user_id', authData.user?.id).maybeSingle()
+      if (!_om) { await supabase.auth.signOut(); setError('No analyst account found. Player login is at /player/login'); setLoading(false); return }
       const params = new URLSearchParams(window.location.search)
       const inviteToken = params.get('invite')
       if (inviteToken) {
