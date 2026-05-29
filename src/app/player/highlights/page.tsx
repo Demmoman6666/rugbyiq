@@ -102,7 +102,7 @@ export default function PlayerHighlightsPage() {
 
   const formatTime = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(Math.floor(s % 60)).padStart(2, '0')}`
 
-  const eventTypes = [...new Set(allEvents.map(e => e.event_type))]
+  const eventTypes = Array.from(new Set(allEvents.map(e => e.event_type)))
 
   if (loading) return <div style={{ fontFamily: FF, background: BG, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: MUTED }}>Loading...</div>
 
