@@ -26,9 +26,6 @@ export default function PlayerLoginPage() {
     if (authError) { setError(authError.message); setLoading(false); return }
     const { data: playerProfile } = await supabase.from('player_profiles').select('id').eq('user_id', authData.user?.id).maybeSingle()
     if (!playerProfile) { await supabase.auth.signOut(); setError('No player account found. Are you looking for the analyst login?'); setLoading(false); return }
-    const { data: playerProfile } = await supabase.from('player_profiles').select('id').eq('user_id', authData.user?.id).maybeSingle()
-    if (!playerProfile) {
-      await supabase.auth.signOut()
       setError('No player account found. Are you looking for the analyst login?')
       setLoading(false)
       return
