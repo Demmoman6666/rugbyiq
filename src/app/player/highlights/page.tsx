@@ -116,7 +116,8 @@ export default function PlayerHighlightsPage() {
           <div style={{ width: 1, height: 16, background: BD }}/>
           <div style={{ fontSize: 10, letterSpacing: 2, color: MUTED }}>MY HIGHLIGHTS</div>
         </div>
-        <button onClick={() => router.push('/player/dashboard')} style={{ padding: '5px 12px', fontFamily: FF, fontSize: 11, background: 'transparent', border: `1px solid ${BD}`, color: MUTED, borderRadius: 4, cursor: 'pointer' }}>← DASHBOARD</button>
+          <button onClick={async () => { const url = `${window.location.origin}/player/reel/${profile?.share_token}`; await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 2000) }} style={{ padding: '5px 14px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: copied ? '#16a34a22' : GOLD + '22', border: `1px solid ${copied ? '#16a34a44' : GOLD + '44'}`, color: copied ? '#4ade80' : GOLD, borderRadius: 4, cursor: 'pointer', letterSpacing: 1 }}>{copied ? '✓ COPIED!' : '🔗 SHARE REEL'}</button>
+          <button onClick={() => router.push('/player/dashboard')} style={{ padding: '5px 12px', fontFamily: FF, fontSize: 11, background: 'transparent', border: `1px solid ${BD}`, color: MUTED, borderRadius: 4, cursor: 'pointer' }}>← DASHBOARD</button>
       </div>
 
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '32px 24px' }}>
