@@ -564,7 +564,7 @@ function SettingsPageInner() {
 
             {/* PLAYERS */}
             {tab === 'players' && (
-              <PlayersPanel orgId={org?.id ?? } orgName={org?.name ?? ''} isMobile={isMobile} card={card} />
+              <PlayersPanel orgId={org?.id ?? ''} orgName={org?.name ?? ''} isMobile={isMobile} card={card} />
             )}
 
             {/* ANALYSTS */}
