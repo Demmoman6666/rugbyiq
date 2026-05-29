@@ -196,24 +196,16 @@ export default function DashboardPage() {
                 >
                   {/* Thumbnail */}
                   <div style={{ position: 'relative', width: '100%', paddingBottom: '56.25%', background: '#050810', overflow: 'hidden' }}>
-                    {m.video_public_url && !m.video_public_url.includes('youtube') ? (
-                      <video
-                        src={m.video_public_url}
-                        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
-                        preload="metadata"
-                        muted
-                        onLoadedMetadata={e => { (e.target as HTMLVideoElement).currentTime = 30 }}
-                      />
-                    ) : m.video_public_url?.includes('youtube') ? (
+                    {m.video_public_url?.includes('youtube') ? (
                       <img
                         src={`https://img.youtube.com/vi/${m.video_public_url.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/)?.[1]}/mqdefault.jpg`}
                         style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
                         alt=""
                       />
                     ) : (
-                      <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#1e2d3d' }}>
-                        <div style={{ fontSize: 32, marginBottom: 6 }}>🏉</div>
-                        <div style={{ fontSize: 10, color: '#1e2d3d', letterSpacing: 2 }}>NO VIDEO</div>
+                      <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                        <div style={{ fontSize: isMobile ? 28 : 36, marginBottom: 6 }}>🏉</div>
+                        <div style={{ fontSize: 9, color: '#1e2d3d', letterSpacing: 2, fontWeight: 700 }}>{m.video_public_url ? 'VIDEO READY' : 'NO VIDEO'}</div>
                       </div>
                     )}
 
