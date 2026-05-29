@@ -141,6 +141,38 @@ export default function VideoAnalyst({
   }
 
   const currentEventRef = useRef<HTMLDivElement>(null)
+  const thumbnailCapturedRef = useRef(false)
+
+  const captureThumbnail = () => {
+    if (thumbnailCapturedRef.current || !videoUrl || videoUrl.includes('youtube')) return
+    thumbnailCapturedRef.current = true
+    try {
+      const tmpVideo = document.createElement('video')
+      tmpVideo.crossOrigin = 'anonymous'
+      tmpVideo.muted = true
+      tmpVideo.src = videoUrl
+      tmpVideo.addEventListener('loadedmetadata', () => {
+        tmpVideo.currentTime = Math.min(30, tmpVideo.duration * 0.05)
+      })
+      tmpVideo.addEventListener('seeked', () => {
+        try {
+          const canvas = document.createElement('canvas')
+          canvas.width = 640; canvas.height = 360
+          const ctx = canvas.getContext('2d')
+          if (!ctx) return
+          ctx.drawImage(tmpVideo, 0, 0, 640, 360)
+          const imageData = canvas.toDataURL('image/jpeg', 0.8)
+          fetch('/api/thumbnail', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ matchId, imageData })
+          }).catch(() => {})
+        } catch {}
+        tmpVideo.remove()
+      })
+      tmpVideo.load()
+    } catch {}
+  }
 
   useEffect(() => {
     if (currentEventRef.current) {
@@ -258,7 +290,7 @@ export default function VideoAnalyst({
     if (isYoutube) return
     const v = videoRef.current; if (!v) return
     const onTime  = () => setTime(Math.floor(v.currentTime))
-    const onMeta  = () => setDuration(Math.floor(v.duration))
+    const onMeta  = () => { setDuration(Math.floor(v.duration)); captureThumbnail() }
     const onPlay  = () => setPlaying(true)
     const onPause = () => setPlaying(false)
     v.addEventListener('timeupdate', onTime); v.addEventListener('loadedmetadata', onMeta)

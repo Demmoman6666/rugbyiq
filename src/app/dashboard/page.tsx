@@ -196,7 +196,9 @@ export default function DashboardPage() {
                 >
                   {/* Thumbnail */}
                   <div style={{ position: 'relative', width: '100%', paddingBottom: '56.25%', background: '#050810', overflow: 'hidden' }}>
-                    {m.video_public_url?.includes('youtube') ? (
+                    {m.thumbnail_url ? (
+                      <img src={m.thumbnail_url} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
+                    ) : m.video_public_url?.includes('youtube') ? (
                       <img
                         src={`https://img.youtube.com/vi/${m.video_public_url.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/)?.[1]}/mqdefault.jpg`}
                         style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
