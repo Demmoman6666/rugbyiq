@@ -82,21 +82,24 @@ export default function PlayerMatchPage() {
   // Video event listeners
   useEffect(() => {
     const v = videoRef.current; if (!v) return
-    const onTime  = () => setTime(Math.floor(v.currentTime))
-    const onMeta  = () => setDuration(Math.floor(v.duration))
-    const onPlay  = () => setPlaying(true)
-    const onPause = () => setPlaying(false)
+    const onTime     = () => setTime(Math.floor(v.currentTime))
+    const onMeta     = () => setDuration(Math.floor(v.duration))
+    const onDuration = () => { if (v.duration && !isNaN(v.duration)) setDuration(Math.floor(v.duration)) }
+    const onPlay     = () => setPlaying(true)
+    const onPause    = () => setPlaying(false)
     v.addEventListener('timeupdate', onTime)
     v.addEventListener('loadedmetadata', onMeta)
+    v.addEventListener('durationchange', onDuration)
     v.addEventListener('play', onPlay)
     v.addEventListener('pause', onPause)
     return () => {
       v.removeEventListener('timeupdate', onTime)
       v.removeEventListener('loadedmetadata', onMeta)
+      v.removeEventListener('durationchange', onDuration)
       v.removeEventListener('play', onPlay)
       v.removeEventListener('pause', onPause)
     }
-  }, [match])
+  }, [])
 
   // Auto-scroll current event
   useEffect(() => {
