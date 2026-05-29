@@ -53,8 +53,6 @@ function PlayerJoinContent() {
         userId = signUpData.user.id
       }
       if (!userId) throw new Error('Could not get user')
-      const userId = authData.user?.id
-      if (!userId) throw new Error('No user created')
 
       await supabase.from('player_profiles').insert({ user_id: userId, org_id: invite.org_id, name: name.trim() })
       await supabase.from('player_invites').update({ status: 'accepted' }).eq('token', token)
