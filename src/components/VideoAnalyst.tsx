@@ -627,7 +627,7 @@ export default function VideoAnalyst({
   }
 
   return (
-    <div onClick={() => { setShowFiltersMenu(false); setShowReviewFilters(false); setShowEditMatch(false) }} style={{ fontFamily: FF, background: BG, color: TEXT, height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div onClick={() => { setShowFiltersMenu(false); setShowReviewFilters(false) }} style={{ fontFamily: FF, background: BG, color: TEXT, height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
       {showSquadsModal && <SquadsModal />}
 
@@ -704,7 +704,7 @@ export default function VideoAnalyst({
             {scanState.running && <div style={{ color: GOLD, fontSize: 10, marginTop: 2, letterSpacing: 1 }}>🤖 SCANNING {scanState.pct}%</div>}
           </div>
           <button onClick={() => { if (plan !== 'club') { alert('Team sheets are only available on the Club plan. Upgrade in Settings → Plans & Billing.'); return } setShowSquadsModal(true) }} style={{ padding: '5px 12px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: '#ffffff0d', color: plan === 'club' ? DIM : MUTED, border: `1px solid ${BD}`, borderRadius: 4, cursor: plan === 'club' ? 'pointer' : 'not-allowed', letterSpacing: 1, opacity: plan === 'club' ? 1 : 0.4 }}>{plan === 'club' ? '👥 SQUADS' : '🔒 SQUADS'}</button>
-          <button onClick={() => setShowEditMatch(true)} style={{ padding: '5px 12px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: '#ffffff0d', color: DIM, border: `1px solid ${BD}`, borderRadius: 4, cursor: 'pointer', letterSpacing: 1 }}>✏️ EDIT</button>
+          <button onClick={(e) => { e.stopPropagation(); setShowEditMatch(true) }} style={{ padding: '5px 12px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: '#ffffff0d', color: DIM, border: `1px solid ${BD}`, borderRadius: 4, cursor: 'pointer', letterSpacing: 1 }}>✏️ EDIT</button>
           <button onClick={generateShareLink} style={{ padding: '5px 12px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: copying ? '#16a34a' : '#ffffff0d', color: copying ? '#fff' : GOLD, border: `1px solid ${copying ? '#16a34a' : GOLD + '44'}`, borderRadius: 4, cursor: 'pointer', letterSpacing: 1 }}>
             {copying ? '✓ COPIED' : '🔗 SHARE'}
           </button>
