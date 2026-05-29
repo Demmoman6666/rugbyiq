@@ -43,9 +43,16 @@ function PlayerJoinContent() {
     if (!name.trim() || !email.trim() || !password.trim()) { setError('Please fill in all fields'); return }
     setSubmitting(true); setError('')
     try {
-      const { data: authData, error: authError } = await supabase.auth.signUp({ email, password, options: { data: { full_name: name } } })
-      if (authError) throw authError
-
+      let userId: string | undefined
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({ email, password, options: { data: { full_name: name } } })
+      if (signUpError || !signUpData.user) {
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+        if (signInError) throw signInError
+        userId = signInData.user?.id
+      } else {
+        userId = signUpData.user.id
+      }
+      if (!userId) throw new Error('Could not get user')
       const userId = authData.user?.id
       if (!userId) throw new Error('No user created')
 
