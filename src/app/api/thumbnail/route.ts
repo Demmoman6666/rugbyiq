@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
-import { createClient } from '@/lib/supabase-server'
+import { createClient } from '@supabase/supabase-js'
 
 const s3 = new S3Client({
   region: 'auto',
@@ -10,6 +10,11 @@ const s3 = new S3Client({
     secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
   },
 })
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
 export async function POST(req: NextRequest) {
   try {
@@ -29,7 +34,6 @@ export async function POST(req: NextRequest) {
 
     const thumbnailUrl = `${process.env.R2_PUBLIC_URL}/${key}`
 
-    const supabase = createClient()
     await supabase.from('matches').update({ thumbnail_url: thumbnailUrl }).eq('id', matchId)
 
     return NextResponse.json({ thumbnailUrl })
