@@ -120,7 +120,25 @@ export default function VideoAnalyst({
   const playerTimer      = useRef<NodeJS.Timeout | null>(null)
   const [hudDisplay, setHudDisplay] = useState<{ eventLabel: string; digits: string; color: string } | null>(null)
 
-  const currentEventRef = useRef<HTMLDivElement>(null)
+  const [showEditMatch, setShowEditMatch]   = useState(false)
+  const [editForm, setEditForm]             = useState({ home_team: homeTeam.name, away_team: awayTeam.name, competition: '', venue: '', match_date: '' })
+  const [savingEdit, setSavingEdit]         = useState(false)
+
+  useEffect(() => {
+    const loadMatchMeta = async () => {
+      const { data } = await supabase.from('matches').select('competition, venue, match_date, home_team, away_team').eq('id', matchId).single()
+      if (data) setEditForm({ home_team: data.home_team, away_team: data.away_team, competition: data.competition ?? '', venue: data.venue ?? '', match_date: data.match_date ? data.match_date.split('T')[0] : '' })
+    }
+    loadMatchMeta()
+  }, [matchId])
+
+  const saveMatchEdit = async () => {
+    setSavingEdit(true)
+    await supabase.from('matches').update({ home_team: editForm.home_team, away_team: editForm.away_team, competition: editForm.competition || null, venue: editForm.venue || null, match_date: editForm.match_date || null }).eq('id', matchId)
+    setSavingEdit(false)
+    setShowEditMatch(false)
+    window.location.reload()
+  }
 
   useEffect(() => {
     if (currentEventRef.current) {
@@ -607,9 +625,54 @@ export default function VideoAnalyst({
   }
 
   return (
-    <div onClick={() => { setShowFiltersMenu(false); setShowReviewFilters(false) }} style={{ fontFamily: FF, background: BG, color: TEXT, height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div onClick={() => { setShowFiltersMenu(false); setShowReviewFilters(false); setShowEditMatch(false) }} style={{ fontFamily: FF, background: BG, color: TEXT, height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
       {showSquadsModal && <SquadsModal />}
+
+      {/* EDIT MATCH MODAL */}
+      {showEditMatch && (
+        <div onClick={() => setShowEditMatch(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#111827', border: `1px solid ${BD}`, borderRadius: 12, padding: 28, width: '90%', maxWidth: 480, boxShadow: '0 40px 80px rgba(0,0,0,0.6)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+              <div style={{ fontSize: 16, fontWeight: 900, color: TEXT, letterSpacing: 1 }}>✏️ EDIT MATCH</div>
+              <button onClick={() => setShowEditMatch(false)} style={{ background: 'none', border: 'none', color: MUTED, fontSize: 18, cursor: 'pointer' }}>✕</button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {[
+                { label: 'HOME TEAM', key: 'home_team', placeholder: 'Home team name' },
+                { label: 'AWAY TEAM', key: 'away_team', placeholder: 'Away team name' },
+                { label: 'COMPETITION', key: 'competition', placeholder: 'e.g. Welsh Premiership' },
+                { label: 'VENUE', key: 'venue', placeholder: 'e.g. Gnoll Ground' },
+              ].map(({ label, key, placeholder }) => (
+                <div key={key}>
+                  <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 2, color: MUTED, marginBottom: 5 }}>{label}</div>
+                  <input
+                    value={(editForm as any)[key]}
+                    onChange={e => setEditForm(f => ({ ...f, [key]: e.target.value }))}
+                    placeholder={placeholder}
+                    style={{ width: '100%', padding: '9px 12px', fontFamily: FF, fontSize: 13, background: BG, border: `1px solid ${BD}`, borderRadius: 6, color: TEXT, outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
+              ))}
+              <div>
+                <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 2, color: MUTED, marginBottom: 5 }}>MATCH DATE</div>
+                <input
+                  type="date"
+                  value={editForm.match_date}
+                  onChange={e => setEditForm(f => ({ ...f, match_date: e.target.value }))}
+                  style={{ width: '100%', padding: '9px 12px', fontFamily: FF, fontSize: 13, background: BG, border: `1px solid ${BD}`, borderRadius: 6, color: TEXT, outline: 'none', boxSizing: 'border-box', colorScheme: 'dark' }}
+                />
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+              <button onClick={() => setShowEditMatch(false)} style={{ flex: 1, padding: '10px 0', fontFamily: FF, fontSize: 13, fontWeight: 700, background: 'transparent', border: `1px solid ${BD}`, color: MUTED, borderRadius: 6, cursor: 'pointer' }}>Cancel</button>
+              <button onClick={saveMatchEdit} disabled={savingEdit} style={{ flex: 2, padding: '10px 0', fontFamily: FF, fontSize: 13, fontWeight: 900, background: GOLD, color: '#000', border: 'none', borderRadius: 6, cursor: 'pointer', letterSpacing: 1 }}>
+                {savingEdit ? 'SAVING...' : 'SAVE CHANGES'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* HEADER */}
       <div style={{ background: NAV, padding: '10px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, borderBottom: `1px solid ${BD}` }}>
@@ -639,6 +702,7 @@ export default function VideoAnalyst({
             {scanState.running && <div style={{ color: GOLD, fontSize: 10, marginTop: 2, letterSpacing: 1 }}>🤖 SCANNING {scanState.pct}%</div>}
           </div>
           <button onClick={() => { if (plan !== 'club') { alert('Team sheets are only available on the Club plan. Upgrade in Settings → Plans & Billing.'); return } setShowSquadsModal(true) }} style={{ padding: '5px 12px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: '#ffffff0d', color: plan === 'club' ? DIM : MUTED, border: `1px solid ${BD}`, borderRadius: 4, cursor: plan === 'club' ? 'pointer' : 'not-allowed', letterSpacing: 1, opacity: plan === 'club' ? 1 : 0.4 }}>{plan === 'club' ? '👥 SQUADS' : '🔒 SQUADS'}</button>
+          <button onClick={() => setShowEditMatch(true)} style={{ padding: '5px 12px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: '#ffffff0d', color: DIM, border: `1px solid ${BD}`, borderRadius: 4, cursor: 'pointer', letterSpacing: 1 }}>✏️ EDIT</button>
           <button onClick={generateShareLink} style={{ padding: '5px 12px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: copying ? '#16a34a' : '#ffffff0d', color: copying ? '#fff' : GOLD, border: `1px solid ${copying ? '#16a34a' : GOLD + '44'}`, borderRadius: 4, cursor: 'pointer', letterSpacing: 1 }}>
             {copying ? '✓ COPIED' : '🔗 SHARE'}
           </button>
