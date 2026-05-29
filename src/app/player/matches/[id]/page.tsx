@@ -208,7 +208,18 @@ export default function PlayerMatchPage() {
           {/* Video */}
           <div style={{ position: 'relative', width: '100%', background: '#000', flexShrink: 0 }}>
             {match?.video_public_url ? (
-              <video ref={videoRef} src={match.video_public_url} style={{ width: '100%', maxHeight: '65vh', objectFit: 'contain', display: 'block' }} playsInline preload="metadata" />
+              <video
+                  ref={videoRef}
+                  src={match.video_public_url}
+                  style={{ width: '100%', maxHeight: '65vh', objectFit: 'contain', display: 'block' }}
+                  playsInline
+                  preload="metadata"
+                  onTimeUpdate={e => setTime(Math.floor((e.target as HTMLVideoElement).currentTime))}
+                  onLoadedMetadata={e => setDuration(Math.floor((e.target as HTMLVideoElement).duration))}
+                  onDurationChange={e => { const d = (e.target as HTMLVideoElement).duration; if (d && !isNaN(d)) setDuration(Math.floor(d)) }}
+                  onPlay={() => setPlaying(true)}
+                  onPause={() => setPlaying(false)}
+                />
             ) : (
               <div style={{ width: '100%', height: '36vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#050810' }}>
                 <div style={{ textAlign: 'center', color: MUTED }}><div style={{ fontSize: 36, marginBottom: 10 }}>📹</div><div>NO VIDEO</div></div>
