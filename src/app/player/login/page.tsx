@@ -2,7 +2,6 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
-
 const FF = "'Barlow Condensed',system-ui,sans-serif"
 const GOLD = '#e8a020'
 const BD = '#1e2d3d'
@@ -25,7 +24,8 @@ export default function PlayerLoginPage() {
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({ email, password })
     if (authError) { setError(authError.message); setLoading(false); return }
     const { data: playerProfile } = await supabase.from('player_profiles').select('id').eq('user_id', authData.user?.id).maybeSingle()
-    if (!playerProfile) { await supabase.auth.signOut(); setError('No player account found. Are you looking for the analyst login?'); setLoading(false); return }
+    if (!playerProfile) {
+      await supabase.auth.signOut()
       setError('No player account found. Are you looking for the analyst login?')
       setLoading(false)
       return
@@ -40,7 +40,6 @@ export default function PlayerLoginPage() {
           <div style={{ fontSize: 28, fontWeight: 900, letterSpacing: 3, color: TEXT, marginBottom: 4 }}>CLUB<span style={{ color: GOLD }}>CODE</span></div>
           <div style={{ fontSize: 12, color: MUTED, letterSpacing: 2 }}>PLAYER PORTAL</div>
         </div>
-
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div>
             <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 2, color: MUTED, marginBottom: 5 }}>EMAIL</div>
@@ -51,17 +50,13 @@ export default function PlayerLoginPage() {
             <input value={password} onChange={e => setPassword(e.target.value)} type="password" placeholder="Your password" onKeyDown={e => e.key === 'Enter' && handleLogin()} style={{ width: '100%', padding: '10px 12px', fontFamily: FF, fontSize: 14, background: '#ffffff08', border: `1px solid ${BD}`, borderRadius: 6, color: TEXT, outline: 'none', boxSizing: 'border-box' }} />
           </div>
         </div>
-
         {error && <div style={{ marginTop: 12, color: '#f87171', fontSize: 13 }}>⚠️ {error}</div>}
-
         <button onClick={handleLogin} disabled={loading} style={{ width: '100%', marginTop: 20, padding: '12px 0', fontFamily: FF, fontSize: 14, fontWeight: 900, background: GOLD, color: '#000', border: 'none', borderRadius: 6, cursor: 'pointer', letterSpacing: 1 }}>
           {loading ? 'LOGGING IN...' : 'LOG IN →'}
         </button>
-
         <div style={{ marginTop: 20, textAlign: 'center', fontSize: 12, color: MUTED }}>
           Don't have an account? Check your email for an invite link from your club.
         </div>
-
         <div style={{ marginTop: 16, textAlign: 'center', borderTop: `1px solid ${BD}`, paddingTop: 16 }}>
           <a href="/login" style={{ fontSize: 11, color: MUTED, textDecoration: 'none' }}>Analyst login →</a>
         </div>
