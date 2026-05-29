@@ -140,6 +140,8 @@ export default function VideoAnalyst({
     window.location.reload()
   }
 
+  const currentEventRef = useRef<HTMLDivElement>(null)
+
   useEffect(() => {
     if (currentEventRef.current) {
       currentEventRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
