@@ -19,6 +19,7 @@ export interface Match {
   video_url?: string
   video_public_url?: string
   video_duration?: number
+  thumbnail_url?: string
   created_at: string
 }
 
