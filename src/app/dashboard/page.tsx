@@ -17,7 +17,6 @@ export default function DashboardPage() {
   const [plan, setPlan]         = useState('starter')
   const [orgName, setOrgName]   = useState('')
   const [orgId, setOrgId]       = useState('')
-  const [sport, setSport]       = useState('rugby')
   const [usage, setUsage]       = useState<{ used: number; limit: number; canCreate: boolean } | null>(null)
   const [upgraded, setUpgraded] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
@@ -49,11 +48,11 @@ export default function DashboardPage() {
 
       let member: any = null
       if (profile?.active_org_id) {
-        const { data } = await supabase.from('org_members').select('org_id, organisations(plan, name, sport)').eq('user_id', user.id).eq('org_id', profile.active_org_id).maybeSingle()
+        const { data } = await supabase.from('org_members').select('org_id, organisations(plan, name)').eq('user_id', user.id).eq('org_id', profile.active_org_id).maybeSingle()
         member = data
       }
       if (!member) {
-        const { data } = await supabase.from('org_members').select('org_id, organisations(plan, name, sport)').eq('user_id', user.id).maybeSingle()
+        const { data } = await supabase.from('org_members').select('org_id, organisations(plan, name)').eq('user_id', user.id).maybeSingle()
         member = data
       }
 
@@ -62,7 +61,6 @@ export default function DashboardPage() {
         setPlan(org?.plan ?? 'starter')
         setOrgName(org?.name ?? '')
         setOrgId(member.org_id)
-        setSport(org?.sport ?? 'rugby')
 
         const res = await fetch(`/api/usage?orgId=${member.org_id}`)
         const u = await res.json()
@@ -160,7 +158,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div style={{ maxWidth: 1000, margin: '0 auto', padding: isMobile ? '24px 14px' : '40px 24px' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: isMobile ? '24px 14px' : '40px 32px' }}>
 
         {/* Header */}
         <div style={{ marginBottom: 24 }}>
@@ -176,7 +174,7 @@ export default function DashboardPage() {
           <div style={{ textAlign: 'center', padding: 80, color: '#4a5568', fontSize: 14, letterSpacing: 2 }}>LOADING...</div>
         ) : matches.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px 20px', background: '#0d1117', border: '1px solid #1e2d3d', borderRadius: 16 }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>{({'rugby':'🏉','football':'⚽','netball':'🏐','basketball':'🏀','hockey':'🏑','cricket':'🏏'} as any)[sport] ?? '🏉'}</div>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>🏉</div>
             <div style={{ fontSize: 22, fontWeight: 900, color: '#fff', marginBottom: 8 }}>No matches yet</div>
             <div style={{ fontSize: 14, color: '#4a5568', marginBottom: 28 }}>Create your first match to start analysing footage</div>
             <button onClick={handleNewMatch} style={{ padding: '12px 28px', background: '#e8a020', color: '#000', fontFamily: FF, fontSize: 14, fontWeight: 900, borderRadius: 8, border: 'none', cursor: 'pointer', letterSpacing: 1 }}>
@@ -184,60 +182,65 @@ export default function DashboardPage() {
             </button>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {matches.map((m, i) => {
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(3, 1fr)', gap: 16 }}>
+            {matches.map(m => {
               const sc = statusConfig[m.status as string] ?? statusConfig.pending
               const matchDate = m.match_date ? new Date(m.match_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : null
-              const radius = i === 0
-                ? '12px 12px 4px 4px'
-                : i === matches.length - 1
-                  ? '4px 4px 12px 12px'
-                  : '4px'
               return (
                 <div
                   key={m.id}
                   onClick={() => router.push(`/matches/${m.id}`)}
-                  style={{ background: '#0d1117', border: '1px solid #1e2d3d', borderRadius: radius, padding: isMobile ? '14px 14px' : '18px 24px', cursor: 'pointer', transition: 'all 0.12s' }}
-                  onMouseEnter={e => { e.currentTarget.style.background = '#111827'; e.currentTarget.style.borderColor = '#e8a02044' }}
-                  onMouseLeave={e => { e.currentTarget.style.background = '#0d1117'; e.currentTarget.style.borderColor = '#1e2d3d' }}
+                  style={{ background: '#0d1117', border: '1px solid #1e2d3d', borderRadius: 10, cursor: 'pointer', overflow: 'hidden', transition: 'all 0.15s' }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = '#e8a02066'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.4)' }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = '#1e2d3d'; e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none' }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    {/* Status dot */}
-                    <div style={{ width: 9, height: 9, borderRadius: '50%', background: sc.dot, flexShrink: 0, boxShadow: `0 0 6px ${sc.dot}88` }}/>
-
-                    {/* Teams + meta */}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: isMobile ? 15 : 17, fontWeight: 800, color: '#fff', letterSpacing: 0.3, marginBottom: 3 }}>
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
-                          {m.home_team}
-                          <span style={{ color: '#4a5568', fontWeight: 400, fontSize: 12, margin: '0 6px' }}>vs</span>
-                          {m.away_team}
-                        </span>
+                  {/* Thumbnail */}
+                  <div style={{ position: 'relative', width: '100%', paddingBottom: '56.25%', background: '#050810', overflow: 'hidden' }}>
+                    {m.video_public_url && !m.video_public_url.includes('youtube') ? (
+                      <video
+                        src={m.video_public_url}
+                        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+                        preload="metadata"
+                        muted
+                        onLoadedMetadata={e => { (e.target as HTMLVideoElement).currentTime = 30 }}
+                      />
+                    ) : m.video_public_url?.includes('youtube') ? (
+                      <img
+                        src={`https://img.youtube.com/vi/${m.video_public_url.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/)?.[1]}/mqdefault.jpg`}
+                        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+                        alt=""
+                      />
+                    ) : (
+                      <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#1e2d3d' }}>
+                        <div style={{ fontSize: 32, marginBottom: 6 }}>🏉</div>
+                        <div style={{ fontSize: 10, color: '#1e2d3d', letterSpacing: 2 }}>NO VIDEO</div>
                       </div>
-                      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                        {m.competition && (
-                          <span style={{ fontSize: 10, fontWeight: 700, color: '#e8a020', letterSpacing: 0.5 }}>{m.competition}</span>
-                        )}
-                        {matchDate && (
-                          <span style={{ fontSize: 10, color: '#64748b' }}>{matchDate}</span>
-                        )}
-                        {m.venue && !isMobile && (
-                          <span style={{ fontSize: 10, color: '#64748b' }}>📍 {m.venue}</span>
-                        )}
-                      </div>
-                    </div>
+                    )}
 
-                    {/* Badges */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                      {m.video_url && (
-                        <span style={{ fontSize: 10, fontWeight: 700, color: '#0ea5e9', background: '#0ea5e911', border: '1px solid #0ea5e922', padding: '3px 8px', borderRadius: 4, letterSpacing: 1 }}>
-                          VIDEO
-                        </span>
-                      )}
-                      <span style={{ fontSize: 10, fontWeight: 700, color: sc.color, background: sc.color + '18', border: `1px solid ${sc.color}33`, padding: '3px 8px', borderRadius: 4, letterSpacing: 1, whiteSpace: 'nowrap' }}>
+                    {/* Status badge overlay */}
+                    <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 4 }}>
+                      <span style={{ fontSize: 9, fontWeight: 700, color: sc.color, background: '#060912cc', border: `1px solid ${sc.color}55`, padding: '2px 7px', borderRadius: 4, letterSpacing: 1, backdropFilter: 'blur(4px)' }}>
                         {sc.label.toUpperCase()}
                       </span>
-                      <span style={{ color: '#64748b', fontSize: 18 }}>›</span>
+                    </div>
+
+                    {/* Team colours bar at top */}
+                    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, display: 'flex' }}>
+                      <div style={{ flex: 1, background: m.home_color || '#e8a020' }}/>
+                      <div style={{ flex: 1, background: m.away_color || '#0ea5e9' }}/>
+                    </div>
+                  </div>
+
+                  {/* Card body */}
+                  <div style={{ padding: '12px 14px' }}>
+                    <div style={{ fontSize: isMobile ? 13 : 15, fontWeight: 800, color: '#fff', lineHeight: 1.3, marginBottom: 5 }}>
+                      <span style={{ color: m.home_color || '#e2e8f0' }}>{m.home_team}</span>
+                      <span style={{ color: '#4a5568', fontWeight: 400, fontSize: 11, margin: '0 5px' }}>vs</span>
+                      <span style={{ color: m.away_color || '#e2e8f0' }}>{m.away_team}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      {m.competition && <span style={{ fontSize: 10, fontWeight: 700, color: '#e8a020' }}>{m.competition}</span>}
+                      {matchDate && <span style={{ fontSize: 10, color: '#64748b' }}>{matchDate}</span>}
                     </div>
                   </div>
                 </div>
