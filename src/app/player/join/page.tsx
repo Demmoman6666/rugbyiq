@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 
@@ -11,7 +11,7 @@ const CARD = '#0d1117'
 const TEXT = '#e2e8f0'
 const MUTED = '#64748b'
 
-export default function PlayerJoinPage() {
+function PlayerJoinContent() {
   const params = useSearchParams()
   const router = useRouter()
   const supabase = createClient()
@@ -128,5 +128,13 @@ export default function PlayerJoinPage() {
         </button>
       </div>
     </div>
+  )
+}
+
+export default function PlayerJoinPage() {
+  return (
+    <Suspense fallback={<div style={{ fontFamily: FF, background: BG, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: MUTED }}>Loading...</div>}>
+      <PlayerJoinContent />
+    </Suspense>
   )
 }
