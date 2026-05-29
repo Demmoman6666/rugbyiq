@@ -147,7 +147,7 @@ export default function LandingPage() {
 
           {/* Auth buttons */}
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-            <Link href="/login" style={{ padding: '8px 20px', fontSize: 13, fontWeight: 700, color: '#e2e8f0', border: '1px solid #1e2d3d', borderRadius: 6, background: 'transparent', letterSpacing: 0.5 }}>Sign in</Link>
+            <Link href="/login-select" style={{ padding: '8px 20px', fontSize: 13, fontWeight: 700, color: '#e2e8f0', border: '1px solid #1e2d3d', borderRadius: 6, background: 'transparent', letterSpacing: 0.5 }}>Sign in</Link>
             <Link href="/login?signup=true" style={{ padding: '9px 22px', background: '#e8a020', color: '#000', fontSize: 13, fontWeight: 900, borderRadius: 6, letterSpacing: 1, boxShadow: '0 0 20px rgba(232,160,32,0.3)' }}>Start free →</Link>
           </div>
         </div>
@@ -411,7 +411,7 @@ export default function LandingPage() {
             <Link href="/login?signup=true" style={{ display: 'inline-block', padding: '15px 40px', background: '#e8a020', color: '#000', fontSize: 17, fontWeight: 900, borderRadius: 8, letterSpacing: 1, boxShadow: '0 0 40px rgba(232,160,32,0.3)' }}>
               Get started free →
             </Link>
-            <Link href="/login" style={{ display: 'inline-block', padding: '15px 32px', background: 'transparent', color: '#e2e8f0', fontSize: 17, fontWeight: 700, borderRadius: 8, border: '1px solid #334155' }}>
+            <Link href="/login-select" style={{ display: 'inline-block', padding: '15px 32px', background: 'transparent', color: '#e2e8f0', fontSize: 17, fontWeight: 700, borderRadius: 8, border: '1px solid #334155' }}>
               Sign in
             </Link>
           </div>
