@@ -114,8 +114,18 @@ export default function PlayerMatchPage() {
       const eventType = Object.entries(PLAYER_EVENTS).find(([, cfg]) => cfg.hotkey === key)?.[0]
       if (eventType) { e.preventDefault(); codeEvent(eventType) }
       if (e.key === ' ') { e.preventDefault(); playPause() }
-      if (e.key === 'ArrowLeft') skipSeconds(-5)
-      if (e.key === 'ArrowRight') skipSeconds(5)
+      if (e.key === 'ArrowLeft') { e.preventDefault(); skipSeconds(-5) }
+      if (e.key === 'ArrowRight') { e.preventDefault(); skipSeconds(5) }
+      if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        const next = visibleEvents.find(ev => ev.timestamp_secs > time)
+        if (next) seekTo(next.timestamp_secs)
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        const prev = [...visibleEvents].reverse().find(ev => ev.timestamp_secs < time - 1)
+        if (prev) seekTo(prev.timestamp_secs)
+      }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
