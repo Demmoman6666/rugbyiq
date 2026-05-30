@@ -411,7 +411,7 @@ export default function PlayerHighlightsPage() {
                         <video
                           ref={videoRef}
                           src={videoUrl}
-                          crossOrigin="anonymous"
+                          
                           style={{ width: '100%', maxHeight: '55vh', objectFit: 'contain', display: 'block' }}
                           playsInline
                           controls
