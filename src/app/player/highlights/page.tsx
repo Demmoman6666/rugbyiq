@@ -246,12 +246,14 @@ export default function PlayerHighlightsPage() {
                   <div style={{ fontSize: 9, color: MUTED, letterSpacing: 1.5, marginBottom: 8 }}>⏪ SECONDS BEFORE EVENT</div>
                   <div style={{ display: 'flex', gap: 4 }}>
                     {[3, 5, 10, 15].map(s => <button key={s} onClick={() => setClipBefore(s)} style={{ flex: 1, padding: '7px 0', fontFamily: FF, fontSize: 12, fontWeight: 700, borderRadius: 4, border: `1px solid ${clipBefore === s ? GOLD : BD}`, background: clipBefore === s ? GOLD + '22' : 'transparent', color: clipBefore === s ? GOLD : MUTED, cursor: 'pointer' }}>{s}s</button>)}
+                    <input type="number" min="1" max="120" value={clipBefore} onChange={e => setClipBefore(Math.max(1, Math.min(120, parseInt(e.target.value) || 1)))} style={{ width: 52, padding: '7px 6px', fontFamily: FF, fontSize: 12, fontWeight: 700, borderRadius: 4, border: `1px solid ${BD}`, background: 'transparent', color: GOLD, textAlign: 'center', outline: 'none' }} />
                   </div>
                 </div>
                 <div>
                   <div style={{ fontSize: 9, color: MUTED, letterSpacing: 1.5, marginBottom: 8 }}>⏩ SECONDS AFTER EVENT</div>
                   <div style={{ display: 'flex', gap: 4 }}>
                     {[10, 15, 20, 30].map(s => <button key={s} onClick={() => setClipAfter(s)} style={{ flex: 1, padding: '7px 0', fontFamily: FF, fontSize: 12, fontWeight: 700, borderRadius: 4, border: `1px solid ${clipAfter === s ? GOLD : BD}`, background: clipAfter === s ? GOLD + '22' : 'transparent', color: clipAfter === s ? GOLD : MUTED, cursor: 'pointer' }}>{s}s</button>)}
+                    <input type="number" min="1" max="300" value={clipAfter} onChange={e => setClipAfter(Math.max(1, Math.min(300, parseInt(e.target.value) || 1)))} style={{ width: 52, padding: '7px 6px', fontFamily: FF, fontSize: 12, fontWeight: 700, borderRadius: 4, border: `1px solid ${BD}`, background: 'transparent', color: GOLD, textAlign: 'center', outline: 'none' }} />
                   </div>
                 </div>
               </div>
