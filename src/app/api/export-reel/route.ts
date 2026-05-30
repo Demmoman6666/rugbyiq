@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
 
     // Get the events for this reel (in order of event_ids array)
     const { data: events, error: eventsError } = await supabase
-      .from('events')
+      .from('player_events')
       .select('id, timestamp_secs, event_type, match_id')
       .in('id', reel.event_ids)
 
