@@ -78,7 +78,7 @@ export default function PlayerHighlightsPage() {
 
       // Load match details for any matches referenced
       if (playerEvents.length > 0) {
-        const matchIds = [...new Set(playerEvents.map((e: any) => e.match_id))] as string[]
+        const matchIds = Array.from(new Set(playerEvents.map((e: any) => e.match_id))) as string[]
         const { data: matchData } = await supabase
           .from('matches')
           .select('id, home_team, away_team, home_color, away_color, competition, match_date, video_public_url')
