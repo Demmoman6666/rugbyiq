@@ -100,7 +100,7 @@ export default function PlayerHighlightsPage() {
     load()
   }, [])
 
-  // Load video URL when active reel/clip changes
+  // When active reel or clip index changes, update the video URL
   useEffect(() => {
     if (!activeReel) return
     const reelEvents = getReelEvents(activeReel)
@@ -110,23 +110,17 @@ export default function PlayerHighlightsPage() {
     if (match?.video_public_url) setVideoUrl(match.video_public_url)
   }, [activeReel, currentIdx, matchMap])
 
-  // Seek and auto-advance when video url is set
-  useEffect(() => {
-    if (!videoRef.current || !activeReel || !videoUrl) return
+  // Compute start time and duration for current clip
+  function getCurrentClipTimes() {
+    if (!activeReel) return null
     const reelEvents = getReelEvents(activeReel)
     const ev = reelEvents[currentIdx]
-    if (!ev) return
-    const video = videoRef.current
-    const start    = Math.max(0, ev.timestamp_secs - activeReel.clip_before_secs)
-    const duration = activeReel.clip_before_secs + activeReel.clip_after_secs
-    video.currentTime = start
-    video.play().catch(() => {})
-    const timer = setTimeout(() => {
-      if (currentIdx < reelEvents.length - 1) setCurrentIdx(i => i + 1)
-      else video.pause()
-    }, duration * 1000)
-    return () => clearTimeout(timer)
-  }, [videoUrl, currentIdx, activeReel])
+    if (!ev) return null
+    return {
+      start: Math.max(0, ev.timestamp_secs - activeReel.clip_before_secs),
+      duration: activeReel.clip_before_secs + activeReel.clip_after_secs,
+    }
+  }
 
   function getReelEvents(reel: any) {
     return (reel.event_ids || [])
@@ -196,7 +190,7 @@ export default function PlayerHighlightsPage() {
     </div>
   )
 
-  const eventTypes = Array.from(new Set(events.map((e: any) => e.event_type)))
+  const eventTypes = [...new Set(events.map((e: any) => e.event_type))]
   const filtered   = filterType ? events.filter((e: any) => e.event_type === filterType) : events
 
   return (
@@ -350,7 +344,10 @@ export default function PlayerHighlightsPage() {
                   return (
                     <div key={reel.id}
                       style={{ background: CARD, border: `1px solid ${isActive ? GOLD + '66' : BD}`, borderRadius: 8, overflow: 'hidden', cursor: 'pointer' }}
-                      onClick={() => { setActiveReel(reel); setCurrentIdx(0); setVideoUrl(null) }}>
+                      onClick={() => {
+                        if (videoRef.current) clearTimeout((videoRef.current as any)._clipTimer)
+                        setActiveReel(reel); setCurrentIdx(0); setVideoUrl(null)
+                      }}>
                       <div style={{ padding: '12px 14px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                           {isActive && <div style={{ width: 6, height: 6, borderRadius: '50%', background: GOLD, flexShrink: 0 }}/>}
@@ -411,9 +408,33 @@ export default function PlayerHighlightsPage() {
                   <div>
                     <div style={{ background: '#000', borderRadius: 8, overflow: 'hidden', marginBottom: 12 }}>
                       {videoUrl ? (
-                        <video ref={videoRef} src={videoUrl} crossOrigin="anonymous"
+                        <video
+                          ref={videoRef}
+                          src={videoUrl}
+                          crossOrigin="anonymous"
                           style={{ width: '100%', maxHeight: '55vh', objectFit: 'contain', display: 'block' }}
-                          playsInline controls/>
+                          playsInline
+                          controls
+                          onLoadedMetadata={() => {
+                            const clip = getCurrentClipTimes()
+                            if (!clip || !videoRef.current) return
+                            const video = videoRef.current
+                            video.currentTime = clip.start
+                            video.play().catch(() => {})
+                            // Auto-advance after clip duration
+                            const reelEvents = getReelEvents(activeReel)
+                            const timer = setTimeout(() => {
+                              if (currentIdx < reelEvents.length - 1) {
+                                setCurrentIdx(i => i + 1)
+                                setVideoUrl(null)
+                              } else {
+                                video.pause()
+                              }
+                            }, clip.duration * 1000)
+                            // Store timer cleanup on the element
+                            ;(video as any)._clipTimer = timer
+                          }}
+                        />
                       ) : (
                         <div style={{ height: 280, display: 'flex', alignItems: 'center', justifyContent: 'center', color: MUTED, fontSize: 12 }}>
                           {reelEvents.length === 0 ? 'No clips in this reel' : 'Loading video...'}
@@ -427,7 +448,14 @@ export default function PlayerHighlightsPage() {
                         </div>
                         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                           {reelEvents.map((e: any, i: number) => (
-                            <button key={e.id} onClick={() => { setCurrentIdx(i); setVideoUrl(null) }}
+                            <button key={e.id} onClick={() => {
+                              // Clear any running clip timer
+                              if (videoRef.current) {
+                                clearTimeout((videoRef.current as any)._clipTimer)
+                              }
+                              setCurrentIdx(i)
+                              setVideoUrl(null)
+                            }}
                               style={{ padding: '4px 10px', fontFamily: FF, fontSize: 10, fontWeight: 700, background: i === currentIdx ? GOLD + '22' : 'transparent', border: `1px solid ${i === currentIdx ? GOLD : BD}`, color: i === currentIdx ? GOLD : MUTED, borderRadius: 4, cursor: 'pointer' }}>
                               {i + 1}. {e.event_type} {formatTime(e.timestamp_secs)}
                             </button>
