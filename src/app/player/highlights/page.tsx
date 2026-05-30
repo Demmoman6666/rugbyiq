@@ -196,7 +196,7 @@ export default function PlayerHighlightsPage() {
     </div>
   )
 
-  const eventTypes = Array.from(new Set(events.map((e: any) => e.event_type))]
+  const eventTypes = Array.from(new Set(events.map((e: any) => e.event_type)))
   const filtered   = filterType ? events.filter((e: any) => e.event_type === filterType) : events
 
   return (
