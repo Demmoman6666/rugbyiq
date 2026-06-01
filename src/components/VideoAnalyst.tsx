@@ -787,10 +787,10 @@ export default function VideoAnalyst({
 
       {/* CODE TAB */}
       {tab === 'code' && (
-        <div style={{ flex: 1, display: 'flex', flexDirection: isMobile ? 'column' : 'row', overflow: 'hidden' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: isMobile ? 'column' : 'row', overflow: isMobile ? 'auto' : 'hidden' }}>
 
           {/* LEFT COLUMN — video + controls + event buttons */}
-          <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: isMobile ? 'unset' : '1' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', overflow: isMobile ? 'visible' : 'hidden', flex: isMobile ? 'unset' : '1' }}>
           <div ref={videoContainerRef} style={{ position: 'relative', width: '100%', flexShrink: 0, background: '#000', ...(isFullscreen ? { height: '100vh' } : {}) }}
             onTouchEnd={e => {
               if (isYoutube) return
@@ -972,7 +972,7 @@ export default function VideoAnalyst({
 
           {/* Event buttons */}
           <div style={{ background: CARD, borderBottom: `1px solid ${BD}`, padding: '8px 12px', flexShrink: 0, overflowX: isMobile ? 'auto' : 'visible' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: isMobile ? 'nowrap' : 'wrap', overflowX: isMobile ? 'auto' : 'visible', paddingBottom: isMobile ? 4 : 0 }}>
               <div style={{ display: 'flex', gap: 4, marginRight: 6 }}>
                 {[homeTeam, awayTeam].map(tm => (
                   <button key={tm.id} onClick={() => setActiveTeam(tm.id)} style={{ padding: '5px 14px', fontFamily: FF, fontSize: 12, fontWeight: 700, borderRadius: 4, border: `1px solid ${tm.color}44`, cursor: 'pointer', color: activeTeam === tm.id ? '#000' : tm.color, background: activeTeam === tm.id ? tm.color : tm.color + '11', letterSpacing: 1 }}>{tm.abbr}</button>
@@ -1116,7 +1116,7 @@ export default function VideoAnalyst({
                         {e.ai_detected && <span style={{ fontSize: 9, background: GOLD+'18', color: GOLD, padding: '1px 6px', borderRadius: 3, fontWeight: 700, border: `1px solid ${GOLD}33`, letterSpacing: 0.5 }}>AI {Math.round((e.ai_confidence ?? 0) * 100)}%</span>}
                         <span style={{ fontFamily: MONO, color: isCurrent ? GOLD : MUTED, fontSize: 11, whiteSpace: 'nowrap', fontWeight: isCurrent ? 700 : 400 }}>{formatTime(e.timestamp_secs)}</span>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: isMobile ? 'nowrap' : 'wrap', overflowX: isMobile ? 'auto' : 'visible', paddingBottom: isMobile ? 4 : 0 }}>
                         <span style={{ fontWeight: 700, color: e.team === 'home' ? homeTeam.color : awayTeam.color, fontSize: 12 }}>{e.team === 'home' ? homeTeam.name : awayTeam.name}</span>
                         {e.shirt_number && <span style={{ fontFamily: MONO, fontSize: 10, color: GOLD, background: GOLD + '18', padding: '1px 6px', borderRadius: 3, border: `1px solid ${GOLD}33` }}>#{e.shirt_number}{e.player_name ? ` ${e.player_name.split(' ').pop()}` : ''}</span>}
                         {e.outcome && <span style={{ color: MUTED, fontStyle: 'italic', fontSize: 10 }}>{e.outcome}</span>}
