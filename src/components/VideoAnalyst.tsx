@@ -815,14 +815,14 @@ export default function VideoAnalyst({
             }}>
             {videoUrl ? (
               isYoutube ? (
-                <div style={{ position: 'relative', width: '100%', height: isFullscreen ? '100vh' : '52vh' }}>
+                <div style={{ position: 'relative', width: '100%', height: isFullscreen ? '100vh' : isMobile ? '35vh' : '52vh' }}>
                   <div id="yt-embed" style={{ width: '100%', height: '100%' }} />
                   <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: '15%', cursor: 'pointer', zIndex: 5 }}
                     onClick={() => { if (!ytReadyRef.current) return; playing ? ytPlayerRef.current.pauseVideo() : ytPlayerRef.current.playVideo() }}
                   />
                 </div>
               ) : (
-                <video ref={videoRef} src={videoUrl} style={{ width: '100%', height: isFullscreen ? '100vh' : 'auto', maxHeight: isFullscreen ? '100vh' : isMobile ? '52vh' : '72vh', objectFit: 'contain', display: 'block' }} playsInline preload="metadata"/>
+                <video ref={videoRef} src={videoUrl} style={{ width: '100%', height: isFullscreen ? '100vh' : 'auto', maxHeight: isFullscreen ? '100vh' : isMobile ? '35vh' : '72vh', objectFit: 'contain', display: 'block' }} playsInline preload="metadata"/>
               )
             ) : (
               <div style={{ width: '100%', height: '36vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#050810' }}>
@@ -971,7 +971,7 @@ export default function VideoAnalyst({
           )}
 
           {/* Event buttons */}
-          <div style={{ background: CARD, borderBottom: `1px solid ${BD}`, padding: '8px 12px', flexShrink: 0 }}>
+          <div style={{ background: CARD, borderBottom: `1px solid ${BD}`, padding: '8px 12px', flexShrink: 0, overflowX: isMobile ? 'auto' : 'visible' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', gap: 4, marginRight: 6 }}>
                 {[homeTeam, awayTeam].map(tm => (
