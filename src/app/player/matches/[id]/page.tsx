@@ -192,7 +192,7 @@ export default function PlayerMatchPage() {
     <div style={{ fontFamily: FF, background: BG, color: TEXT, height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
       {/* Header */}
-      <div style={{ background: NAV, padding: '10px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, borderBottom: `1px solid ${BD}` }}>
+      <div style={{ background: NAV, padding: '8px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, borderBottom: `1px solid ${BD}`, flexWrap: 'wrap', gap: 6 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <a href="/player/dashboard" style={{ fontSize: 20, fontWeight: 900, letterSpacing: 3, color: '#fff', textDecoration: 'none' }}>CLUB<span style={{ color: GOLD }}>CODE</span></a>
           <div style={{ width: 1, height: 20, background: BD }}/>
@@ -210,10 +210,11 @@ export default function PlayerMatchPage() {
       </div>
 
       {/* Main layout */}
-      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+      <style>{`@media(max-width:639px){.player-match-row{flex-direction:column !important;overflow:auto !important}.player-match-right{width:100% !important;border-left:none !important;border-top:1px solid #1e2d3d !important;max-height:50vh !important}.player-match-video{max-height:35vh !important}}`}</style>
+      <div className='player-match-row' style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
 
         {/* Left — video + controls + buttons */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
 
           {/* Video */}
           <div style={{ position: 'relative', width: '100%', background: '#000', flexShrink: 0 }}>
@@ -221,7 +222,7 @@ export default function PlayerMatchPage() {
               <video
                   ref={videoRef}
                   src={match.video_public_url}
-                  style={{ width: '100%', maxHeight: '65vh', objectFit: 'contain', display: 'block' }}
+                  className='player-match-video' style={{ width: '100%', maxHeight: '65vh', objectFit: 'contain', display: 'block' }}
                   playsInline
                   preload="metadata"
                   onTimeUpdate={e => setTime(Math.floor((e.target as HTMLVideoElement).currentTime))}
@@ -281,7 +282,7 @@ export default function PlayerMatchPage() {
         </div>
 
         {/* Right — toggle + event feed */}
-        <div style={{ width: 340, flexShrink: 0, borderLeft: `1px solid ${BD}`, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div className='player-match-right' style={{ width: 340, flexShrink: 0, borderLeft: `1px solid ${BD}`, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
           {/* Toggle */}
           <div style={{ background: NAV, borderBottom: `1px solid ${BD}`, padding: '8px 10px', flexShrink: 0 }}>
