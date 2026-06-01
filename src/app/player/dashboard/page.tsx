@@ -70,22 +70,22 @@ export default function PlayerDashboard() {
   return (
     <div style={{ fontFamily: FF, background: BG, minHeight: '100vh', color: TEXT }}>
       {/* Header */}
-      <div style={{ background: NAV, borderBottom: `1px solid ${BD}`, padding: '12px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ background: NAV, borderBottom: `1px solid ${BD}`, padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <div style={{ fontSize: 20, fontWeight: 900, letterSpacing: 3 }}>CLUB<span style={{ color: GOLD }}>CODE</span></div>
           <div style={{ width: 1, height: 16, background: BD }}/>
           <div style={{ fontSize: 10, letterSpacing: 2, color: MUTED }}>PLAYER</div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <span style={{ fontSize: 13, color: DIM }}>{orgName}</span>
+          <span style={{ fontSize: 11, color: DIM, display: 'none' }}>{orgName}</span>
           {profile?.shirt_number && <span style={{ fontFamily: 'monospace', fontSize: 11, color: GOLD, background: GOLD + '18', padding: '2px 8px', borderRadius: 4, border: `1px solid ${GOLD}33` }}>#{profile.shirt_number}</span>}
-          <button onClick={() => router.push('/player/highlights')} style={{ padding: '5px 14px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: GOLD + '22', border: `1px solid ${GOLD}44`, color: GOLD, borderRadius: 4, cursor: 'pointer', letterSpacing: 1 }}>🎬 MY HIGHLIGHTS</button>
+          <button onClick={() => router.push('/player/highlights')} style={{ padding: '5px 12px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: GOLD + '22', border: `1px solid ${GOLD}44`, color: GOLD, borderRadius: 4, cursor: 'pointer', letterSpacing: 1, whiteSpace: 'nowrap' }}>🎬 MY HIGHLIGHTS</button>
           <button onClick={handleLogout} style={{ padding: '5px 12px', fontFamily: FF, fontSize: 11, background: 'transparent', border: `1px solid ${BD}`, color: MUTED, borderRadius: 4, cursor: 'pointer' }}>LOG OUT</button>
         </div>
       </div>
 
       {/* Content */}
-      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '40px 24px' }}>
+      <div style={{ maxWidth: 1100, margin: '0 auto', padding: 'clamp(16px, 4vw, 40px) clamp(12px, 3vw, 24px)' }}>
         <div style={{ marginBottom: 32 }}>
           <div style={{ fontSize: 28, fontWeight: 900, color: TEXT, marginBottom: 4 }}>Match Library</div>
           <div style={{ fontSize: 13, color: MUTED }}>{matches.length} matches available · {orgName}</div>
@@ -98,7 +98,7 @@ export default function PlayerDashboard() {
             <div style={{ fontSize: 13 }}>Your analyst hasn't uploaded any matches yet.</div>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
             {matches.map(m => {
               const matchDate = m.match_date ? new Date(m.match_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : null
               return (
