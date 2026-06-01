@@ -126,7 +126,7 @@ export default function LandingPage() {
         @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;700;900&display=swap');
         html { scroll-behavior: smooth; }
         .nav-link { transition: color 0.15s; }
-        .nav-link:hover { color: #e8a020 !important; }
+        .nav-link:hover { color: #e8a020 !important; } @media (max-width: 640px) { .nav-desktop { display: none !important; } }
         .sport-card { transition: border-color 0.2s, transform 0.2s; }
         .sport-card:hover { transform: translateY(-4px); }
         .feature-card { transition: border-color 0.2s; }
@@ -134,12 +134,12 @@ export default function LandingPage() {
       `}</style>
 
       {/* NAV */}
-      <nav style={{ position: 'sticky', top: 0, zIndex: 40, background: 'rgba(6,9,18,0.97)', backdropFilter: 'blur(8px)', borderBottom: '1px solid #1e2d3d', padding: '0 32px' }}>
+      <nav style={{ position: 'sticky', top: 0, zIndex: 40, background: 'rgba(6,9,18,0.97)', backdropFilter: 'blur(8px)', borderBottom: '1px solid #1e2d3d', padding: '0 16px' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 60 }}>
           <div style={{ fontSize: 24, fontWeight: 900, letterSpacing: 3, color: '#ffffff' }}>CLUB<span style={{ color: '#e8a020' }}>CODE</span></div>
 
           {/* Desktop nav links */}
-          <div style={{ display: 'flex', gap: 32, alignItems: 'center' }}>
+          <div className='nav-desktop' style={{ display: 'flex', gap: 32, alignItems: 'center' }}>
             <a href="#features" className="nav-link" style={{ fontSize: 13, fontWeight: 700, color: '#94a3b8', letterSpacing: 1 }}>FEATURES</a>
             <a href="#about" className="nav-link" style={{ fontSize: 13, fontWeight: 700, color: '#94a3b8', letterSpacing: 1 }}>ABOUT US</a>
             <a href="#contact" className="nav-link" style={{ fontSize: 13, fontWeight: 700, color: '#94a3b8', letterSpacing: 1 }}>CONTACT</a>
