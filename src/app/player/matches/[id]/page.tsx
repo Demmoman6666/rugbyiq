@@ -214,7 +214,7 @@ export default function PlayerMatchPage() {
       <div className='player-match-row' style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
 
         {/* Left — video + controls + buttons */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'visible', minWidth: 0 }}>
 
           {/* Video */}
           <div style={{ position: 'relative', width: '100%', background: '#000', flexShrink: 0 }}>
@@ -262,7 +262,7 @@ export default function PlayerMatchPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'nowrap', overflowX: 'auto', paddingBottom: 4, marginBottom: lastEv ? 8 : 0 }}>
               {Object.entries(PLAYER_EVENTS).map(([type, cfg]) => (
                 <button key={type} onClick={() => codeEvent(type)}
-                  style={{ padding: '6px 12px', fontFamily: FF, fontSize: 11, fontWeight: 700, border: `1px solid ${cfg.color}33`, borderRadius: 4, background: cfg.color + '18', color: cfg.color, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+                  style={{ padding: '6px 12px', fontFamily: FF, fontSize: 11, fontWeight: 700, border: `1px solid ${cfg.color}33`, borderRadius: 4, background: cfg.color + '18', color: cfg.color, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, flexShrink: 0, minWidth: 52 }}>
                   <span style={{ fontSize: 8, opacity: 0.4, letterSpacing: 1 }}>[{cfg.hotkey}]</span>
                   {cfg.label}
                 </button>
