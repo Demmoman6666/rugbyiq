@@ -196,7 +196,7 @@ export default function PlayerHighlightsPage() {
   return (
     <div style={{ fontFamily: FF, background: BG, minHeight: '100vh', color: TEXT }}>
 
-      <div style={{ background: NAV, borderBottom: `1px solid ${BD}`, padding: '12px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ background: NAV, borderBottom: `1px solid ${BD}`, padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <div style={{ fontSize: 20, fontWeight: 900, letterSpacing: 3 }}>CLUB<span style={{ color: GOLD }}>CODE</span></div>
           <div style={{ width: 1, height: 16, background: BD }}/>
@@ -208,7 +208,7 @@ export default function PlayerHighlightsPage() {
         </button>
       </div>
 
-      <div style={{ background: NAV, borderBottom: `1px solid ${BD}`, padding: '0 24px', display: 'flex' }}>
+      <div style={{ background: NAV, borderBottom: `1px solid ${BD}`, padding: '0 12px', display: 'flex' }}>
         {([['create', '✂️ CREATE REEL'], ['reels', `🎬 MY REELS (${reels.length})`]] as const).map(([t, label]) => (
           <button key={t} onClick={() => setTab(t)}
             style={{ padding: '12px 20px', fontFamily: FF, fontSize: 12, fontWeight: 700, letterSpacing: 1, background: 'none', border: 'none', borderBottom: tab === t ? `2px solid ${GOLD}` : '2px solid transparent', color: tab === t ? GOLD : MUTED, cursor: 'pointer' }}>
@@ -217,10 +217,11 @@ export default function PlayerHighlightsPage() {
         ))}
       </div>
 
-      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '28px 24px' }}>
+      <div style={{ maxWidth: 1100, margin: '0 auto', padding: 'clamp(14px,3vw,28px) clamp(12px,3vw,24px)' }}>
 
         {tab === 'create' && (
-          <div style={{ display: 'flex', gap: 24 }}>
+          <div style={{ display: 'flex', gap: 24, flexDirection: 'column' }}>
+          <style>{`@media(min-width:640px){.highlights-row{flex-direction:row !important}}`}</style>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ background: CARD, border: `1px solid ${BD}`, borderRadius: 8, padding: '16px 18px', marginBottom: 16 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: MUTED, letterSpacing: 1, marginBottom: 12 }}>REEL NAME</div>
@@ -301,8 +302,8 @@ export default function PlayerHighlightsPage() {
               </div>
             </div>
 
-            <div style={{ width: 240, flexShrink: 0 }}>
-              <div style={{ background: CARD, border: `1px solid ${BD}`, borderRadius: 8, padding: '20px 18px', position: 'sticky', top: 24 }}>
+            <div style={{ width: '100%', maxWidth: 360 }}>
+              <div style={{ background: CARD, border: `1px solid ${BD}`, borderRadius: 8, padding: '20px 18px', position: 'relative', top: 0 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: MUTED, letterSpacing: 1, marginBottom: 16 }}>REEL SUMMARY</div>
                 <div style={{ marginBottom: 8 }}>
                   <div style={{ fontSize: 10, color: MUTED, marginBottom: 4 }}>Name</div>
