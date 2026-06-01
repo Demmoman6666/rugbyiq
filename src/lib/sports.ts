@@ -27,6 +27,9 @@ export const SPORT_CONFIGS: Record<Sport, SportConfig> = {
       CONVERSION: { label: 'Conv',     color: '#a3e635', hotkey: 'C', outcomes: ['scored','missed'] },
       KNOCK_ON:   { label: 'Knock On', color: '#fb7185', hotkey: 'K' },
       KICK:       { label: 'Kick',     color: '#38bdf8', hotkey: 'X', outcomes: ['retained','lost','touch'] },
+      CARRY:      { label: 'Carry',    color: '#34d399', hotkey: 'A' },
+      ATTACK:     { label: 'Attack',   color: '#f97316', hotkey: 'Q', outcomes: ['success','breakdown','penalty'] },
+      DEFENCE:    { label: 'Defence',  color: '#818cf8', hotkey: 'D', outcomes: ['held','turnover','penalty'] },
     }
   },
   football: {
