@@ -222,7 +222,7 @@ export default function PlayerHighlightsPage() {
         {tab === 'create' && (
           <div style={{ display: 'flex', gap: 24, flexDirection: 'column' }}>
           <style>{`@media(min-width:640px){.highlights-row{flex-direction:row !important}}`}</style>
-            <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ flex: 1, minWidth: 0, width: '100%' }}>
               <div style={{ background: CARD, border: `1px solid ${BD}`, borderRadius: 8, padding: '16px 18px', marginBottom: 16 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: MUTED, letterSpacing: 1, marginBottom: 12 }}>REEL NAME</div>
                 <input value={reelName} onChange={e => setReelName(e.target.value)}
@@ -328,8 +328,8 @@ export default function PlayerHighlightsPage() {
         )}
 
         {tab === 'reels' && (
-          <div style={{ display: 'flex', gap: 24 }}>
-            <div style={{ width: 300, flexShrink: 0 }}>
+          <div className='reels-row' style={{ display: 'flex', gap: 24, flexDirection: 'column-reverse' }}>
+            <div style={{ width: '100%', maxWidth: '100%' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {reels.length === 0 && (
                   <div style={{ background: CARD, border: `1px solid ${BD}`, borderRadius: 8, padding: 32, textAlign: 'center', color: MUTED, fontSize: 12 }}>
@@ -397,7 +397,7 @@ export default function PlayerHighlightsPage() {
               </div>
             </div>
 
-            <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ flex: 1, minWidth: 0, width: '100%' }}>
               {!activeReel ? (
                 <div style={{ background: CARD, border: `1px solid ${BD}`, borderRadius: 8, padding: 48, textAlign: 'center', color: MUTED }}>
                   <div style={{ fontSize: 32, marginBottom: 12 }}>🎬</div>
@@ -413,7 +413,7 @@ export default function PlayerHighlightsPage() {
                           ref={videoRef}
                           src={videoUrl}
                           
-                          style={{ width: '100%', maxHeight: '55vh', objectFit: 'contain', display: 'block' }}
+                          style={{ width: '100%', maxHeight: 'min(55vh, 300px)', objectFit: 'contain', display: 'block' }}
                           playsInline
                           controls
                           onLoadedMetadata={() => {
