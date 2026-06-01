@@ -192,20 +192,19 @@ export default function PlayerMatchPage() {
     <div style={{ fontFamily: FF, background: BG, color: TEXT, height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
       {/* Header */}
-      <div style={{ background: NAV, padding: '8px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, borderBottom: `1px solid ${BD}`, flexWrap: 'wrap', gap: 6 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <a href="/player/dashboard" style={{ fontSize: 20, fontWeight: 900, letterSpacing: 3, color: '#fff', textDecoration: 'none' }}>CLUB<span style={{ color: GOLD }}>CODE</span></a>
-          <div style={{ width: 1, height: 20, background: BD }}/>
-          <div style={{ fontSize: 10, letterSpacing: 3, color: MUTED }}>PLAYER</div>
+      <div style={{ background: NAV, padding: '8px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, borderBottom: `1px solid ${BD}`, gap: 8 }}>
+        {/* Left: Logo */}
+        <a href="/player/dashboard" style={{ fontSize: 18, fontWeight: 900, letterSpacing: 2, color: '#fff', textDecoration: 'none', flexShrink: 0 }}>CLUB<span style={{ color: GOLD }}>CODE</span></a>
+        {/* Centre: match info + time */}
+        <div style={{ flex: 1, textAlign: 'center', minWidth: 0 }}>
+          <div style={{ fontSize: 12, fontFamily: MONO, color: GOLD, letterSpacing: 2 }}>{formatTime(time)}</div>
+          <div style={{ fontSize: 9, color: MUTED, letterSpacing: 0.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{match?.home_team} vs {match?.away_team}</div>
         </div>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 13, fontFamily: MONO, color: GOLD, letterSpacing: 3 }}>{formatTime(time)}</div>
-          <div style={{ fontSize: 9, color: MUTED, letterSpacing: 1 }}>{match?.home_team} vs {match?.away_team}</div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          {profile?.shirt_number && <span style={{ fontFamily: MONO, fontSize: 11, color: GOLD, background: GOLD + '18', padding: '2px 8px', borderRadius: 4, border: `1px solid ${GOLD}33` }}>#{profile.shirt_number}</span>}
-          <button onClick={() => router.push('/player/highlights')} style={{ padding: '5px 12px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: GOLD + '22', border: `1px solid ${GOLD}44`, color: GOLD, borderRadius: 4, cursor: 'pointer', letterSpacing: 1 }}>🎬 HIGHLIGHTS</button>
-          <button onClick={() => router.push('/player/dashboard')} style={{ padding: '5px 12px', fontFamily: FF, fontSize: 11, background: 'transparent', border: `1px solid ${BD}`, color: MUTED, borderRadius: 4, cursor: 'pointer' }}>← BACK</button>
+        {/* Right: actions */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+          {profile?.shirt_number && <span style={{ fontFamily: MONO, fontSize: 10, color: GOLD, background: GOLD + '18', padding: '2px 6px', borderRadius: 4, border: `1px solid ${GOLD}33` }}>#{profile.shirt_number}</span>}
+          <button onClick={() => router.push('/player/highlights')} style={{ padding: '5px 10px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: GOLD + '22', border: `1px solid ${GOLD}44`, color: GOLD, borderRadius: 4, cursor: 'pointer', whiteSpace: 'nowrap' }}>🎬 HIGHLIGHTS</button>
+          <button onClick={() => router.push('/player/dashboard')} style={{ padding: '5px 10px', fontFamily: FF, fontSize: 11, background: 'transparent', border: `1px solid ${BD}`, color: MUTED, borderRadius: 4, cursor: 'pointer', whiteSpace: 'nowrap' }}>← BACK</button>
         </div>
       </div>
 
