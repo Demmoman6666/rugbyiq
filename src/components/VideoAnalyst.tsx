@@ -709,40 +709,69 @@ export default function VideoAnalyst({
       )}
 
       {/* HEADER */}
-      <div style={{ background: NAV, padding: '10px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, borderBottom: `1px solid ${BD}` }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <a href="/dashboard" style={{ fontSize: 20, fontWeight: 900, letterSpacing: 3, color: '#fff', textDecoration: 'none' }}>CLUB<span style={{ color: GOLD }}>CODE</span></a>
-          <div style={{ width: 1, height: 20, background: BD }}/>
-          <div style={{ fontSize: 10, letterSpacing: 3, color: MUTED }}>ANALYST</div>
+      {isMobile ? (
+        <div style={{ background: NAV, padding: '8px 12px', flexShrink: 0, borderBottom: `1px solid ${BD}` }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <a href="/dashboard" style={{ fontSize: 18, fontWeight: 900, letterSpacing: 2, color: '#fff', textDecoration: 'none' }}>CLUB<span style={{ color: GOLD }}>CODE</span></a>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: 9, fontWeight: 700, color: homeTeam.color, letterSpacing: 1 }}>{homeTeam.abbr}</div>
+                <div style={{ fontSize: 28, fontWeight: 900, color: homeTeam.color, lineHeight: 1 }}>{stats.home.score}</div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 8, color: MUTED, letterSpacing: 1 }}>{time < duration / 2 ? '1ST HALF' : '2ND HALF'}</div>
+                <div style={{ fontSize: 12, fontFamily: MONO, color: GOLD, letterSpacing: 2 }}>{formatTime(time)}</div>
+                <div style={{ fontSize: 8, color: MUTED, letterSpacing: 1 }}>{events.length} EVS</div>
+              </div>
+              <div style={{ textAlign: 'left' }}>
+                <div style={{ fontSize: 9, fontWeight: 700, color: awayTeam.color, letterSpacing: 1 }}>{awayTeam.abbr}</div>
+                <div style={{ fontSize: 28, fontWeight: 900, color: awayTeam.color, lineHeight: 1 }}>{stats.away.score}</div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button onClick={generateShareLink} style={{ padding: '5px 10px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: copying ? '#16a34a' : '#ffffff0d', color: copying ? '#fff' : GOLD, border: `1px solid ${copying ? '#16a34a' : GOLD + '44'}`, borderRadius: 4, cursor: 'pointer' }}>
+                {copying ? '✓' : '🔗'}
+              </button>
+              <SettingsDropdown matchId={matchId} />
+            </div>
+          </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, color: homeTeam.color, opacity: 0.8 }}>{homeTeam.abbr}</div>
-            <div style={{ fontSize: 40, fontWeight: 900, color: homeTeam.color, lineHeight: 1 }}>{stats.home.score}</div>
+      ) : (
+        <div style={{ background: NAV, padding: '10px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, borderBottom: `1px solid ${BD}` }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <a href="/dashboard" style={{ fontSize: 20, fontWeight: 900, letterSpacing: 3, color: '#fff', textDecoration: 'none' }}>CLUB<span style={{ color: GOLD }}>CODE</span></a>
+            <div style={{ width: 1, height: 20, background: BD }}/>
+            <div style={{ fontSize: 10, letterSpacing: 3, color: MUTED }}>ANALYST</div>
           </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 9, color: MUTED, letterSpacing: 2, marginBottom: 2 }}>{time < duration / 2 ? '1ST HALF' : '2ND HALF'}</div>
-            <div style={{ fontSize: 15, fontFamily: MONO, color: GOLD, letterSpacing: 3 }}>{formatTime(time)}</div>
-            <div style={{ fontSize: 9, color: MUTED, marginTop: 2, letterSpacing: 1 }}>{events.length} EVENTS</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, color: homeTeam.color, opacity: 0.8 }}>{homeTeam.abbr}</div>
+              <div style={{ fontSize: 40, fontWeight: 900, color: homeTeam.color, lineHeight: 1 }}>{stats.home.score}</div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: 9, color: MUTED, letterSpacing: 2, marginBottom: 2 }}>{time < duration / 2 ? '1ST HALF' : '2ND HALF'}</div>
+              <div style={{ fontSize: 15, fontFamily: MONO, color: GOLD, letterSpacing: 3 }}>{formatTime(time)}</div>
+              <div style={{ fontSize: 9, color: MUTED, marginTop: 2, letterSpacing: 1 }}>{events.length} EVENTS</div>
+            </div>
+            <div style={{ textAlign: 'left' }}>
+              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, color: awayTeam.color, opacity: 0.8 }}>{awayTeam.abbr}</div>
+              <div style={{ fontSize: 40, fontWeight: 900, color: awayTeam.color, lineHeight: 1 }}>{stats.away.score}</div>
+            </div>
           </div>
-          <div style={{ textAlign: 'left' }}>
-            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, color: awayTeam.color, opacity: 0.8 }}>{awayTeam.abbr}</div>
-            <div style={{ fontSize: 40, fontWeight: 900, color: awayTeam.color, lineHeight: 1 }}>{stats.away.score}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: 11, color: MUTED }}>{homeTeam.name} vs {awayTeam.name}</div>
+              {scanState.running && <div style={{ color: GOLD, fontSize: 10, marginTop: 2, letterSpacing: 1 }}>🤖 SCANNING {scanState.pct}%</div>}
+            </div>
+            <button onClick={() => { if (plan !== 'club') { alert('Team sheets are only available on the Club plan. Upgrade in Settings → Plans & Billing.'); return } setShowSquadsModal(true) }} style={{ padding: '5px 12px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: '#ffffff0d', color: plan === 'club' ? DIM : MUTED, border: `1px solid ${BD}`, borderRadius: 4, cursor: plan === 'club' ? 'pointer' : 'not-allowed', letterSpacing: 1, opacity: plan === 'club' ? 1 : 0.4 }}>{plan === 'club' ? '👥 SQUADS' : '🔒 SQUADS'}</button>
+            <button onClick={(e) => { e.stopPropagation(); setShowEditMatch(true) }} style={{ padding: '5px 12px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: '#ffffff0d', color: DIM, border: `1px solid ${BD}`, borderRadius: 4, cursor: 'pointer', letterSpacing: 1 }}>✏️ EDIT</button>
+            <button onClick={generateShareLink} style={{ padding: '5px 12px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: copying ? '#16a34a' : '#ffffff0d', color: copying ? '#fff' : GOLD, border: `1px solid ${copying ? '#16a34a' : GOLD + '44'}`, borderRadius: 4, cursor: 'pointer', letterSpacing: 1 }}>
+              {copying ? '✓ COPIED' : '🔗 SHARE'}
+            </button>
+            <SettingsDropdown matchId={matchId} />
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: 11, color: MUTED }}>{homeTeam.name} vs {awayTeam.name}</div>
-            {scanState.running && <div style={{ color: GOLD, fontSize: 10, marginTop: 2, letterSpacing: 1 }}>🤖 SCANNING {scanState.pct}%</div>}
-          </div>
-          <button onClick={() => { if (plan !== 'club') { alert('Team sheets are only available on the Club plan. Upgrade in Settings → Plans & Billing.'); return } setShowSquadsModal(true) }} style={{ padding: '5px 12px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: '#ffffff0d', color: plan === 'club' ? DIM : MUTED, border: `1px solid ${BD}`, borderRadius: 4, cursor: plan === 'club' ? 'pointer' : 'not-allowed', letterSpacing: 1, opacity: plan === 'club' ? 1 : 0.4 }}>{plan === 'club' ? '👥 SQUADS' : '🔒 SQUADS'}</button>
-          <button onClick={(e) => { e.stopPropagation(); setShowEditMatch(true) }} style={{ padding: '5px 12px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: '#ffffff0d', color: DIM, border: `1px solid ${BD}`, borderRadius: 4, cursor: 'pointer', letterSpacing: 1 }}>✏️ EDIT</button>
-          <button onClick={generateShareLink} style={{ padding: '5px 12px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: copying ? '#16a34a' : '#ffffff0d', color: copying ? '#fff' : GOLD, border: `1px solid ${copying ? '#16a34a' : GOLD + '44'}`, borderRadius: 4, cursor: 'pointer', letterSpacing: 1 }}>
-            {copying ? '✓ COPIED' : '🔗 SHARE'}
-          </button>
-          <SettingsDropdown matchId={matchId} />
-        </div>
-      </div>
+      )}
 
       {/* TABS */}
       <div style={{ display: 'flex', background: NAV, borderBottom: `1px solid ${BD}`, flexShrink: 0 }}>
