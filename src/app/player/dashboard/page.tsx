@@ -13,6 +13,27 @@ const MUTED = '#64748b'
 const DIM = '#94a3b8'
 const NAV = '#080e1a'
 
+function AnalystSwitchButton() {
+  const [hasAnalystAccess, setHasAnalystAccess] = useState(false)
+  const supabase = createClient()
+  useEffect(() => {
+    const check = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data } = await supabase.from('org_members').select('id').eq('user_id', user.id).maybeSingle()
+      setHasAnalystAccess(!!data)
+    }
+    check()
+  }, [])
+  if (!hasAnalystAccess) return null
+  return (
+    <a href="/dashboard" style={{ padding: '5px 12px', fontFamily: "'Barlow Condensed',system-ui,sans-serif", fontSize: 11, fontWeight: 700, background: '#e8a02022', border: '1px solid #e8a02044', color: '#e8a020', borderRadius: 4, cursor: 'pointer', letterSpacing: 1, textDecoration: 'none', whiteSpace: 'nowrap' }}>
+      🎬 ANALYST VIEW
+    </a>
+  )
+}
+
+
 export default function PlayerDashboard() {
   const router = useRouter()
   const supabase = createClient()
@@ -80,7 +101,7 @@ export default function PlayerDashboard() {
           <span style={{ fontSize: 11, color: DIM, display: 'none' }}>{orgName}</span>
           {profile?.shirt_number && <span style={{ fontFamily: 'monospace', fontSize: 11, color: GOLD, background: GOLD + '18', padding: '2px 8px', borderRadius: 4, border: `1px solid ${GOLD}33` }}>#{profile.shirt_number}</span>}
           <button onClick={() => router.push('/player/highlights')} style={{ padding: '5px 12px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: GOLD + '22', border: `1px solid ${GOLD}44`, color: GOLD, borderRadius: 4, cursor: 'pointer', letterSpacing: 1, whiteSpace: 'nowrap' }}>🎬 MY HIGHLIGHTS</button>
-          <button onClick={handleLogout} style={{ padding: '5px 12px', fontFamily: FF, fontSize: 11, background: 'transparent', border: `1px solid ${BD}`, color: MUTED, borderRadius: 4, cursor: 'pointer' }}>LOG OUT</button>
+          <><AnalystSwitchButton /><button onClick={handleLogout} style={{ padding: '5px 12px', fontFamily: FF, fontSize: 11, background: 'transparent', border: `1px solid ${BD}`, color: MUTED, borderRadius: 4, cursor: 'pointer' }}>LOG OUT</button></>
         </div>
       </div>
 

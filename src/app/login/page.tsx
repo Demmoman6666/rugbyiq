@@ -5,8 +5,13 @@ import { createClient } from '@/lib/supabase'
 import Link from 'next/link'
 
 const FF = "'Barlow Condensed', system-ui, sans-serif"
-const NAV = '#0f172a'
+const NAV = '#060912'
+const CARD = '#0d1117'
+const BD = '#1e2d3d'
+const GOLD = '#e8a020'
+const TEXT = '#e2e8f0'
 const MUTED = '#64748b'
+const DIM = '#94a3b8'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -85,36 +90,36 @@ export default function LoginPage() {
   }
 
   const inputStyle: React.CSSProperties = {
-    width: '100%', padding: '10px 14px', background: '#f8fafc',
-    border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 14,
-    fontFamily: FF, color: NAV, outline: 'none', boxSizing: 'border-box',
+    width: '100%', padding: '10px 14px', background: '#ffffff08',
+    border: `1px solid ${BD}`, borderRadius: 6, fontSize: 14,
+    fontFamily: FF, color: TEXT, outline: 'none', boxSizing: 'border-box',
   }
   const btnStyle: React.CSSProperties = {
-    width: '100%', padding: '12px 0', background: NAV, color: '#fff',
+    width: '100%', padding: '12px 0', background: GOLD, color: '#000',
     border: 'none', borderRadius: 6, fontSize: 15, fontWeight: 900,
     fontFamily: FF, cursor: 'pointer', letterSpacing: 1, marginTop: 8,
   }
 
   return (
-    <div style={{ fontFamily: FF, background: '#f8fafc', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <nav style={{ background: '#fff', borderBottom: '1px solid #e2e8f0', padding: '14px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Link href="/" style={{ fontSize: 22, fontWeight: 900, letterSpacing: 3, color: NAV, textDecoration: 'none' }}>
+    <div style={{ fontFamily: FF, background: NAV, minHeight: '100vh', display: 'flex', flexDirection: 'column', color: TEXT }}>
+      <nav style={{ background: '#080e1a', borderBottom: `1px solid ${BD}`, padding: '14px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Link href="/" style={{ fontSize: 22, fontWeight: 900, letterSpacing: 3, color: TEXT, textDecoration: 'none' }}>
           CLUB<span style={{ color: '#e8a020' }}>CODE</span>
         </Link>
       </nav>
 
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-        <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: '36px 32px', width: '100%', maxWidth: 400, boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
+        <div style={{ background: CARD, border: `1px solid ${BD}`, borderRadius: 12, padding: '36px 32px', width: '100%', maxWidth: 400, boxShadow: '0 20px 60px rgba(0,0,0,0.4)' }}>
 
           {/* Check your email — after signup */}
           {emailSent && (
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: 48, marginBottom: 16 }}>📧</div>
-              <div style={{ fontSize: 22, fontWeight: 900, color: NAV, marginBottom: 10 }}>Check your email</div>
+              <div style={{ fontSize: 22, fontWeight: 900, color: TEXT, marginBottom: 10 }}>Check your email</div>
               <div style={{ fontSize: 14, color: MUTED, lineHeight: 1.7, marginBottom: 8 }}>
                 We've sent a confirmation link to
               </div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: NAV, marginBottom: 16 }}>{email}</div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: GOLD, marginBottom: 16 }}>{email}</div>
               <div style={{ fontSize: 13, color: MUTED, lineHeight: 1.7, marginBottom: 24 }}>
                 Click the link in your email to confirm your account and choose your plan.
               </div>
@@ -122,7 +127,7 @@ export default function LoginPage() {
               <button onClick={async () => {
                 await supabase.auth.resend({ type: 'signup', email, options: { emailRedirectTo: `${window.location.origin}/auth/callback` } })
                 alert('Confirmation email resent!')
-              }} style={{ padding: '8px 20px', background: '#f1f5f9', border: '1px solid #e2e8f0', color: '#475569', fontFamily: FF, fontSize: 12, fontWeight: 700, borderRadius: 6, cursor: 'pointer', marginBottom: 8 }}>
+              }} style={{ padding: '8px 20px', background: '#ffffff0d', border: `1px solid ${BD}`, color: DIM, fontFamily: FF, fontSize: 12, fontWeight: 700, borderRadius: 6, cursor: 'pointer', marginBottom: 8 }}>
                 Resend confirmation email
               </button>
               <br />
@@ -136,18 +141,18 @@ export default function LoginPage() {
           {!emailSent && mode === 'forgot' && resetSent && (
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: 40, marginBottom: 12 }}>📧</div>
-              <div style={{ fontSize: 20, fontWeight: 900, color: NAV, marginBottom: 8 }}>Check your email</div>
+              <div style={{ fontSize: 20, fontWeight: 900, color: TEXT, marginBottom: 8 }}>Check your email</div>
               <div style={{ fontSize: 13, color: MUTED, lineHeight: 1.6, marginBottom: 20 }}>
                 We've sent a password reset link to <strong>{email}</strong>.
               </div>
-              <button onClick={() => { setMode('login'); setResetSent(false); setEmail('') }} style={{ ...btnStyle, background: '#0ea5e9' }}>Back to sign in</button>
+              <button onClick={() => { setMode('login'); setResetSent(false); setEmail('') }} style={{ ...btnStyle }}>Back to sign in</button>
             </div>
           )}
 
           {/* Main form */}
           {!emailSent && !(mode === 'forgot' && resetSent) && (
             <>
-              <div style={{ fontSize: 26, fontWeight: 900, marginBottom: 4, color: NAV }}>
+              <div style={{ fontSize: 26, fontWeight: 900, marginBottom: 4, color: TEXT }}>
                 {mode === 'login' ? 'Sign in' : mode === 'signup' ? 'Create account' : 'Reset password'}
               </div>
               <div style={{ fontSize: 13, color: MUTED, marginBottom: 12, lineHeight: 1.5 }}>
@@ -189,9 +194,9 @@ export default function LoginPage() {
 
                   {/* Divider */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-                    <div style={{ flex: 1, height: 1, background: '#e2e8f0' }} />
+                    <div style={{ flex: 1, height: 1, background: BD }} />
                     <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 700, letterSpacing: 1 }}>OR</span>
-                    <div style={{ flex: 1, height: 1, background: '#e2e8f0' }} />
+                    <div style={{ flex: 1, height: 1, background: BD }} />
                   </div>
                 </>
               )}
@@ -237,7 +242,7 @@ export default function LoginPage() {
                 </div>
               )}
 
-              {error && <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', fontSize: 12, padding: '8px 12px', borderRadius: 6, marginBottom: 12 }}>{error}</div>}
+              {error && <div style={{ background: '#ef444418', border: '1px solid #ef444444', color: '#f87171', fontSize: 12, padding: '8px 12px', borderRadius: 6, marginBottom: 12 }}>{error}</div>}
 
               <button onClick={handle} disabled={loading} style={{ ...btnStyle, opacity: loading ? 0.6 : 1 }}>
                 {loading ? 'Please wait...' : mode === 'login' ? 'SIGN IN' : mode === 'signup' ? 'CREATE ACCOUNT' : 'SEND RESET LINK'}

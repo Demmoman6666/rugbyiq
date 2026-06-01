@@ -9,6 +9,27 @@ const FF = "'Barlow Condensed', system-ui, sans-serif"
 const PLAN_LABELS: Record<string, string> = { starter: 'Starter', pro: 'Player', club: 'Club' }
 const PLAN_COLORS: Record<string, string> = { starter: '#64748b', pro: '#0ea5e9', club: '#8b5cf6' }
 
+function PlayerSwitchButton() {
+  const [hasPlayerProfile, setHasPlayerProfile] = useState(false)
+  const supabase = createClient()
+  useEffect(() => {
+    const check = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data } = await supabase.from('player_profiles').select('id').eq('user_id', user.id).maybeSingle()
+      setHasPlayerProfile(!!data)
+    }
+    check()
+  }, [])
+  if (!hasPlayerProfile) return null
+  return (
+    <a href="/player/dashboard" style={{ padding: '5px 12px', fontFamily: "'Barlow Condensed',system-ui,sans-serif", fontSize: 11, fontWeight: 700, background: '#e8a02022', border: '1px solid #e8a02044', color: '#e8a020', borderRadius: 4, cursor: 'pointer', letterSpacing: 1, textDecoration: 'none', whiteSpace: 'nowrap' }}>
+      👤 PLAYER VIEW
+    </a>
+  )
+}
+
+
 export default function DashboardPage() {
   const supabase = createClient()
   const router   = useRouter()
@@ -145,7 +166,7 @@ export default function DashboardPage() {
             {isMobile ? '+' : '+ NEW MATCH'}
           </button>
 
-          <SettingsDropdown />
+          <><PlayerSwitchButton /><SettingsDropdown /></>
         </div>
       </nav>
 
