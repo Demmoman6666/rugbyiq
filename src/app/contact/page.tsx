@@ -129,8 +129,8 @@ export default function ContactPage() {
                   {/* Name + Email row */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                     {[
-                      { key: 'name', label: 'YOUR NAME', placeholder: 'e.g. Corey Tucker' },
-                      { key: 'email', label: 'EMAIL ADDRESS', placeholder: 'corey@club.co.uk' },
+                      { key: 'name', label: 'YOUR NAME', placeholder: 'Your full name' },
+                      { key: 'email', label: 'EMAIL ADDRESS', placeholder: 'your@email.com' },
                     ].map(({ key, label, placeholder }) => (
                       <div key={key}>
                         <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 2, color: MUTED, marginBottom: 6 }}>{label}</div>
