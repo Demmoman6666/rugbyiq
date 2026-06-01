@@ -173,7 +173,7 @@ export default function PlayerHighlightsPage() {
       })
       const data = await res.json()
       if (data.success) {
-        setExportResult({ reelId: reel.id, url: data.downloadUrl, format: data.format })
+        setExportResult({ reelId: reel.id, url: data.proxiedDownloadUrl || data.downloadUrl, format: data.format })
       } else {
         alert('Export failed: ' + (data.error || 'Unknown error'))
       }

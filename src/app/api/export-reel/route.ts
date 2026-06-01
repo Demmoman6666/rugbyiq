@@ -147,7 +147,7 @@ export async function POST(req: NextRequest) {
                     <div style="font-size:16px;font-weight:700;color:#e8a020">${reel.name}</div>
                     <div style="font-size:11px;color:#64748b;margin-top:8px">${match.home_team} vs ${match.away_team} · ${result.clipCount} clips · ${result.format}</div>
                   </div>
-                  <a href="${result.downloadUrl}" 
+                  <a href="${downloadUrl}" 
                      style="display:block;background:#e8a020;color:#000;text-align:center;padding:14px 0;border-radius:8px;font-size:14px;font-weight:900;letter-spacing:1px;text-decoration:none;margin-bottom:16px">
                     ⬇ DOWNLOAD MP4
                   </a>
@@ -170,9 +170,14 @@ export async function POST(req: NextRequest) {
       console.error('Email notification failed:', emailErr)
     }
 
+    // Build a proxied download URL that forces browser download
+    const reelNameSafe = (reel.name || 'reel').replace(/[^a-zA-Z0-9_-]/g, '_')
+    const downloadUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://www.clubcode.co.uk'}/api/download?url=${encodeURIComponent(result.downloadUrl)}&name=${encodeURIComponent(reelNameSafe)}`
+
     return NextResponse.json({
       success: true,
       downloadUrl: result.downloadUrl,
+      proxiedDownloadUrl: downloadUrl,
       format: result.format,
       clipCount: result.clipCount,
     })
