@@ -979,7 +979,7 @@ export default function VideoAnalyst({
           </div>{/* end LEFT COLUMN */}
 
           {/* RIGHT COLUMN — timeline + event log (desktop only, else normal flow) */}
-          <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', width: isMobile ? '100%' : 340, flexShrink: 0, borderLeft: isMobile ? 'none' : `1px solid ${BD}` }}>
+          <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', width: isMobile ? '100%' : 340, flexShrink: 0, borderLeft: isMobile ? 'none' : `1px solid ${BD}`, minHeight: isMobile ? 300 : 'auto' }}>
 
             {/* Filters button + dropdown */}
             <div style={{ background: NAV, borderBottom: `1px solid ${BD}`, padding: '8px 10px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative' }}>
@@ -1417,8 +1417,8 @@ export default function VideoAnalyst({
 
             {/* Event list */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 0, maxHeight: 400, overflowY: 'auto', marginBottom: 14 }}>
-              {visible.length === 0 && <div style={{ fontSize: 12, color: MUTED, padding: '12px 0' }}>No events coded yet — go to Code Match first</div>}
-              {visible.filter(e => (reviewFilters.length === 0 || reviewFilters.includes(e.event_type)) && (reviewPlayerFilter === null || e.shirt_number === reviewPlayerFilter)).map(e => {
+              {events.length === 0 && <div style={{ fontSize: 12, color: MUTED, padding: '12px 0' }}>No events coded yet — go to Code Match first</div>}
+              {events.filter(e => (reviewFilters.length === 0 || reviewFilters.includes(e.event_type)) && (reviewPlayerFilter === null || e.shirt_number === reviewPlayerFilter)).sort((a,b) => a.timestamp_secs - b.timestamp_secs).map(e => {
                 const cfg = sportConfig.events[e.event_type]
                 const selected = reviewSelected.includes(e.id)
                 const players = e.team === 'home' ? homePlayers : awayPlayers
@@ -1444,7 +1444,7 @@ export default function VideoAnalyst({
             </div>
 
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <button onClick={() => setReviewSelected(visible.filter(e => (reviewFilters.length === 0 || reviewFilters.includes(e.event_type)) && (reviewPlayerFilter === null || e.shirt_number === reviewPlayerFilter)).map(e => e.id))} style={{ padding: '7px 14px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: 'transparent', border: `1px solid ${BD}`, color: MUTED, borderRadius: 4, cursor: 'pointer', letterSpacing: 1 }}>SELECT ALL</button>
+              <button onClick={() => setReviewSelected(events.filter(e => (reviewFilters.length === 0 || reviewFilters.includes(e.event_type)) && (reviewPlayerFilter === null || e.shirt_number === reviewPlayerFilter)).map(e => e.id))} style={{ padding: '7px 14px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: 'transparent', border: `1px solid ${BD}`, color: MUTED, borderRadius: 4, cursor: 'pointer', letterSpacing: 1 }}>SELECT ALL</button>
               <button onClick={() => setReviewSelected([])} style={{ padding: '7px 14px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: 'transparent', border: `1px solid ${BD}`, color: MUTED, borderRadius: 4, cursor: 'pointer', letterSpacing: 1 }}>CLEAR</button>
               <button onClick={createReview} disabled={buildingReview || !reviewName.trim() || reviewSelected.length === 0} style={{ flex: 1, padding: '10px 0', fontFamily: FF, fontSize: 13, fontWeight: 900, background: reviewName.trim() && reviewSelected.length > 0 ? GOLD : '#ffffff0d', border: 'none', color: reviewName.trim() && reviewSelected.length > 0 ? '#000' : MUTED, borderRadius: 4, cursor: reviewName.trim() && reviewSelected.length > 0 ? 'pointer' : 'default', letterSpacing: 1 }}>
                 {buildingReview ? 'CREATING…' : `🎬 CREATE REVIEW (${reviewSelected.length} clips)`}
