@@ -259,7 +259,7 @@ export default function PlayerMatchPage() {
 
           {/* Event buttons */}
           <div style={{ background: CARD, borderBottom: `1px solid ${BD}`, padding: '10px 12px', flexShrink: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: lastEv ? 8 : 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'nowrap', overflowX: 'auto', paddingBottom: 4, marginBottom: lastEv ? 8 : 0 }}>
               {Object.entries(PLAYER_EVENTS).map(([type, cfg]) => (
                 <button key={type} onClick={() => codeEvent(type)}
                   style={{ padding: '6px 12px', fontFamily: FF, fontSize: 11, fontWeight: 700, border: `1px solid ${cfg.color}33`, borderRadius: 4, background: cfg.color + '18', color: cfg.color, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
