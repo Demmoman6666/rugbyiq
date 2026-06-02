@@ -205,15 +205,13 @@ export default function PlayerSettingsPage() {
                               placeholder="e.g. Made, Missed, Assist"
                               style={{ width: '100%', padding: '7px 10px', fontFamily: FF, fontSize: 12, background: CARD, border: `1px solid ${BD}`, borderRadius: 4, color: TEXT, outline: 'none', boxSizing: 'border-box' }} />
                           </div>
+                          <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${BD}` }}>
+                            <button onClick={() => { setEvents(prev => prev.filter((_, i) => i !== idx)); setEditingIdx(null) }}
+                              style={{ padding: '6px 14px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: '#ef444418', border: '1px solid #ef444444', color: '#f87171', borderRadius: 4, cursor: 'pointer' }}>
+                              🗑 Delete this event
+                            </button>
+                          </div>
                         </>
-                      {!DEFAULT_EVENT_KEYS.has(ev.event_key) && (
-                        <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${BD}` }}>
-                          <button onClick={() => { setEvents(prev => prev.filter((_, i) => i !== idx)); setEditingIdx(null) }}
-                            style={{ padding: '6px 14px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: '#ef444418', border: '1px solid #ef444444', color: '#f87171', borderRadius: 4, cursor: 'pointer' }}>
-                            🗑 Delete this event
-                          </button>
-                        </div>
-                      )}
                     </div>
                   )}
                 </div>
