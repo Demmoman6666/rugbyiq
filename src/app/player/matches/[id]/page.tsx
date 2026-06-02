@@ -176,7 +176,7 @@ export default function PlayerMatchPage() {
     if (event) {
       setPlayerEvents(prev => [...prev, event].sort((a: any, b: any) => a.timestamp_secs - b.timestamp_secs))
       if (cfg?.outcomes) setLastEv(event); else setLastEv(null)
-      const label = shirtNumber ? \`\${cfg?.label} #\${shirtNumber}\${player?.name ? ' ' + player.name.split(' ').pop() : ''}\` : cfg?.label ?? eventType
+      const label = shirtNumber ? `${cfg?.label} #${shirtNumber}${player?.name ? ' ' + player.name.split(' ').pop() : ''}` : cfg?.label ?? eventType
       showToast(label, cfg?.color ?? GOLD)
       setViewMode('mine')
     }
