@@ -242,7 +242,7 @@ export default function PlayerMatchPage() {
     const cfg = PLAYER_EVENTS[eventType]
     const player = shirtNumber ? players.find(p => p.shirt_number === shirtNumber) : null
     const { data } = await supabase.from('player_events').insert({
-      match_id: matchId, event_type: eventType, timestamp_secs: time,
+      match_id: id, event_type: eventType, timestamp_secs: time,
       player_id: profile?.id, outcome: null,
       shirt_number: shirtNumber ?? null, player_name: player?.name ?? null,
     }).select().single()
