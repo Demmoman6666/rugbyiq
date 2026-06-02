@@ -16,23 +16,22 @@ const DIM  = '#94a3b8'
 const DEFAULT_EVENT_KEYS = new Set(['Tackle','Carry','Ruck','Lineout','Scrum','Penalty','Try','Conv','Knock On','Kick','Offload'])
 
 const DEFAULT_EVENTS = [
-  { event_key: 'Tackle',    label: 'Tackle',    color: '#3b82f6', hotkey: 'T', sort_order: 0,  enabled: true, outcomes: ['Made','Missed','Assist'] },
-  { event_key: 'Carry',     label: 'Carry',     color: '#f59e0b', hotkey: 'C', sort_order: 1,  enabled: true, outcomes: ['Gain','No gain','Try'] },
-  { event_key: 'Ruck',      label: 'Ruck',      color: '#ea580c', hotkey: 'R', sort_order: 2,  enabled: true, outcomes: ['Won','Lost'] },
-  { event_key: 'Lineout',   label: 'Lineout',   color: '#8b5cf6', hotkey: 'L', sort_order: 3,  enabled: true, outcomes: ['Won','Lost'] },
-  { event_key: 'Scrum',     label: 'Scrum',     color: '#ec4899', hotkey: 'S', sort_order: 4,  enabled: true, outcomes: ['Won','Lost','Penalty won'] },
-  { event_key: 'Penalty',   label: 'Penalty',   color: '#ef4444', hotkey: 'P', sort_order: 5,  enabled: true, outcomes: null },
-  { event_key: 'Try',       label: 'Try',       color: '#10b981', hotkey: 'Y', sort_order: 6,  enabled: true, outcomes: null },
-  { event_key: 'Conv',      label: 'Conv',      color: '#06b6d4', hotkey: 'V', sort_order: 7,  enabled: true, outcomes: null },
-  { event_key: 'Knock On',  label: 'Knock On',  color: '#f97316', hotkey: 'K', sort_order: 8,  enabled: true, outcomes: null },
-  { event_key: 'Kick',      label: 'Kick',      color: '#a78bfa', hotkey: 'I', sort_order: 9,  enabled: true, outcomes: ['Box kick','Clearance','Penalty kick','Chip'] },
-  { event_key: 'Offload',   label: 'Offload',   color: '#34d399', hotkey: 'O', sort_order: 10, enabled: true, outcomes: ['Completed','Knocked on'] },
+  { event_key: 'Tackle',   label: 'Tackle',   color: '#3b82f6', hotkey: 'T', sort_order: 0,  enabled: true, outcomes: ['Made','Missed','Assist'] },
+  { event_key: 'Carry',    label: 'Carry',    color: '#f59e0b', hotkey: 'C', sort_order: 1,  enabled: true, outcomes: ['Gain','No gain','Try'] },
+  { event_key: 'Ruck',     label: 'Ruck',     color: '#ea580c', hotkey: 'R', sort_order: 2,  enabled: true, outcomes: ['Won','Lost'] },
+  { event_key: 'Lineout',  label: 'Lineout',  color: '#8b5cf6', hotkey: 'L', sort_order: 3,  enabled: true, outcomes: ['Won','Lost'] },
+  { event_key: 'Scrum',    label: 'Scrum',    color: '#ec4899', hotkey: 'S', sort_order: 4,  enabled: true, outcomes: ['Won','Lost','Penalty won'] },
+  { event_key: 'Penalty',  label: 'Penalty',  color: '#ef4444', hotkey: 'P', sort_order: 5,  enabled: true, outcomes: null },
+  { event_key: 'Try',      label: 'Try',      color: '#10b981', hotkey: 'Y', sort_order: 6,  enabled: true, outcomes: null },
+  { event_key: 'Conv',     label: 'Conv',     color: '#06b6d4', hotkey: 'V', sort_order: 7,  enabled: true, outcomes: null },
+  { event_key: 'Knock On', label: 'Knock On', color: '#f97316', hotkey: 'K', sort_order: 8,  enabled: true, outcomes: null },
+  { event_key: 'Kick',     label: 'Kick',     color: '#a78bfa', hotkey: 'I', sort_order: 9,  enabled: true, outcomes: ['Box kick','Clearance','Penalty kick','Chip'] },
+  { event_key: 'Offload',  label: 'Offload',  color: '#34d399', hotkey: 'O', sort_order: 10, enabled: true, outcomes: ['Completed','Knocked on'] },
 ]
 
 const COLORS = ['#3b82f6','#f59e0b','#ea580c','#8b5cf6','#ec4899','#ef4444','#10b981','#06b6d4','#f97316','#a78bfa','#34d399','#e8a020','#60a5fa','#fb923c','#4ade80','#f472b6']
 
 type EventPref = {
-  id?: string
   event_key: string
   label: string
   color: string
@@ -61,7 +60,6 @@ export default function PlayerSettingsPage() {
       const { data: p } = await supabase.from('player_profiles').select('*, organisations(name)').eq('user_id', user.id).single()
       if (!p) { router.push('/player/login'); return }
       setProfile(p)
-
       const { data: prefs } = await supabase.from('player_event_preferences').select('*').eq('player_id', p.id).order('sort_order')
       if (prefs && prefs.length > 0) {
         setEvents(prefs)
@@ -105,14 +103,34 @@ export default function PlayerSettingsPage() {
     setEvents(newEvents)
   }
 
-  const resetToDefaults = () => {
-    if (confirm('Reset all events to defaults?')) setEvents(DEFAULT_EVENTS)
+  const addCustomEvent = () => {
+    const key = `custom_${Date.now()}`
+    const newEvent: EventPref = { event_key: key, label: 'New Event', color: '#e8a020', hotkey: '', sort_order: events.length, enabled: true, outcomes: null, is_custom: true }
+    setEvents(prev => [...prev, newEvent])
+    setEditingIdx(events.length)
   }
 
-  if (loading) return <div style={{ fontFamily: FF, background: BG, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: MUTED }}>Loading...</div>
+  const deleteEvent = (idx: number) => {
+    setEvents(prev => prev.filter((_, i) => i !== idx))
+    setEditingIdx(null)
+  }
+
+  const resetToDefaults = () => {
+    if (confirm('Reset all events to defaults?')) {
+      setEvents(DEFAULT_EVENTS)
+      setEditingIdx(null)
+    }
+  }
+
+  if (loading) {
+    return <div style={{ fontFamily: FF, background: BG, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: MUTED }}>Loading...</div>
+  }
+
+  const isLocked = (ev: EventPref) => DEFAULT_EVENT_KEYS.has(ev.event_key)
 
   return (
     <div style={{ fontFamily: FF, background: BG, minHeight: '100vh', color: TEXT }}>
+
       {/* Header */}
       <div style={{ background: NAV, borderBottom: `1px solid ${BD}`, padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -125,9 +143,9 @@ export default function PlayerSettingsPage() {
 
       {/* Tabs */}
       <div style={{ background: NAV, borderBottom: `1px solid ${BD}`, padding: '0 16px', display: 'flex' }}>
-        {([['events', '⚡ MY EVENTS'], ['profile', '👤 PROFILE']] as const).map(([t, label]) => (
+        {(['events', 'profile'] as const).map(t => (
           <button key={t} onClick={() => setTab(t)} style={{ padding: '10px 16px', fontFamily: FF, fontSize: 12, fontWeight: 700, letterSpacing: 1, background: 'none', border: 'none', borderBottom: tab === t ? `2px solid ${GOLD}` : '2px solid transparent', color: tab === t ? GOLD : MUTED, cursor: 'pointer' }}>
-            {label}
+            {t === 'events' ? '⚡ MY EVENTS' : '👤 PROFILE'}
           </button>
         ))}
       </div>
@@ -135,23 +153,22 @@ export default function PlayerSettingsPage() {
       <div style={{ maxWidth: 600, margin: '0 auto', padding: '24px 16px' }}>
 
         {tab === 'events' && (
-          <>
+          <div>
             <div style={{ marginBottom: 20 }}>
               <div style={{ fontSize: 18, fontWeight: 900, color: TEXT, marginBottom: 4 }}>Coding Events</div>
-              <div style={{ fontSize: 13, color: MUTED, lineHeight: 1.6 }}>
-                Customise which events appear on your coding page, change labels, colours and hotkeys. The first 18 enabled events will show — arranged 6 per row.
-              </div>
+              <div style={{ fontSize: 13, color: MUTED, lineHeight: 1.6 }}>Customise which events appear on your coding page. First 18 enabled events show — 6 per row. 🔒 Standard events can be reordered and toggled but not edited.</div>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
               {events.map((ev, idx) => (
                 <div key={ev.event_key} style={{ background: CARD, border: `1px solid ${ev.enabled ? ev.color + '44' : BD}`, borderRadius: 8, overflow: 'hidden', opacity: ev.enabled ? 1 : 0.5 }}>
+
                   {/* Row header */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', cursor: 'pointer' }} onClick={() => setEditingIdx(editingIdx === idx ? null : idx)}>
                     <div style={{ width: 14, height: 14, borderRadius: 3, background: ev.color, flexShrink: 0 }}/>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 14, fontWeight: 700, color: ev.enabled ? TEXT : MUTED }}>{ev.label}</div>
-                      <div style={{ fontSize: 10, color: MUTED, marginTop: 1 }}>Hotkey: [{ev.hotkey}] {ev.outcomes ? `· ${ev.outcomes.length} outcomes` : ''}</div>
+                      <div style={{ fontSize: 10, color: MUTED, marginTop: 1 }}>Hotkey: [{ev.hotkey}]{ev.outcomes ? ` · ${ev.outcomes.length} outcomes` : ''}</div>
                     </div>
                     <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
                       <button onClick={e => { e.stopPropagation(); moveEvent(idx, 'up') }} disabled={idx === 0} style={{ background: 'none', border: 'none', color: idx === 0 ? '#ffffff10' : MUTED, cursor: idx === 0 ? 'default' : 'pointer', fontSize: 12, padding: '2px 4px' }}>↑</button>
@@ -160,24 +177,24 @@ export default function PlayerSettingsPage() {
                         style={{ padding: '3px 10px', fontFamily: FF, fontSize: 10, fontWeight: 700, borderRadius: 4, border: `1px solid ${ev.enabled ? '#16a34a44' : BD}`, background: ev.enabled ? '#16a34a22' : 'transparent', color: ev.enabled ? '#4ade80' : MUTED, cursor: 'pointer' }}>
                         {ev.enabled ? 'ON' : 'OFF'}
                       </button>
-                      {DEFAULT_EVENT_KEYS.has(ev.event_key) && <span style={{ fontSize: 10, color: MUTED }} title='Standard event - locked'>🔒</span>}
-                    <div style={{ fontSize: 11, color: MUTED }}>{editingIdx === idx ? '▲' : '▼'}</div>
+                      {isLocked(ev) && <span style={{ fontSize: 10, color: MUTED }}>🔒</span>}
+                      <div style={{ fontSize: 11, color: MUTED }}>{editingIdx === idx ? '▲' : '▼'}</div>
                     </div>
                   </div>
 
                   {/* Edit panel */}
                   {editingIdx === idx && (
                     <div style={{ padding: '12px 14px', borderTop: `1px solid ${BD}`, background: '#060912' }}>
-                      {DEFAULT_EVENT_KEYS.has(ev.event_key) ? (
+                      {isLocked(ev) ? (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: '#e8a02012', border: `1px solid ${GOLD}33`, borderRadius: 6 }}>
                           <span style={{ fontSize: 14 }}>🔒</span>
                           <div>
                             <div style={{ fontSize: 12, fontWeight: 700, color: GOLD }}>Standard event — locked</div>
-                            <div style={{ fontSize: 11, color: MUTED, marginTop: 2 }}>Label, hotkey, colour and outcomes can't be changed to keep stats consistent across all clubs. You can reorder and toggle it on/off.</div>
+                            <div style={{ fontSize: 11, color: MUTED, marginTop: 2 }}>Label, hotkey, colour and outcomes are fixed to keep stats consistent. You can reorder and toggle it on/off.</div>
                           </div>
                         </div>
                       ) : (
-                        <>
+                        <div>
                           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
                             <div>
                               <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 2, color: MUTED, marginBottom: 5 }}>LABEL</div>
@@ -199,24 +216,28 @@ export default function PlayerSettingsPage() {
                               ))}
                             </div>
                           </div>
-                          <div>
+                          <div style={{ marginBottom: 12 }}>
                             <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 2, color: MUTED, marginBottom: 5 }}>OUTCOMES <span style={{ color: '#ffffff30', fontWeight: 400 }}>(comma separated, leave empty for none)</span></div>
-                            <input value={ev.outcomes?.join(', ') ?? ''} onChange={e => updateEvent(idx, 'outcomes', e.target.value ? e.target.value.split(',').map(s => s.trim()).filter(Boolean) : null)}
+                            <input value={ev.outcomes?.join(', ') ?? ''} onChange={e => updateEvent(idx, 'outcomes', e.target.value ? e.target.value.split(',').map((s: string) => s.trim()).filter(Boolean) : null)}
                               placeholder="e.g. Made, Missed, Assist"
                               style={{ width: '100%', padding: '7px 10px', fontFamily: FF, fontSize: 12, background: CARD, border: `1px solid ${BD}`, borderRadius: 4, color: TEXT, outline: 'none', boxSizing: 'border-box' }} />
                           </div>
-                          <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${BD}` }}>
-                            <button onClick={() => { setEvents(prev => prev.filter((_, i) => i !== idx)); setEditingIdx(null) }}
-                              style={{ padding: '6px 14px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: '#ef444418', border: '1px solid #ef444444', color: '#f87171', borderRadius: 4, cursor: 'pointer' }}>
-                              🗑 Delete this event
-                            </button>
-                          </div>
-                        </>
+                          <button onClick={() => deleteEvent(idx)}
+                            style={{ padding: '6px 14px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: '#ef444418', border: '1px solid #ef444444', color: '#f87171', borderRadius: 4, cursor: 'pointer' }}>
+                            🗑 Delete this event
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
               ))}
             </div>
+
+            {/* Add custom event */}
+            <button onClick={addCustomEvent} style={{ width: '100%', padding: '10px 0', fontFamily: FF, fontSize: 12, fontWeight: 700, background: 'transparent', border: `1px dashed ${BD}`, color: MUTED, borderRadius: 6, cursor: 'pointer', marginBottom: 16, letterSpacing: 1 }}>
+              + ADD CUSTOM EVENT
+            </button>
 
             {/* Preview */}
             <div style={{ background: CARD, border: `1px solid ${BD}`, borderRadius: 8, padding: '12px 14px', marginBottom: 16 }}>
@@ -231,15 +252,6 @@ export default function PlayerSettingsPage() {
               </div>
             </div>
 
-            {/* Add custom event */}
-            <button onClick={() => {
-              const key = `custom_${Date.now()}`
-              setEvents(prev => [...prev, { event_key: key, label: 'New Event', color: '#e8a020', hotkey: '', sort_order: prev.length, enabled: true, outcomes: null, is_custom: true }])
-              setEditingIdx(events.length)
-            }} style={{ width: '100%', padding: '10px 0', fontFamily: FF, fontSize: 12, fontWeight: 700, background: 'transparent', border: `1px dashed ${BD}`, color: MUTED, borderRadius: 6, cursor: 'pointer', marginBottom: 16, letterSpacing: 1 }}>
-              + ADD CUSTOM EVENT
-            </button>
-
             <div style={{ display: 'flex', gap: 8 }}>
               <button onClick={resetToDefaults} style={{ padding: '10px 16px', fontFamily: FF, fontSize: 12, fontWeight: 700, background: 'transparent', border: `1px solid ${BD}`, color: MUTED, borderRadius: 6, cursor: 'pointer' }}>Reset defaults</button>
               <button onClick={savePreferences} disabled={saving}
@@ -247,7 +259,7 @@ export default function PlayerSettingsPage() {
                 {saving ? 'SAVING...' : saved ? '✓ SAVED' : 'SAVE PREFERENCES'}
               </button>
             </div>
-          </>
+          </div>
         )}
 
         {tab === 'profile' && (
@@ -257,7 +269,7 @@ export default function PlayerSettingsPage() {
               {[
                 { label: 'NAME', value: profile?.name ?? 'Not set' },
                 { label: 'SHIRT NUMBER', value: profile?.shirt_number ? `#${profile.shirt_number}` : 'Not set' },
-                { label: 'CLUB', value: profile?.organisations?.name ?? 'Not set' },
+                { label: 'CLUB', value: (profile?.organisations as any)?.name ?? 'Not set' },
                 { label: 'POSITION', value: profile?.position ?? 'Not set' },
               ].map(({ label, value }) => (
                 <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: `1px solid ${BD}` }}>
@@ -266,9 +278,7 @@ export default function PlayerSettingsPage() {
                 </div>
               ))}
             </div>
-            <div style={{ marginTop: 16, fontSize: 12, color: MUTED }}>
-              To update your profile details, contact your club analyst.
-            </div>
+            <div style={{ marginTop: 16, fontSize: 12, color: MUTED }}>To update your profile details, contact your club analyst.</div>
           </div>
         )}
       </div>
