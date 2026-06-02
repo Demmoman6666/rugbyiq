@@ -13,6 +13,8 @@ const TEXT = '#e2e8f0'
 const MUTED= '#64748b'
 const DIM  = '#94a3b8'
 
+const DEFAULT_EVENT_KEYS = new Set(['Tackle','Carry','Ruck','Lineout','Scrum','Penalty','Try','Conv','Knock On','Kick','Offload'])
+
 const DEFAULT_EVENTS = [
   { event_key: 'Tackle',    label: 'Tackle',    color: '#3b82f6', hotkey: 'T', sort_order: 0,  enabled: true, outcomes: ['Made','Missed','Assist'] },
   { event_key: 'Carry',     label: 'Carry',     color: '#f59e0b', hotkey: 'C', sort_order: 1,  enabled: true, outcomes: ['Gain','No gain','Try'] },
@@ -38,6 +40,7 @@ type EventPref = {
   sort_order: number
   enabled: boolean
   outcomes: string[] | null
+  is_custom?: boolean
 }
 
 export default function PlayerSettingsPage() {
@@ -157,40 +160,53 @@ export default function PlayerSettingsPage() {
                         style={{ padding: '3px 10px', fontFamily: FF, fontSize: 10, fontWeight: 700, borderRadius: 4, border: `1px solid ${ev.enabled ? '#16a34a44' : BD}`, background: ev.enabled ? '#16a34a22' : 'transparent', color: ev.enabled ? '#4ade80' : MUTED, cursor: 'pointer' }}>
                         {ev.enabled ? 'ON' : 'OFF'}
                       </button>
-                      <div style={{ fontSize: 11, color: MUTED }}>{editingIdx === idx ? '▲' : '▼'}</div>
+                      {DEFAULT_EVENT_KEYS.has(ev.event_key) && <span style={{ fontSize: 10, color: MUTED }} title='Standard event - locked'>🔒</span>}
+                    <div style={{ fontSize: 11, color: MUTED }}>{editingIdx === idx ? '▲' : '▼'}</div>
                     </div>
                   </div>
 
                   {/* Edit panel */}
                   {editingIdx === idx && (
                     <div style={{ padding: '12px 14px', borderTop: `1px solid ${BD}`, background: '#060912' }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
-                        <div>
-                          <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 2, color: MUTED, marginBottom: 5 }}>LABEL</div>
-                          <input value={ev.label} onChange={e => updateEvent(idx, 'label', e.target.value)}
-                            style={{ width: '100%', padding: '7px 10px', fontFamily: FF, fontSize: 13, background: CARD, border: `1px solid ${BD}`, borderRadius: 4, color: TEXT, outline: 'none', boxSizing: 'border-box' }} />
+                      {DEFAULT_EVENT_KEYS.has(ev.event_key) ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: '#e8a02012', border: `1px solid ${GOLD}33`, borderRadius: 6 }}>
+                          <span style={{ fontSize: 14 }}>🔒</span>
+                          <div>
+                            <div style={{ fontSize: 12, fontWeight: 700, color: GOLD }}>Standard event — locked</div>
+                            <div style={{ fontSize: 11, color: MUTED, marginTop: 2 }}>Label, hotkey, colour and outcomes can't be changed to keep stats consistent across all clubs. You can reorder and toggle it on/off.</div>
+                          </div>
                         </div>
-                        <div>
-                          <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 2, color: MUTED, marginBottom: 5 }}>HOTKEY</div>
-                          <input value={ev.hotkey} onChange={e => updateEvent(idx, 'hotkey', e.target.value.toUpperCase().slice(0, 1))} maxLength={1}
-                            style={{ width: '100%', padding: '7px 10px', fontFamily: FF, fontSize: 13, background: CARD, border: `1px solid ${BD}`, borderRadius: 4, color: TEXT, outline: 'none', textTransform: 'uppercase', textAlign: 'center', boxSizing: 'border-box' }} />
-                        </div>
-                      </div>
-                      <div style={{ marginBottom: 12 }}>
-                        <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 2, color: MUTED, marginBottom: 8 }}>COLOUR</div>
-                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                          {COLORS.map(c => (
-                            <div key={c} onClick={() => updateEvent(idx, 'color', c)}
-                              style={{ width: 24, height: 24, borderRadius: 4, background: c, cursor: 'pointer', border: ev.color === c ? '2px solid #fff' : '2px solid transparent', boxSizing: 'border-box' }} />
-                          ))}
-                        </div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 2, color: MUTED, marginBottom: 5 }}>OUTCOMES <span style={{ color: '#ffffff30', fontWeight: 400 }}>(comma separated, leave empty for none)</span></div>
-                        <input value={ev.outcomes?.join(', ') ?? ''} onChange={e => updateEvent(idx, 'outcomes', e.target.value ? e.target.value.split(',').map(s => s.trim()).filter(Boolean) : null)}
-                          placeholder="e.g. Made, Missed, Assist"
-                          style={{ width: '100%', padding: '7px 10px', fontFamily: FF, fontSize: 12, background: CARD, border: `1px solid ${BD}`, borderRadius: 4, color: TEXT, outline: 'none', boxSizing: 'border-box' }} />
-                      </div>
+                      ) : (
+                        <>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                            <div>
+                              <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 2, color: MUTED, marginBottom: 5 }}>LABEL</div>
+                              <input value={ev.label} onChange={e => updateEvent(idx, 'label', e.target.value)}
+                                style={{ width: '100%', padding: '7px 10px', fontFamily: FF, fontSize: 13, background: CARD, border: `1px solid ${BD}`, borderRadius: 4, color: TEXT, outline: 'none', boxSizing: 'border-box' }} />
+                            </div>
+                            <div>
+                              <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 2, color: MUTED, marginBottom: 5 }}>HOTKEY</div>
+                              <input value={ev.hotkey} onChange={e => updateEvent(idx, 'hotkey', e.target.value.toUpperCase().slice(0, 1))} maxLength={1}
+                                style={{ width: '100%', padding: '7px 10px', fontFamily: FF, fontSize: 13, background: CARD, border: `1px solid ${BD}`, borderRadius: 4, color: TEXT, outline: 'none', textTransform: 'uppercase', textAlign: 'center', boxSizing: 'border-box' }} />
+                            </div>
+                          </div>
+                          <div style={{ marginBottom: 12 }}>
+                            <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 2, color: MUTED, marginBottom: 8 }}>COLOUR</div>
+                            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                              {COLORS.map(c => (
+                                <div key={c} onClick={() => updateEvent(idx, 'color', c)}
+                                  style={{ width: 24, height: 24, borderRadius: 4, background: c, cursor: 'pointer', border: ev.color === c ? '2px solid #fff' : '2px solid transparent', boxSizing: 'border-box' }} />
+                              ))}
+                            </div>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 2, color: MUTED, marginBottom: 5 }}>OUTCOMES <span style={{ color: '#ffffff30', fontWeight: 400 }}>(comma separated, leave empty for none)</span></div>
+                            <input value={ev.outcomes?.join(', ') ?? ''} onChange={e => updateEvent(idx, 'outcomes', e.target.value ? e.target.value.split(',').map(s => s.trim()).filter(Boolean) : null)}
+                              placeholder="e.g. Made, Missed, Assist"
+                              style={{ width: '100%', padding: '7px 10px', fontFamily: FF, fontSize: 12, background: CARD, border: `1px solid ${BD}`, borderRadius: 4, color: TEXT, outline: 'none', boxSizing: 'border-box' }} />
+                          </div>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
