@@ -48,6 +48,10 @@ export default function PlayerMatchPage() {
   const [playerEvents, setPlayerEvents]   = useState<any[]>([])
   const [lastEv, setLastEv]           = useState<any>(null)
   const [toast, setToast]             = useState<{ label: string; color: string } | null>(null)
+  const [voiceActive, setVoiceActive]   = useState(false)
+  const [voiceText, setVoiceText]       = useState('')
+  const recognitionRef                   = useRef<any>(null)
+  const [players, setPlayers]           = useState<any[]>([])
   const toastTimer = useRef<NodeJS.Timeout | null>(null)
   const currentEventRef = useRef<HTMLDivElement>(null)
 
@@ -74,6 +78,9 @@ export default function PlayerMatchPage() {
       const { data: pEvents } = await fetch(`/api/player-events?match_id=${id}&player_id=${playerProfile.id}`).then(r => r.json()).then(d => ({ data: d.events }))
       setPlayerEvents(pEvents ?? [])
 
+      // Load squad for voice coding player name matching
+      const { data: squadData } = await supabase.from('players').select('*').eq('match_id', id)
+      setPlayers(squadData ?? [])
       setLoading(false)
     }
     load()
@@ -151,6 +158,100 @@ export default function PlayerMatchPage() {
     if (toastTimer.current) clearTimeout(toastTimer.current)
     setToast({ label, color })
     toastTimer.current = setTimeout(() => setToast(null), 1500)
+  }
+
+  const parseVoiceCommand = (transcript: string) => {
+    const lower = transcript.toLowerCase().trim()
+    const words = lower.split(/\s+/)
+    if (words.length === 0) return
+
+    // Match event type from first word(s)
+    let matchedType: string | null = null
+    let remainder = ''
+
+    // Try two-word match first (e.g. "knock on")
+    if (words.length >= 2) {
+      const twoWord = words[0] + ' ' + words[1]
+      const twoMatch = Object.entries(PLAYER_EVENTS).find(([key, cfg]) =>
+        key.toLowerCase() === twoWord || cfg.label.toLowerCase() === twoWord
+      )
+      if (twoMatch) { matchedType = twoMatch[0]; remainder = words.slice(2).join(' ') }
+    }
+
+    // Single word match
+    if (!matchedType) {
+      const oneMatch = Object.entries(PLAYER_EVENTS).find(([key, cfg]) =>
+        key.toLowerCase() === words[0] ||
+        cfg.label.toLowerCase() === words[0] ||
+        cfg.hotkey.toLowerCase() === words[0]
+      )
+      if (oneMatch) { matchedType = oneMatch[0]; remainder = words.slice(1).join(' ') }
+    }
+
+    if (!matchedType) return
+
+    // Parse remainder for shirt number or player name
+    let shirtNumber: number | null = null
+    if (remainder) {
+      const num = parseInt(remainder)
+      if (!isNaN(num)) {
+        shirtNumber = num
+      } else {
+        // Fuzzy name match against squad
+        const squadMatch = players.find(p =>
+          p.name?.toLowerCase().includes(remainder.toLowerCase())
+        )
+        if (squadMatch) shirtNumber = squadMatch.shirt_number
+      }
+    }
+
+    codeEventWithPlayer(matchedType, shirtNumber)
+  }
+
+  const startVoice = () => {
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    if (!SR) { alert('Voice coding not supported on this browser. Try Chrome or Safari.'); return }
+
+    if (voiceActive) {
+      recognitionRef.current?.stop()
+      setVoiceActive(false)
+      return
+    }
+
+    const recognition = new SR()
+    recognitionRef.current = recognition
+    recognition.continuous = false
+    recognition.interimResults = true
+    recognition.lang = 'en-GB'
+
+    recognition.onstart = () => { setVoiceActive(true); setVoiceText('') }
+    recognition.onresult = (e: any) => {
+      const transcript = Array.from(e.results).map((r: any) => r[0].transcript).join('')
+      setVoiceText(transcript)
+      if (e.results[e.results.length - 1].isFinal) {
+        parseVoiceCommand(transcript)
+        setVoiceText('')
+      }
+    }
+    recognition.onerror = () => { setVoiceActive(false); setVoiceText('') }
+    recognition.onend = () => { setVoiceActive(false); setVoiceText('') }
+    recognition.start()
+  }
+
+  const codeEventWithPlayer = async (eventType: string, shirtNumber: number | null) => {
+    const cfg = PLAYER_EVENTS[eventType]
+    const player = shirtNumber ? players.find(p => p.shirt_number === shirtNumber) : null
+    const { data } = await supabase.from('player_events').insert({
+      match_id: matchId, event_type: eventType, timestamp_secs: time,
+      player_id: profile?.id, outcome: null,
+      shirt_number: shirtNumber ?? null, player_name: player?.name ?? null,
+    }).select().single()
+    if (data) {
+      setPlayerEvents(prev => [...prev, data])
+      if (cfg?.outcomes) setLastEv(data); else setLastEv(null)
+      const label = shirtNumber ? `${cfg?.label} #${shirtNumber}${player?.name ? ' ' + player.name.split(' ').pop() : ''}` : cfg?.label ?? eventType
+      showToast(label, cfg?.color ?? GOLD)
+    }
   }
 
   const codeEvent = async (eventType: string) => {
@@ -259,7 +360,19 @@ export default function PlayerMatchPage() {
           {/* Event buttons */}
           <div style={{ background: CARD, borderBottom: `1px solid ${BD}`, padding: '10px 12px', flexShrink: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'nowrap', overflowX: 'auto', paddingBottom: 4, marginBottom: lastEv ? 8 : 0 }}>
-              {Object.entries(PLAYER_EVENTS).map(([type, cfg]) => (
+              {/* Voice button - mobile only */}
+            {typeof window !== 'undefined' && ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition) && (
+              <button onClick={startVoice}
+                style={{ flexShrink: 0, padding: '6px 14px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: voiceActive ? '#ef4444' : GOLD + '22', border: `1px solid ${voiceActive ? '#ef4444' : GOLD + '44'}`, color: voiceActive ? '#fff' : GOLD, borderRadius: 4, cursor: 'pointer', letterSpacing: 1, whiteSpace: 'nowrap' }}>
+                {voiceActive ? '🎙 STOP' : '🎙 VOICE'}
+              </button>
+            )}
+            {voiceText && (
+              <div style={{ position: 'fixed', bottom: 100, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.9)', border: `2px solid ${GOLD}`, borderRadius: 8, padding: '10px 20px', zIndex: 9999, color: GOLD, fontFamily: FF, fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap' }}>
+                🎙 "{voiceText}"
+              </div>
+            )}
+            {Object.entries(PLAYER_EVENTS).map(([type, cfg]) => (
                 <button key={type} onClick={() => codeEvent(type)}
                   style={{ padding: '6px 12px', fontFamily: FF, fontSize: 11, fontWeight: 700, border: `1px solid ${cfg.color}33`, borderRadius: 4, background: cfg.color + '18', color: cfg.color, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, flexShrink: 0, minWidth: 52 }}>
                   <span style={{ fontSize: 8, opacity: 0.4, letterSpacing: 1 }}>[{cfg.hotkey}]</span>
