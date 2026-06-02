@@ -365,26 +365,21 @@ export default function PlayerMatchPage() {
               <div style={{ position: 'absolute', top: '50%', left: `${(time / (duration || 1)) * 100}%`, transform: 'translate(-50%,-50%)', width: 10, height: 10, borderRadius: '50%', background: GOLD }}/>
             </div>
             <span style={{ fontFamily: MONO, fontSize: 10, color: MUTED, whiteSpace: 'nowrap' }}>{formatTime(time)} / {formatTime(duration)}</span>
+            <button onClick={() => {
+              const el = videoRef.current
+              if (!document.fullscreenElement) {
+                if (el?.requestFullscreen) el.requestFullscreen()
+                else if ((el as any)?.webkitEnterFullscreen) (el as any).webkitEnterFullscreen()
+              } else { document.exitFullscreen() }
+            }} style={{ padding: '4px 8px', fontFamily: FF, fontSize: 11, background: '#ffffff0d', border: `1px solid ${BD}`, color: DIM, borderRadius: 4, cursor: 'pointer', flexShrink: 0 }}>⛶</button>
           </div>
 
           {/* Event buttons */}
-          <div style={{ background: CARD, borderBottom: `1px solid ${BD}`, padding: '10px 12px', flexShrink: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'nowrap', overflowX: 'auto', paddingBottom: 4, marginBottom: lastEv ? 8 : 0 }}>
-              {/* Voice button - mobile only */}
-            {typeof window !== 'undefined' && ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition) && (
-              <button onClick={startVoice}
-                style={{ flexShrink: 0, padding: '6px 14px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: voiceActive ? '#ef4444' : GOLD + '22', border: `1px solid ${voiceActive ? '#ef4444' : GOLD + '44'}`, color: voiceActive ? '#fff' : GOLD, borderRadius: 4, cursor: 'pointer', letterSpacing: 1, whiteSpace: 'nowrap' }}>
-                {voiceActive ? '🎙 STOP' : '🎙 VOICE'}
-              </button>
-            )}
-            {voiceText && (
-              <div style={{ position: 'fixed', bottom: 100, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.9)', border: `2px solid ${GOLD}`, borderRadius: 8, padding: '10px 20px', zIndex: 9999, color: GOLD, fontFamily: FF, fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap' }}>
-                🎙 "{voiceText}"
-              </div>
-            )}
-            {Object.entries(PLAYER_EVENTS).map(([type, cfg]) => (
+          <div style={{ background: CARD, borderBottom: `1px solid ${BD}`, padding: '8px 10px', flexShrink: 0 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 5, marginBottom: lastEv ? 8 : 0 }}>
+            {Object.entries(PLAYER_EVENTS).slice(0, 18).map(([type, cfg]) => (
                 <button key={type} onClick={() => codeEvent(type)}
-                  style={{ padding: '6px 12px', fontFamily: FF, fontSize: 11, fontWeight: 700, border: `1px solid ${cfg.color}33`, borderRadius: 4, background: cfg.color + '18', color: cfg.color, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, flexShrink: 0, minWidth: 52 }}>
+                  style={{ padding: '6px 4px', fontFamily: FF, fontSize: 11, fontWeight: 700, border: `1px solid ${cfg.color}33`, borderRadius: 4, background: cfg.color + '18', color: cfg.color, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, width: '100%' }}>
                   <span style={{ fontSize: 8, opacity: 0.4, letterSpacing: 1 }}>[{cfg.hotkey}]</span>
                   {cfg.label}
                 </button>
