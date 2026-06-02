@@ -43,26 +43,47 @@ function PlayerJoinContent() {
     if (!name.trim() || !email.trim() || !password.trim()) { setError('Please fill in all fields'); return }
     setSubmitting(true); setError('')
     try {
+      // Try sign in first (existing account), then sign up (new account)
       let userId: string | undefined
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({ email, password, options: { data: { full_name: name } } })
-      if (signUpError || !signUpData.user) {
-        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password })
-        if (signInError) throw signInError
-        userId = signInData.user?.id
-      } else {
-        userId = signUpData.user.id
-      }
-      if (!userId) throw new Error('Could not get user')
+      let needsSignIn = false
 
-      // Use service role API to create player profile (bypasses RLS)
+      const { data: signInFirst, error: signInFirstError } = await supabase.auth.signInWithPassword({ email, password })
+      if (!signInFirstError && signInFirst.user) {
+        // Existing account - signed in successfully
+        userId = signInFirst.user.id
+        needsSignIn = false
+      } else {
+        // New account - sign up
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email, password,
+          options: {
+            data: { full_name: name },
+            emailRedirectTo: undefined, // disable confirmation email for player invite flow
+          }
+        })
+        if (signUpError) throw signUpError
+        if (!signUpData.user) throw new Error('Could not create account')
+        userId = signUpData.user.id
+        needsSignIn = true
+      }
+
+      if (!userId) throw new Error('Could not get user ID')
+
+      // Create player profile via service role (bypasses RLS, works even before email confirmation)
       const profileRes = await fetch('/api/create-player-profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_id: userId, org_id: invite.org_id, name: name.trim(), token })
       })
       if (!profileRes.ok) {
-        const err = await profileRes.json()
-        throw new Error(err.error || 'Failed to create player profile')
+        const profileErr = await profileRes.json()
+        throw new Error(profileErr.error || 'Failed to create player profile')
+      }
+
+      // Sign in if we just signed up
+      if (needsSignIn) {
+        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+        if (signInError) throw signInError
       }
 
       router.push('/player/dashboard')
