@@ -243,7 +243,7 @@ export default function PlayerMatchPage() {
 
     const recognition = new SR()
     recognitionRef.current = recognition
-    recognition.continuous = false
+    recognition.continuous = true
     recognition.interimResults = true
     recognition.lang = 'en-GB'
 
@@ -256,8 +256,8 @@ export default function PlayerMatchPage() {
         setVoiceText('')
       }
     }
-    recognition.onerror = () => { setVoiceActive(false); setVoiceText('') }
-    recognition.onend = () => { setVoiceActive(false); setVoiceText('') }
+    recognition.onerror = (e: any) => { if (e.error !== 'aborted') { recognition.start() } else { setVoiceActive(false); setVoiceText('') } }
+    recognition.onend = () => { if (voiceActive) { try { recognition.start() } catch(_) {} } }
     recognition.start()
   }
 
