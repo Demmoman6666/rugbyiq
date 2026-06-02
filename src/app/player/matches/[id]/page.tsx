@@ -249,9 +249,11 @@ export default function PlayerMatchPage() {
 
     recognition.onstart = () => { setVoiceActive(true); setVoiceText('') }
     recognition.onresult = (e: any) => {
-      const transcript = Array.from(e.results).map((r: any) => r[0].transcript).join('')
+      // Only process the latest result, not accumulated results
+      const latestResult = e.results[e.results.length - 1]
+      const transcript = latestResult[0].transcript.trim()
       setVoiceText(transcript)
-      if (e.results[e.results.length - 1].isFinal) {
+      if (latestResult.isFinal) {
         parseVoiceCommand(transcript)
         setVoiceText('')
       }
