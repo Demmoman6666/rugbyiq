@@ -161,18 +161,24 @@ export default function PlayerMatchPage() {
   }
 
   const codeEventWithPlayer = async (eventType: string, shirtNumber: number | null) => {
+    if (!profile) return
     const cfg = PLAYER_EVENTS[eventType]
-    const player = shirtNumber ? players.find(p => p.shirt_number === shirtNumber) : null
-    const { data } = await supabase.from('player_events').insert({
-      match_id: id, event_type: eventType, timestamp_secs: time,
-      player_id: profile?.id, outcome: null,
-      shirt_number: shirtNumber ?? null, player_name: player?.name ?? null,
-    }).select().single()
-    if (data) {
-      setPlayerEvents(prev => [...prev, data])
-      if (cfg?.outcomes) setLastEv(data); else setLastEv(null)
-      const label = shirtNumber ? `${cfg?.label} #${shirtNumber}${player?.name ? ' ' + player.name.split(' ').pop() : ''}` : cfg?.label ?? eventType
+    const player = shirtNumber ? players.find((p: any) => p.shirt_number === shirtNumber) : null
+    const res = await fetch('/api/player-events', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        match_id: id, player_id: profile.id, event_type: eventType, timestamp_secs: time,
+        shirt_number: shirtNumber ?? null, player_name: player?.name ?? null,
+      })
+    })
+    const { event } = await res.json()
+    if (event) {
+      setPlayerEvents(prev => [...prev, event].sort((a: any, b: any) => a.timestamp_secs - b.timestamp_secs))
+      if (cfg?.outcomes) setLastEv(event); else setLastEv(null)
+      const label = shirtNumber ? \`\${cfg?.label} #\${shirtNumber}\${player?.name ? ' ' + player.name.split(' ').pop() : ''}\` : cfg?.label ?? eventType
       showToast(label, cfg?.color ?? GOLD)
+      setViewMode('mine')
     }
   }
 
