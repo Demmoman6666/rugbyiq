@@ -86,7 +86,11 @@ export default function PlayerMatchPage() {
         prefs.filter((p: any) => p.enabled).forEach((p: any) => {
           prefsMap[p.event_key] = { label: p.label, color: p.color, hotkey: p.hotkey, outcomes: p.outcomes }
         })
+        console.log('[ClubCode] Loaded', Object.keys(prefsMap).length, 'custom events:', Object.keys(prefsMap))
         setCustomEvents(prefsMap)
+      } else {
+        console.log('[ClubCode] No custom events found, using defaults')
+        setCustomEvents(null)
       }
       // Load squad for voice coding player name matching
       const { data: squadData } = await supabase.from('players').select('*').eq('match_id', id)

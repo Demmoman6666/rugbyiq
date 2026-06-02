@@ -74,13 +74,18 @@ export default function PlayerSettingsPage() {
     if (!profile) return
     setSaving(true)
     try {
-      await supabase.from('player_event_preferences').delete().eq('player_id', profile.id)
-      const toInsert = events.map((e, i) => ({ ...e, player_id: profile.id, sort_order: i, id: undefined }))
-      await supabase.from('player_event_preferences').insert(toInsert)
+      const toSave = events.map((e, i) => ({ ...e, sort_order: i }))
+      const res = await fetch('/api/player-event-preferences', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ player_id: profile.id, events: toSave })
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Save failed')
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
-    } catch (err) {
-      alert('Failed to save preferences')
+    } catch (err: any) {
+      alert('Failed to save: ' + err.message)
     }
     setSaving(false)
   }
