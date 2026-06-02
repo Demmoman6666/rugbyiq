@@ -206,6 +206,13 @@ export default function PlayerSettingsPage() {
                               style={{ width: '100%', padding: '7px 10px', fontFamily: FF, fontSize: 12, background: CARD, border: `1px solid ${BD}`, borderRadius: 4, color: TEXT, outline: 'none', boxSizing: 'border-box' }} />
                           </div>
                         </>
+                      {!DEFAULT_EVENT_KEYS.has(ev.event_key) && (
+                        <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${BD}` }}>
+                          <button onClick={() => { setEvents(prev => prev.filter((_, i) => i !== idx)); setEditingIdx(null) }}
+                            style={{ padding: '6px 14px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: '#ef444418', border: '1px solid #ef444444', color: '#f87171', borderRadius: 4, cursor: 'pointer' }}>
+                            🗑 Delete this event
+                          </button>
+                        </div>
                       )}
                     </div>
                   )}
@@ -225,6 +232,15 @@ export default function PlayerSettingsPage() {
                 ))}
               </div>
             </div>
+
+            {/* Add custom event */}
+            <button onClick={() => {
+              const key = `custom_${Date.now()}`
+              setEvents(prev => [...prev, { event_key: key, label: 'New Event', color: '#e8a020', hotkey: '', sort_order: prev.length, enabled: true, outcomes: null, is_custom: true }])
+              setEditingIdx(events.length)
+            }} style={{ width: '100%', padding: '10px 0', fontFamily: FF, fontSize: 12, fontWeight: 700, background: 'transparent', border: `1px dashed ${BD}`, color: MUTED, borderRadius: 6, cursor: 'pointer', marginBottom: 16, letterSpacing: 1 }}>
+              + ADD CUSTOM EVENT
+            </button>
 
             <div style={{ display: 'flex', gap: 8 }}>
               <button onClick={resetToDefaults} style={{ padding: '10px 16px', fontFamily: FF, fontSize: 12, fontWeight: 700, background: 'transparent', border: `1px solid ${BD}`, color: MUTED, borderRadius: 6, cursor: 'pointer' }}>Reset defaults</button>
