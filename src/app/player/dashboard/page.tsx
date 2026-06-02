@@ -101,6 +101,7 @@ export default function PlayerDashboard() {
           <span style={{ fontSize: 11, color: DIM, display: 'none' }}>{orgName}</span>
           {profile?.shirt_number && <span style={{ fontFamily: 'monospace', fontSize: 11, color: GOLD, background: GOLD + '18', padding: '2px 8px', borderRadius: 4, border: `1px solid ${GOLD}33` }}>#{profile.shirt_number}</span>}
           <button onClick={() => router.push('/player/highlights')} style={{ padding: '5px 12px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: GOLD + '22', border: `1px solid ${GOLD}44`, color: GOLD, borderRadius: 4, cursor: 'pointer', letterSpacing: 1, whiteSpace: 'nowrap' }}>🎬 MY HIGHLIGHTS</button>
+          <button onClick={() => router.push('/player/settings')} style={{ padding: '5px 12px', fontFamily: FF, fontSize: 11, fontWeight: 700, background: '#ffffff0d', border: `1px solid ${BD}`, color: DIM, borderRadius: 4, cursor: 'pointer', letterSpacing: 1, whiteSpace: 'nowrap' }}>⚙️ SETTINGS</button>
           <><AnalystSwitchButton /><button onClick={handleLogout} style={{ padding: '5px 12px', fontFamily: FF, fontSize: 11, background: 'transparent', border: `1px solid ${BD}`, color: MUTED, borderRadius: 4, cursor: 'pointer' }}>LOG OUT</button></>
         </div>
       </div>

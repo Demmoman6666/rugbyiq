@@ -52,6 +52,7 @@ export default function PlayerMatchPage() {
   const [voiceText, setVoiceText]       = useState('')
   const recognitionRef                   = useRef<any>(null)
   const [players, setPlayers]           = useState<any[]>([])
+  const [customEvents, setCustomEvents] = useState<Record<string, any> | null>(null)
   const toastTimer = useRef<NodeJS.Timeout | null>(null)
   const currentEventRef = useRef<HTMLDivElement>(null)
 
@@ -78,6 +79,15 @@ export default function PlayerMatchPage() {
       const { data: pEvents } = await fetch(`/api/player-events?match_id=${id}&player_id=${playerProfile.id}`).then(r => r.json()).then(d => ({ data: d.events }))
       setPlayerEvents(pEvents ?? [])
 
+      // Load custom event preferences
+      const { data: prefs } = await supabase.from('player_event_preferences').select('*').eq('player_id', playerProfile.id).order('sort_order')
+      if (prefs && prefs.length > 0) {
+        const prefsMap: Record<string, any> = {}
+        prefs.filter((p: any) => p.enabled).forEach((p: any) => {
+          prefsMap[p.event_key] = { label: p.label, color: p.color, hotkey: p.hotkey, outcomes: p.outcomes }
+        })
+        setCustomEvents(prefsMap)
+      }
       // Load squad for voice coding player name matching
       const { data: squadData } = await supabase.from('players').select('*').eq('match_id', id)
       setPlayers(squadData ?? [])
@@ -162,7 +172,7 @@ export default function PlayerMatchPage() {
 
   const codeEventWithPlayer = async (eventType: string, shirtNumber: number | null) => {
     if (!profile) return
-    const cfg = PLAYER_EVENTS[eventType]
+    const cfg = activeEvents[eventType] ?? PLAYER_EVENTS[eventType]
     const player = shirtNumber ? players.find((p: any) => p.shirt_number === shirtNumber) : null
     const res = await fetch('/api/player-events', {
       method: 'POST',
@@ -266,7 +276,7 @@ export default function PlayerMatchPage() {
 
   const codeEvent = async (eventType: string) => {
     if (!profile) return
-    const cfg = PLAYER_EVENTS[eventType]
+    const cfg = activeEvents[eventType] ?? PLAYER_EVENTS[eventType]
     const res = await fetch('/api/player-events', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -296,6 +306,7 @@ export default function PlayerMatchPage() {
 
   if (loading) return <div style={{ fontFamily: FF, background: BG, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: MUTED }}>Loading...</div>
 
+  const activeEvents = customEvents ?? Object.fromEntries(Object.entries(PLAYER_EVENTS))
   const visibleEvents = viewMode === 'analyst' ? analystEvents : playerEvents
   const currentEvent = visibleEvents.filter(e => e.timestamp_secs <= time).slice(-1)[0]
 
@@ -377,7 +388,7 @@ export default function PlayerMatchPage() {
           {/* Event buttons */}
           <div style={{ background: CARD, borderBottom: `1px solid ${BD}`, padding: '8px 10px', flexShrink: 0 }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 5, marginBottom: lastEv ? 8 : 0 }}>
-            {Object.entries(PLAYER_EVENTS).slice(0, 18).map(([type, cfg]) => (
+            {Object.entries(activeEvents).slice(0, 18).map(([type, cfg]) => (
                 <button key={type} onClick={() => codeEvent(type)}
                   style={{ padding: '6px 4px', fontFamily: FF, fontSize: 11, fontWeight: 700, border: `1px solid ${cfg.color}33`, borderRadius: 4, background: cfg.color + '18', color: cfg.color, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, width: '100%' }}>
                   <span style={{ fontSize: 8, opacity: 0.4, letterSpacing: 1 }}>[{cfg.hotkey}]</span>
@@ -385,12 +396,12 @@ export default function PlayerMatchPage() {
                 </button>
               ))}
             </div>
-            {lastEv && PLAYER_EVENTS[lastEv.event_type]?.outcomes && (
+            {lastEv && activeEvents[lastEv.event_type]?.outcomes && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 8, borderTop: `1px solid ${BD}`, flexWrap: 'wrap' }}>
                 <span style={{ fontSize: 10, color: PLAYER_EVENTS[lastEv.event_type].color, fontWeight: 700, letterSpacing: 1.5 }}>SET OUTCOME:</span>
-                {PLAYER_EVENTS[lastEv.event_type].outcomes!.map(o => (
+                {activeEvents[lastEv.event_type]?.outcomes?.map((o: string) => (
                   <button key={o} onClick={() => updateOutcome(o)}
-                    style={{ padding: '4px 12px', fontFamily: FF, fontSize: 11, fontWeight: 700, cursor: 'pointer', border: `1px solid ${PLAYER_EVENTS[lastEv.event_type].color}44`, borderRadius: 4, background: PLAYER_EVENTS[lastEv.event_type].color + '22', color: PLAYER_EVENTS[lastEv.event_type].color, letterSpacing: 1 }}>{o}</button>
+                    style={{ padding: '4px 12px', fontFamily: FF, fontSize: 11, fontWeight: 700, cursor: 'pointer', border: `1px solid ${activeEvents[lastEv.event_type]?.color ?? '#fff'}44`, borderRadius: 4, background: (activeEvents[lastEv.event_type]?.color ?? '#fff') + '22', color: activeEvents[lastEv.event_type]?.color ?? '#fff', letterSpacing: 1 }}>{o}</button>
                 ))}
                 <button onClick={() => setLastEv(null)} style={{ padding: '4px 10px', fontFamily: FF, fontSize: 11, border: `1px solid ${BD}`, borderRadius: 4, background: 'transparent', color: MUTED, cursor: 'pointer' }}>skip</button>
               </div>
