@@ -54,8 +54,16 @@ function PlayerJoinContent() {
       }
       if (!userId) throw new Error('Could not get user')
 
-      await supabase.from('player_profiles').insert({ user_id: userId, org_id: invite.org_id, name: name.trim() })
-      await supabase.from('player_invites').update({ status: 'accepted' }).eq('token', token)
+      // Use service role API to create player profile (bypasses RLS)
+      const profileRes = await fetch('/api/create-player-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId, org_id: invite.org_id, name: name.trim(), token })
+      })
+      if (!profileRes.ok) {
+        const err = await profileRes.json()
+        throw new Error(err.error || 'Failed to create player profile')
+      }
 
       router.push('/player/dashboard')
     } catch (err: any) {
