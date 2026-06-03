@@ -138,18 +138,20 @@ export default function DashboardPage() {
             </>
           )}
           {orgName && isMobile && (
-            <button onClick={() => router.push('/clubs')} style={{ padding: '3px 8px', background: '#ffffff0d', border: '1px solid #1e2d3d', color: '#4a5568', fontFamily: FF, fontSize: 10, fontWeight: 700, borderRadius: 4, cursor: 'pointer', letterSpacing: 1 }}>SWITCH</button>
+            <div style={{ fontSize: 10, color: '#4a5568', maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{orgName}</div>
           )}
         </div>
 
         {/* Right */}
         <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 6 : 10, flexShrink: 0 }}>
-          {/* Plan badge */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#ffffff08', border: '1px solid #1e2d3d', borderRadius: 8, padding: isMobile ? '4px 8px' : '5px 12px' }}>
-            <div style={{ width: 7, height: 7, borderRadius: '50%', background: PLAN_COLORS[plan] }}/>
-            <span style={{ fontSize: 11, fontWeight: 700, color: PLAN_COLORS[plan] }}>{PLAN_LABELS[plan]}</span>
-            {usage && !isMobile && <span style={{ fontSize: 11, color: '#4a5568' }}>{usage.used}/{usage.limit === 999 ? '∞' : usage.limit}</span>}
-          </div>
+          {/* Plan badge - desktop only */}
+          {!isMobile && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#ffffff08', border: '1px solid #1e2d3d', borderRadius: 8, padding: '5px 12px' }}>
+              <div style={{ width: 7, height: 7, borderRadius: '50%', background: PLAN_COLORS[plan] }}/>
+              <span style={{ fontSize: 11, fontWeight: 700, color: PLAN_COLORS[plan] }}>{PLAN_LABELS[plan]}</span>
+              {usage && <span style={{ fontSize: 11, color: '#4a5568' }}>{usage.used}/{usage.limit === 999 ? '∞' : usage.limit}</span>}
+            </div>
+          )}
 
           {/* Upgrade — icon only on mobile */}
           {plan !== 'club' && (
